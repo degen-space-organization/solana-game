@@ -1,1 +1,1 @@
-# solana-game
+# Solana Game

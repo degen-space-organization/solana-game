@@ -1,0 +1,7 @@
+{
+  "name": "database",
+  "packageManager": "yarn@4.9.1",
+  "devDependencies": {
+    "supabase": "2.23.4"
+  }
+}

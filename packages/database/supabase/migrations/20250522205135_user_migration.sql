@@ -15,3 +15,8 @@ CREATE TABLE users (
     CONSTRAINT users_matches_lost_non_negative CHECK (matches_lost >= 0),
     CONSTRAINT users_nickname_not_empty CHECK (LENGTH(TRIM(nickname)) > 0)
 );
+
+
+-- Indexes
+CREATE INDEX idx_users_solana_address ON users(solana_address);
+

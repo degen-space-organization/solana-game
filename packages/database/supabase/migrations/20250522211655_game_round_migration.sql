@@ -23,3 +23,6 @@ CREATE TABLE game_rounds (
         (player1_move IS NOT NULL AND player2_move IS NOT NULL AND completed_at IS NOT NULL)
     )
 );
+
+-- Indexes
+CREATE INDEX idx_game_rounds_match ON game_rounds(match_id);

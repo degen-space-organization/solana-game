@@ -28,3 +28,6 @@ CREATE TABLE matches (
         (status != 'completed')
     )
 );
+
+-- Indexes
+CREATE INDEX idx_matches_tournament ON matches(tournament_id);

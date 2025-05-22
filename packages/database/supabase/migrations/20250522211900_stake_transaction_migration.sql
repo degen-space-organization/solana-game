@@ -26,3 +26,9 @@ CREATE TABLE stake_transactions (
         (status != 'confirmed' AND confirmed_at IS NULL)
     )
 );
+
+-- Indexes
+CREATE INDEX idx_stake_transactions_user ON stake_transactions(user_id);
+CREATE INDEX idx_stake_transactions_lobby ON stake_transactions(lobby_id);
+CREATE INDEX idx_stake_transactions_match ON stake_transactions(match_id);
+CREATE INDEX idx_stake_transactions_hash ON stake_transactions(transaction_hash);

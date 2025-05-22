@@ -22,3 +22,7 @@ CREATE TABLE lobby_participants (
         stake_transaction_hash IS NULL OR LENGTH(TRIM(stake_transaction_hash)) > 0
     )
 );
+
+-- Indexes
+CREATE INDEX idx_lobby_participants_lobby ON lobby_participants(lobby_id);
+CREATE INDEX idx_lobby_participants_user ON lobby_participants(user_id);

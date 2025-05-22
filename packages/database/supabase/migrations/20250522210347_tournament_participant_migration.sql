@@ -14,3 +14,7 @@ CREATE TABLE tournament_participants (
     CONSTRAINT tournament_participants_final_position_positive CHECK (final_position IS NULL OR final_position > 0),
     CONSTRAINT tournament_participants_eliminated_after_joined CHECK (eliminated_at IS NULL OR eliminated_at >= joined_at)
 );
+
+--Indexes
+CREATE INDEX idx_tournament_participants_tournament ON tournament_participants(tournament_id);
+CREATE INDEX idx_tournament_participants_user ON tournament_participants(user_id);

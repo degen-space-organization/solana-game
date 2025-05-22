@@ -21,3 +21,9 @@ CREATE TABLE chat_messages (
         (match_id IS NULL AND lobby_id IS NULL AND tournament_id IS NOT NULL)
     )
 );
+
+-- Indexes
+CREATE INDEX idx_chat_messages_match ON chat_messages(match_id);
+CREATE INDEX idx_chat_messages_lobby ON chat_messages(lobby_id);
+CREATE INDEX idx_chat_messages_tournament ON chat_messages(tournament_id);
+CREATE INDEX idx_chat_messages_created_at ON chat_messages(created_at);

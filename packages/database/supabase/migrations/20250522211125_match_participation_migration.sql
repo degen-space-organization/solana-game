@@ -13,3 +13,12 @@ CREATE TABLE match_participants (
     CONSTRAINT match_participants_unique_user_per_match UNIQUE (match_id, user_id),
     CONSTRAINT match_participants_unique_position_per_match UNIQUE (match_id, position)
 );
+
+--Indexes 
+CREATE INDEX idx_match_participants_match ON match_participants(match_id);
+CREATE INDEX idx_match_participants_user ON match_participants(user_id);
+
+-- Triggers
+CREATE TRIGGER trg_prevent_concurrent_match
+    BEFORE INSERT OR UPDATE ON match_participants
+    FOR EACH ROW EXECUTE FUNCTION prevent_concurrent_participation();

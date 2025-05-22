@@ -26,3 +26,9 @@ CREATE TABLE lobby_participants (
 -- Indexes
 CREATE INDEX idx_lobby_participants_lobby ON lobby_participants(lobby_id);
 CREATE INDEX idx_lobby_participants_user ON lobby_participants(user_id);
+
+
+-- Triggers
+CREATE TRIGGER trg_prevent_concurrent_lobby
+    BEFORE INSERT OR UPDATE ON lobby_participants
+    FOR EACH ROW EXECUTE FUNCTION prevent_concurrent_participation();

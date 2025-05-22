@@ -1,6 +1,6 @@
 CREATE TABLE matches (
     id SERIAL,
-    tournament_id INTEGER NULL, -- NULL for casual matches
+    tournament_id INTEGER NULL, -- NULL for 1v1 matches
     lobby_id INTEGER NULL, -- Reference to lobby
     tournament_round INTEGER NULL, -- For tournament bracket tracking (1, 2, 3 for quarterfinals, semifinals, finals)
     status VARCHAR(20) DEFAULT 'waiting',

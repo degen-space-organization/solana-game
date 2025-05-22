@@ -1,11 +1,11 @@
 CREATE TABLE lobbies (
     id SERIAL,
     name VARCHAR(100),
-    tournament_id INTEGER NULL, -- NULL for casual matches
+    tournament_id INTEGER NULL, -- NULL for 1v1 matches
     status VARCHAR(20) DEFAULT 'waiting',
     max_players INTEGER DEFAULT 2,
     current_players INTEGER DEFAULT 0,
-    stake_amount VARCHAR(20) NOT NULL, -- 4 possible SOL values in hex (0.25, 0.5, 0.75, 1.0 SOL)
+    stake_amount VARCHAR(20) NOT NULL, -- 4 possible SOL values in (0.25, 0.5, 0.75, 1.0 SOL)
     created_by INTEGER NOT NULL, -- Lobby owner
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     disbanded_at TIMESTAMP NULL,

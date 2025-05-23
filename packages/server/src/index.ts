@@ -13,6 +13,12 @@ import express from 'express';
 import path from 'path';
 
 
+/** Routers */
+import {
+    GameRouter
+} from './routers'
+
+
 // Config the env vars
 config({ 
     path: path.join(__dirname, '../.env')
@@ -20,6 +26,8 @@ config({
 
 const PORT = process.env.SERVER_PORT || 3000;
 const SUPABASE_URL = process.env.SUPABASE_URL || 'default-supabase-url';
+const API_VERSION = process.env.API_VERSION || 'v1';
+
 
 const app = express();
 app.use(cors());
@@ -27,9 +35,8 @@ app.use(express.json());
 
 
 /** Routes */
-app.get('/', (req, res) => {
-    res.send('healthcheck');
-});
+const prefix = { get: (route: string) => `/api/${API_VERSION}/${route}`}; 
+app.use(prefix.get('game'), GameRouter.default);
 
 
 
@@ -39,6 +46,7 @@ app.listen(PORT, () => {
     console.log('Game server is starting...');
     console.log('==========================');
     console.log('Server is running on port', PORT);
+    console.log('API url: ', `http://localhost:${PORT}/api/${API_VERSION}`);
     console.log('Connected to supabase DB at: ', SUPABASE_URL);
     console.log('==========================\n');
 }).on('error', (err) => {

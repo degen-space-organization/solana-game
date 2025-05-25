@@ -1,9 +1,11 @@
 // src/App.tsx - Updated to show LobbyPending component
 import { useState } from 'react'
+
 import { Box, Button, VStack } from "@chakra-ui/react"
 import LobbyPending from './components/Lobby/LobbyPending'
 import { toaster } from './components/ui/toaster'
 import './index.css'
+
 
 function App() {
   const handleJoinLobby = (lobbyId: number) => {
@@ -30,6 +32,7 @@ function App() {
   }
 
   return (
+
     <Box minH="100vh" bg="gray.100" p="4">
       <VStack padding="8" maxW="7xl" mx="auto">
         {/* Main Content */}
@@ -71,6 +74,7 @@ function App() {
         </Box>
       </VStack>
     </Box>
+
   )
 }
 

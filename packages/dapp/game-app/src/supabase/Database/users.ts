@@ -1,3 +1,4 @@
+
 import type { User } from "@/types/lobby";
 import { supabase } from "..";
 
@@ -52,3 +53,4 @@ export const users = {
         }
     },
 }
+

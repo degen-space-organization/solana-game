@@ -489,6 +489,7 @@ const RealtimeChat: React.FC<ChatProps> = ({
         ) : (
           messages.map((message) => {
             const isOwnMessage = message.user_id === currentUser.id;
+            // @ts-ignore
             const displayName = getDisplayName(message.users);
             
             return (

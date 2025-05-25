@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Wallet, ExternalLink, Copy, RefreshCw } from 'lucide-react';
+import { Connection, PublicKey as SolanaPublicKey } from '@solana/web3.js';
 
 // TypeScript interfaces for Phantom wallet
 interface PhantomWalletEvents {
@@ -114,26 +115,12 @@ const SolanaWeb3App: React.FC = () => {
   // Get SOL balance
   const getBalance = async (pubKey: string): Promise<void> => {
     try {
-      const response = await fetch('https://api.mainnet-beta.solana.com', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          id: 1,
-          method: 'getBalance',
-          params: [pubKey]
-        })
-      });
-      
-      const data: SolanaRPCResponse = await response.json();
-      if (data.result) {
-        const solBalance = data.result.value / 1000000000; // Convert lamports to SOL
-        setBalance(solBalance.toFixed(4));
-      }
+      const connection = new Connection('https://mainnet.helius-rpc.com/?api-key=46c8a41f-92e2-4737-a27f-01507557ce08'); // ✅ safe public endpoint
+      const publicKey = new SolanaPublicKey(pubKey);
+      const lamports = await connection.getBalance(publicKey);
+      setBalance((lamports / 1e9).toFixed(4));
     } catch (error) {
-      console.error('Failed to get balance:', error);
+      console.error('Error fetching balance:', error);
     }
   };
 

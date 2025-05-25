@@ -1,10 +1,9 @@
 import { useState } from 'react'
-import SolanaWeb3App from './components/WalletConnection'
 import ChatExample from './components/Chat'
 import './index.css'
 
 import { Avatar, Button, Card } from "@chakra-ui/react"
-
+import SolanaWeb3App from './components/WalletConnection'
 
 
 const Demo = () => {
@@ -35,9 +34,10 @@ function App() {
 
   return (
     <>
-      <Demo />
-      <Button>Click me</Button>
-      <Button>Click me</Button>
+      {/* <Demo /> */}
+      {/* <Button>Click me</Button> */}
+      {/* <Button>Click me</Button> */}
+      <SolanaWeb3App/>
       {/* <SolanaWeb3App></SolanaWeb3App> */}
       {/* <ChatExample></ChatExample> */}
     </>

@@ -38,6 +38,7 @@ function App() {
       {/* <Button>Click me</Button> */}
       {/* <Button>Click me</Button> */}
       <SolanaWeb3App/>
+      <ChatExample/>
       {/* <SolanaWeb3App></SolanaWeb3App> */}
       {/* <ChatExample></ChatExample> */}
     </>

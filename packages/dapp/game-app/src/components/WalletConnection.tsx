@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Wallet, ExternalLink, Copy, RefreshCw } from 'lucide-react';
 import { Connection, PublicKey as SolanaPublicKey } from '@solana/web3.js';
 
+import { upsertUser, getUserBySolanaAddress } from '../supabase/Database/users'; // Import the new functions
+
+
 // TypeScript interfaces for Phantom wallet
 interface PhantomWalletEvents {
   connect(publicKey: PublicKey): void;
@@ -54,6 +57,9 @@ const SolanaWeb3App: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [initializing, setInitializing] = useState<boolean>(true);
 
+  const [currentUserDb, setCurrentUserDb] = useState<any>(null); // You might want to define a more specific User type
+
+
   // Check if Phantom wallet is installed
   const getProvider = (): PhantomWallet | null => {
     if ('solana' in window) {
@@ -86,6 +92,9 @@ const SolanaWeb3App: React.FC = () => {
       localStorage.removeItem('walletExplicitlyDisconnected');
       
       await getBalance(pubKeyString);
+
+      const userData = await upsertUser(pubKeyString);
+      setCurrentUserDb(userData?.[0] || null); 
     } catch (error) {
       console.error('Connection failed:', error);
       alert('Failed to connect wallet');

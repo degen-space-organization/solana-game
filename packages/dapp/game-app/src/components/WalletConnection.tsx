@@ -114,15 +114,16 @@ const SolanaWeb3App: React.FC = () => {
 
   // Get SOL balance
   const getBalance = async (pubKey: string): Promise<void> => {
-    try {
-      const connection = new Connection('https://mainnet.helius-rpc.com/?api-key=46c8a41f-92e2-4737-a27f-01507557ce08'); // ✅ safe public endpoint
-      const publicKey = new SolanaPublicKey(pubKey);
-      const lamports = await connection.getBalance(publicKey);
-      setBalance((lamports / 1e9).toFixed(4));
-    } catch (error) {
-      console.error('Error fetching balance:', error);
-    }
-  };
+  try {
+    const response = await fetch(`http://localhost:3001/get-balance/${pubKey}`);
+    const data = await response.json();
+    console.log(data.balance)
+    setBalance(data.balance.toFixed(4));
+    
+  } catch (error) {
+    console.error('Error fetching balance from backend:', error);
+  }
+};
 
   // Refresh balance
   const refreshBalance = async (): Promise<void> => {

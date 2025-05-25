@@ -18,7 +18,8 @@ CREATE TABLE chat_messages (
     CONSTRAINT chat_messages_single_context CHECK (
         (match_id IS NOT NULL AND lobby_id IS NULL AND tournament_id IS NULL) OR
         (match_id IS NULL AND lobby_id IS NOT NULL AND tournament_id IS NULL) OR
-        (match_id IS NULL AND lobby_id IS NULL AND tournament_id IS NOT NULL)
+        (match_id IS NULL AND lobby_id IS NULL AND tournament_id IS NOT NULL) OR
+        (match_id IS NULL AND lobby_id IS NULL AND tournament_id IS NULL)
     )
 );
 

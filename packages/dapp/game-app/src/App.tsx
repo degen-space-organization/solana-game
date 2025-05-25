@@ -1,46 +1,76 @@
+// src/App.tsx - Updated to show LobbyPending component
 import { useState } from 'react'
-import SolanaWeb3App from './components/WalletConnection'
-import ChatExample from './components/Chat'
+import { Box, Button, VStack } from "@chakra-ui/react"
+import LobbyPending from './components/Lobby/LobbyPending'
+import { toaster } from './components/ui/toaster'
 import './index.css'
 
-import { Avatar, Button, Card } from "@chakra-ui/react"
-
-
-
-const Demo = () => {
-  return (
-    <Card.Root width="320px">
-      <Card.Body gap="2">
-        <Avatar.Root size="lg" shape="rounded">
-          <Avatar.Image src="https://picsum.photos/200/300" />
-          <Avatar.Fallback name="Nue Camp" />
-        </Avatar.Root>
-        <Card.Title mt="2">Nue Camp</Card.Title>
-        <Card.Description>
-          This is the card body. Lorem ipsum dolor sit amet, consectetur
-          adipiscing elit. Curabitur nec odio vel dui euismod fermentum.
-          Curabitur nec odio vel dui euismod fermentum.
-        </Card.Description>
-      </Card.Body>
-      <Card.Footer justifyContent="flex-end">
-        <Button variant="outline">View</Button>
-        <Button>Join</Button>
-      </Card.Footer>
-    </Card.Root>
-  )
-}
-
-
 function App() {
+  const handleJoinLobby = (lobbyId: number) => {
+    // Show toast notification
+    toaster.create({
+      title: "Joining Lobby",
+      description: `Attempting to join lobby #${lobbyId}...`,
+      type: "info",
+      duration: 3000,
+    })
+    
+    // Here you would implement the actual join logic
+    console.log(`Joining lobby ${lobbyId}`)
+    
+    // Simulate success after a delay
+    setTimeout(() => {
+      toaster.create({
+        title: "Success!",
+        description: `Successfully joined lobby #${lobbyId}`,
+        type: "success",
+        duration: 3000,
+      })
+    }, 1500)
+  }
 
   return (
-    <>
-      <Demo />
-      <Button>Click me</Button>
-      <Button>Click me</Button>
-      {/* <SolanaWeb3App></SolanaWeb3App> */}
-      {/* <ChatExample></ChatExample> */}
-    </>
+    <Box minH="100vh" bg="gray.100" p="4">
+      <VStack padding="8" maxW="7xl" mx="auto">
+        {/* Main Content */}
+        <LobbyPending onJoinLobby={handleJoinLobby} useMockData={false} />
+        
+        {/* Additional buttons for testing */}
+        <Box>
+          <Button
+            onClick={() => {
+              toaster.create({
+                title: "Feature Coming Soon",
+                description: "Create lobby functionality will be available soon!",
+                type: "info",
+                duration: 3000,
+              })
+            }}
+            bg="#FF6B35"
+            color="white"
+            fontWeight="black"
+            textTransform="uppercase"
+            borderRadius="0"
+            border="3px solid"
+            borderColor="gray.900"
+            shadow="4px 4px 0px rgba(0,0,0,0.8)"
+            _hover={{
+              bg: "#E55A2B",
+              transform: "translate(-2px, -2px)",
+              shadow: "6px 6px 0px rgba(0,0,0,0.8)",
+            }}
+            _active={{
+              transform: "translate(0px, 0px)",
+              shadow: "2px 2px 0px rgba(0,0,0,0.8)",
+            }}
+            size="lg"
+            px="8"
+          >
+            🚀 Create New Game
+          </Button>
+        </Box>
+      </VStack>
+    </Box>
   )
 }
 

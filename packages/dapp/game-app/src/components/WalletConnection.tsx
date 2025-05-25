@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Wallet, ExternalLink, Copy, RefreshCw } from 'lucide-react';
 import { Box, Button, Flex, VStack, Text, Card, Heading, HStack } from "@chakra-ui/react";
-
-
+import { database } from '@/supabase/Database';
 // TypeScript interfaces for Phantom wallet
 interface PhantomWalletEvents {
   connect(publicKey: PublicKey): void;
@@ -55,6 +54,9 @@ const SolanaWeb3App: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [initializing, setInitializing] = useState<boolean>(true);
 
+  const [currentUserDb, setCurrentUserDb] = useState<any>(null); // You might want to define a more specific User type
+
+
   // Check if Phantom wallet is installed
   const getProvider = (): PhantomWallet | null => {
     if ('solana' in window) {
@@ -87,6 +89,9 @@ const SolanaWeb3App: React.FC = () => {
       localStorage.removeItem('walletExplicitlyDisconnected');
 
       await getBalance(pubKeyString);
+      const userData = await database.users.createUser(pubKeyString);
+      setCurrentUserDb(userData || null); // Assuming upsertUser returns an array of data
+
     } catch (error) {
       console.error('Connection failed:', error);
       alert('Failed to connect wallet');
@@ -366,7 +371,7 @@ const SolanaWeb3App: React.FC = () => {
             </Card.Root>
           ) : (
             /* Wallet Dashboard */
-            <VStack spacing="6">
+            <VStack padding="6">
               {/* Wallet Info Card */}
               <Card.Root
                 borderWidth="4px"
@@ -387,7 +392,7 @@ const SolanaWeb3App: React.FC = () => {
                 <Card.Body p="0">
                   <Flex justify="space-between" align="flex-start" mb="6">
                     <Heading size="md" fontWeight="black" color="gray.900">Wallet Connected</Heading>
-                    <HStack spacing="2">
+                    <HStack padding="2">
                       <Button
                         onClick={refreshBalance}
                         disabled={loading}
@@ -475,8 +480,8 @@ const SolanaWeb3App: React.FC = () => {
                       </Button>
                       <Button
                         as="a"
-                        href={`https://solscan.io/account/${publicKey}`}
-                        target="_blank"
+                        // href={`https://solscan.io/account/${publicKey}`}
+                        // target="_blank"
                         rel="noopener noreferrer"
                         bg="transparent"
                         _hover={{ bg: "gray.200" }}

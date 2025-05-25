@@ -491,7 +491,7 @@ export type Database = {
           id: number
           matches_lost: number | null
           matches_won: number | null
-          nickname: string
+          nickname: string | null
           solana_address: string
           updated_at: string | null
         }
@@ -500,7 +500,7 @@ export type Database = {
           id?: number
           matches_lost?: number | null
           matches_won?: number | null
-          nickname: string
+          nickname?: string | null
           solana_address: string
           updated_at?: string | null
         }
@@ -509,7 +509,7 @@ export type Database = {
           id?: number
           matches_lost?: number | null
           matches_won?: number | null
-          nickname?: string
+          nickname?: string | null
           solana_address?: string
           updated_at?: string | null
         }

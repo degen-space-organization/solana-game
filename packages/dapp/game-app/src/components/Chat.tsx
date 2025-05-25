@@ -3,6 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 import { Send, MessageCircle, Users, Edit3, Check, X, Globe } from 'lucide-react';
 import { Box, Button, Flex, VStack, Text, Badge, Card, Heading, HStack } from "@chakra-ui/react";
 
+import { database } from '@/supabase/Database';
+
 
 // Mock data for testing
 const MOCK_USERS = [
@@ -201,7 +203,7 @@ const NicknameEditor: React.FC<{
       mb="4"
       position="relative"
     >
-      <VStack align="stretch" spacing="2">
+      <VStack align="stretch" padding="2">
         <input
           type="text"
           value={nickname}
@@ -211,7 +213,7 @@ const NicknameEditor: React.FC<{
           maxLength={50}
           disabled={isLoading}
         />
-        <HStack justify="flex-end" spacing="2">
+        <HStack justify="flex-end" padding="2">
           <Button
             onClick={handleSave}
             disabled={isLoading}
@@ -554,7 +556,7 @@ const RealtimeChat: React.FC<ChatProps> = ({
           bg="gray.100"
           borderTopRadius="0"
         >
-          <HStack spacing="2">
+          <HStack padding="2">
             {chatType === 'global' ? (
               <Globe size={20} color="#06D6A0" />
             ) : (
@@ -564,7 +566,7 @@ const RealtimeChat: React.FC<ChatProps> = ({
               {chatType === 'global' ? 'Global Chat' : `Lobby ${lobbyId} Chat`}
             </Text>
           </HStack>
-          <HStack spacing="2">
+          <HStack padding="2">
             <Box
               h="3"
               w="3"
@@ -638,7 +640,7 @@ const RealtimeChat: React.FC<ChatProps> = ({
 
       {/* Message Input */}
       <Card.Footer p="3" borderTop="4px solid" borderColor="gray.900" bg="gray.100">
-        <HStack width="100%" spacing="2">
+        <HStack width="100%" padding="2">
           <input
             type="text"
             value={newMessage}
@@ -694,10 +696,11 @@ const ChatExample: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User>({
     id: 1,
     nickname: null, // Start with no nickname
-    solana_address: "8Kq2GVcjFJHXzgXgz8Vc2sPBJ9Nh1mK5rL3nQ7wT4sA2"
+    solana_address: "9Kq2GVcjFJHXzgXgz8Vc2sPBJ9Nh1mK5rL3nQ7wT4sA2"
   });
 
-  const handleUserUpdate = (updatedUser: User) => {
+  const handleUserUpdate = async (updatedUser: User) => {
+    // const newNickname = await database.users.updateNickname(updatedUser.solana_address, );
     setCurrentUser(prev => ({ ...prev, ...updatedUser }));
   };
 
@@ -766,7 +769,7 @@ const ChatExample: React.FC = () => {
             <Text fontSize="sm" fontWeight="bold" color="gray.700" mb="2">
               Select Chat:
             </Text>
-            <HStack spacing="4">
+            <HStack padding="4">
               <Button
                 onClick={() => setSelectedChat({ type: 'global' })}
                 bg={selectedChat.type === 'global' ? '#06D6A0' : 'gray.100'}

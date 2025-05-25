@@ -5,6 +5,8 @@ import { Box, Button, VStack } from "@chakra-ui/react"
 import LobbyPending from './components/Lobby/LobbyPending'
 import { toaster } from './components/ui/toaster'
 import './index.css'
+import SolanaWeb3App from './components/WalletConnection'
+import ChatExample from './components/Chat'
 
 
 function App() {
@@ -72,6 +74,8 @@ function App() {
             🚀 Create New Game
           </Button>
         </Box>
+        <SolanaWeb3App></SolanaWeb3App>
+        <ChatExample></ChatExample>
       </VStack>
     </Box>
 

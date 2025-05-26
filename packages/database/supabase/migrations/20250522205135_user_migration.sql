@@ -20,32 +20,53 @@ CREATE TABLE users (
 -- Indexes
 CREATE INDEX idx_users_solana_address ON users(solana_address);
 
--- Create function to prevent concurrent participation
-CREATE OR REPLACE FUNCTION prevent_concurrent_participation()
-RETURNS TRIGGER AS $$
+-- -- Create function to prevent concurrent participation
+-- CREATE OR REPLACE FUNCTION prevent_concurrent_participation()
+-- RETURNS TRIGGER AS $$
+-- BEGIN
+--     -- Check if user is already in an active lobby
+--     -- Only exclude the current lobby if the trigger is on lobby_participants
+--     IF EXISTS (
+--         SELECT 1 FROM lobby_participants lp
+--         JOIN lobbies l ON lp.lobby_id = l.id
+--         WHERE lp.user_id = NEW.user_id
+--         AND l.status IN ('waiting', 'ready', 'starting')
+--         AND (TG_TABLE_NAME <> 'lobby_participants' OR lp.lobby_id <> NEW.lobby_id)
+--     ) THEN
+--         RAISE EXCEPTION 'User is already in an active lobby.';
+--     END IF;
+
+--     -- Check if user is already in an active match
+--     -- Only exclude the current match if the trigger is on match_participants
+--     IF EXISTS (
+--         SELECT 1 FROM match_participants mp
+--         JOIN matches m ON mp.match_id = m.id
+--         WHERE mp.user_id = NEW.user_id
+--         AND m.status IN ('in_progress', 'waiting')
+--         AND (TG_TABLE_NAME <> 'match_participants' OR mp.match_id <> NEW.match_id)
+--     ) THEN
+--         RAISE EXCEPTION 'User is already in an active match.';
+--     END IF;
+
+--     RETURN NEW;
+-- END;
+-- $$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION increment_matches_won(p_user_id INT)
+RETURNS VOID AS $$
 BEGIN
-    -- Check if user is already in an active lobby
-    IF EXISTS (
-        SELECT 1 FROM lobby_participants lp 
-        JOIN lobbies l ON lp.lobby_id = l.id 
-        WHERE lp.user_id = NEW.user_id 
-        AND l.status IN ('waiting', 'ready', 'starting')
-        AND (TG_TABLE_NAME != 'lobby_participants' OR lp.lobby_id != NEW.lobby_id)
-    ) THEN
-        RAISE EXCEPTION 'User is already in an active lobby';
-    END IF;
-    
-    -- Check if user is already in an active game
-    IF EXISTS (
-        SELECT 1 FROM game_participants gp 
-        JOIN games g ON gp.game_id = g.id 
-        WHERE gp.user_id = NEW.user_id 
-        AND g.status IN ('active', 'paused')
-        AND (TG_TABLE_NAME != 'game_participants' OR gp.game_id != NEW.game_id)
-    ) THEN
-        RAISE EXCEPTION 'User is already in an active game';
-    END IF;
-    
-    RETURN NEW;
+    UPDATE users
+    SET matches_won = matches_won + 1
+    WHERE id = p_user_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to increment matches_lost
+CREATE OR REPLACE FUNCTION increment_matches_lost(p_user_id INT)
+RETURNS VOID AS $$
+BEGIN
+    UPDATE users
+    SET matches_lost = matches_lost + 1
+    WHERE id = p_user_id;
 END;
 $$ LANGUAGE plpgsql;

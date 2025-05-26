@@ -17,6 +17,7 @@ import path from 'path';
 import {
     GameRouter
 } from './routers'
+import gameRouter from "./routers/GameRouter/GameRouter";
 
 
 // Config the env vars
@@ -35,9 +36,12 @@ app.use(express.json());
 
 
 /** Routes */
-const prefix = { get: (route: string) => `/api/${API_VERSION}/${route}`}; 
+const prefix = { 
+    get: (route: string) => `/api/${API_VERSION}/${route}`,
+    post: (route: string) => `/api/${API_VERSION}/${route}`
+}; 
 app.use(prefix.get('game'), GameRouter.default);
-
+app.use(prefix.post('game'), GameRouter.default)
 
 
 

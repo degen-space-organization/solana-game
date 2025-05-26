@@ -282,7 +282,6 @@ export type Database = {
       matches: {
         Row: {
           completed_at: string | null
-          created_at: string | null
           id: number
           lobby_id: number | null
           prize_distributed: boolean | null
@@ -296,7 +295,6 @@ export type Database = {
         }
         Insert: {
           completed_at?: string | null
-          created_at?: string | null
           id?: number
           lobby_id?: number | null
           prize_distributed?: boolean | null
@@ -310,7 +308,6 @@ export type Database = {
         }
         Update: {
           completed_at?: string | null
-          created_at?: string | null
           id?: number
           lobby_id?: number | null
           prize_distributed?: boolean | null
@@ -520,7 +517,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      increment_matches_lost: {
+        Args: { p_user_id: number }
+        Returns: undefined
+      }
+      increment_matches_won: {
+        Args: { p_user_id: number }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

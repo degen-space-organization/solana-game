@@ -38,13 +38,10 @@ export default class GameTimer {
                 console.error(`Failed to fetch round ${this.roundId}:`, error.message);
                 return;
             }
-
-            const matchId = data[0]?.id;
+                        
+            const matchId = data[0]?.match_id;
             const roundNumber = data[0]?.round_number;
             const roundProcessResult = await GameController.processRound(matchId, roundNumber);
-            
-            console.log("Data fetching", data);
-            console.log("Process round finished", roundProcessResult);
 
             if (!roundProcessResult.success) {
                 console.error(`Failed to update round ${this.roundId}:`, roundProcessResult.errorMessage || "Unknown error");

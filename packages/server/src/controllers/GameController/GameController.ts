@@ -498,6 +498,9 @@ export default class GameController {
                 .eq('match_id', matchId)
                 .eq('round_number', roundNumber)
                 .single();
+            
+            console.log('ProcessRound - Fetched game round:', gameRound);
+            console.log(gameRound);
 
             if (fetchError || !gameRound) {
                 console.error("Error fetching game round or round not found:", fetchError);

@@ -10,7 +10,6 @@ CREATE TABLE matches (
     prize_distributed BOOLEAN DEFAULT FALSE,
     started_at TIMESTAMP NULL,
     completed_at TIMESTAMP NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     
     -- Constraints
     CONSTRAINT matches_pkey PRIMARY KEY (id),
@@ -21,7 +20,6 @@ CREATE TABLE matches (
     CONSTRAINT matches_stake_amount_valid CHECK (stake_amount ~ '^[0-9]+$'),
     CONSTRAINT matches_total_prize_pool_valid CHECK (total_prize_pool ~ '^[0-9]+$'),
     CONSTRAINT matches_tournament_round_positive CHECK (tournament_round IS NULL OR tournament_round > 0),
-    CONSTRAINT matches_started_after_created CHECK (started_at IS NULL OR started_at >= created_at),
     CONSTRAINT matches_completed_after_started CHECK (completed_at IS NULL OR started_at IS NULL OR completed_at >= started_at),
     CONSTRAINT matches_winner_on_completion CHECK (
         (status = 'completed' AND winner_id IS NOT NULL) OR 

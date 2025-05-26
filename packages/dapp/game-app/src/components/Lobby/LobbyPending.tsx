@@ -17,140 +17,14 @@ import {
 import type { PendingLobby } from '../../types/lobby';
 import { database } from '@/supabase/Database';
 
-// Mock data for testing
-const MOCK_PENDING_LOBBIES: PendingLobby[] = [
-  {
-    id: 1,
-    name: "Lightning Round 1v1",
-    tournament_id: null,
-    status: 'waiting',
-    max_players: 2,
-    current_players: 1,
-    stake_amount: "500000000", // 0.5 SOL
-    created_by: 1,
-    created_at: new Date(Date.now() - 300000).toISOString(), // 5 min ago
-    disbanded_at: null,
-    stake_amount_sol: 0.5,
-    total_prize_pool_sol: 1.0,
-    is_tournament: false,
-    time_since_created: "5m ago",
-    tournament: null,
-    created_by_user: {
-      id: 1,
-      nickname: "SolanaGamer",
-      solana_address: "8Kq2GVcjFJHXzgXgz8Vc2sPBJ9Nh1mK5rL3nQ7wT4sA2",
-      matches_won: 15,
-      matches_lost: 3,
-      created_at: "",
-      updated_at: ""
-    }
-  },
-  {
-    id: 2,
-    name: null,
-    tournament_id: 1,
-    status: 'waiting',
-    max_players: 8,
-    current_players: 3,
-    stake_amount: "1000000000", // 1 SOL
-    created_by: 2,
-    created_at: new Date(Date.now() - 180000).toISOString(), // 3 min ago
-    disbanded_at: null,
-    stake_amount_sol: 1.0,
-    total_prize_pool_sol: 8.0,
-    is_tournament: true,
-    time_since_created: "3m ago",
-    tournament: {
-      id: 1,
-      name: "Weekend Warriors Tournament",
-      status: 'waiting',
-      max_players: 8,
-      current_players: 3,
-      prize_pool: "8000000000",
-      created_at: new Date(Date.now() - 180000).toISOString(),
-      started_at: null,
-      completed_at: null
-    },
-    created_by_user: {
-      id: 2,
-      nickname: null,
-      solana_address: "9Lr3HWdkGKIYzgYh9Wd3tqQCK0Oi2nL6sM4oR8xU5tB3",
-      matches_won: 8,
-      matches_lost: 12,
-      created_at: "",
-      updated_at: ""
-    }
-  },
-  {
-    id: 3,
-    name: "Quick Fire Duel",
-    tournament_id: null,
-    status: 'waiting',
-    max_players: 2,
-    current_players: 0,
-    stake_amount: "250000000", // 0.25 SOL
-    created_by: 3,
-    created_at: new Date(Date.now() - 120000).toISOString(), // 2 min ago
-    disbanded_at: null,
-    stake_amount_sol: 0.25,
-    total_prize_pool_sol: 0.5,
-    is_tournament: false,
-    time_since_created: "2m ago",
-    tournament: null,
-    created_by_user: {
-      id: 3,
-      nickname: "BlockchainBoss",
-      solana_address: "7Mn4IXekHLJZzgZi0Xe4urRDL1Pj3oM7tN5pS9yV6uC4",
-      matches_won: 22,
-      matches_lost: 7,
-      created_at: "",
-      updated_at: ""
-    }
-  },
-  {
-    id: 4,
-    name: null,
-    tournament_id: 2,
-    status: 'waiting',
-    max_players: 4,
-    current_players: 2,
-    stake_amount: "750000000", // 0.75 SOL
-    created_by: 4,
-    created_at: new Date(Date.now() - 600000).toISOString(), // 10 min ago
-    disbanded_at: null,
-    stake_amount_sol: 0.75,
-    total_prize_pool_sol: 3.0,
-    is_tournament: true,
-    time_since_created: "10m ago",
-    tournament: {
-      id: 2,
-      name: "High Stakes Mini Tournament",
-      status: 'waiting',
-      max_players: 4,
-      current_players: 2,
-      prize_pool: "3000000000",
-      created_at: new Date(Date.now() - 600000).toISOString(),
-      started_at: null,
-      completed_at: null
-    },
-    created_by_user: {
-      id: 4,
-      nickname: "DefiDragon",
-      solana_address: "6Kp5JYflIMLAzg0j1Yf5vsSDM2Qk4pN8uO6qT0zW7vD5",
-      matches_won: 45,
-      matches_lost: 12,
-      created_at: "",
-      updated_at: ""
-    }
-  }
-];
-
 interface LobbyCardProps {
   lobby: PendingLobby;
   onJoin: (lobbyId: number) => void;
 }
 
 const LobbyCard: React.FC<LobbyCardProps> = ({ lobby, onJoin }) => {
+
+
   const getDisplayName = (user: any) => {
     if (!user) return 'Unknown';
     return user.nickname || `${user.solana_address.slice(0, 4)}...${user.solana_address.slice(-4)}`;
@@ -354,6 +228,8 @@ const LobbyCard: React.FC<LobbyCardProps> = ({ lobby, onJoin }) => {
   );
 };
 
+
+
 interface LobbyPendingProps {
   onJoinLobby?: (lobbyId: number) => void;
   useMockData?: boolean;
@@ -379,11 +255,12 @@ const LobbyPending: React.FC<LobbyPendingProps> = ({
 
 
   React.useEffect(() => {
-    if (useMockData) {
-      setLobbies(MOCK_PENDING_LOBBIES);
-    } else {
+    // if (useMockData) {
+    //   setLobbies(MOCK_PENDING_LOBBIES);
+    // } else {
+    //   fetchLobies();
+    // }
       fetchLobies();
-    }
   }, [useMockData]);
 
   const handleJoinLobby = (lobbyId: number) => {

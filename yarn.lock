@@ -12406,6 +12406,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "server@workspace:packages/server"
   dependencies:
+    "@solana/web3.js": "npm:^1.98.2"
     "@supabase/supabase-js": "npm:^2.49.8"
     "@types/body-parser": "npm:^1.19.5"
     "@types/cors": "npm:^2.8.18"

@@ -5,6 +5,8 @@ CREATE TABLE tournament_participants (
     joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     eliminated_at TIMESTAMP NULL,
     final_position INTEGER NULL, -- 1st, 2nd, 3rd, etc.
+    is_ready BOOLEAN,
+    has_staked BOOLEAN,
     
     -- Constraints
     CONSTRAINT tournament_participants_pkey PRIMARY KEY (id),

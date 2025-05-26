@@ -955,4 +955,51 @@ export default class GameController {
             res.status(500).json({ error: "Internal Server Error." });
         }
     }
+
+    static async joinTournament(req: Request, res: Response) {
+        try {
+            const { tournament_id, user_id } = req.body;
+
+            if (!tournament_id || !user_id) {
+                return res.status(400).json({ error: "Missing required fields: tournament_id, user_id." });
+            }
+
+            const { success, errorMessage } = await GameController.addTournamentParticipant(tournament_id, user_id);
+
+            if (!success) {
+                return res.status(400).json({ error: errorMessage });
+            }
+
+            res.status(200).json({ message: "Joined tournament successfully." });
+
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ error: "Internal Server Error." });
+        }
+    }
+
+    static async listTournaments(req: Request, res: Response) {
+        try {
+            const { status } = req.query; // Optional filter by status
+
+            let query = dbClient.from('tournaments').select('*');
+
+            if (status && typeof status === 'string') {
+                query = query.eq('status', status);
+            }
+
+            const { data: tournaments, error } = await query.order('created_at', { ascending: false });
+
+            if (error) {
+                console.error("Error listing tournaments:", error);
+                return res.status(500).json({ error: "Failed to retrieve tournaments." });
+            }
+
+            res.status(200).json({ tournaments: tournaments });
+
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ error: "Internal Server Error." });
+        }
+    }
 }

@@ -190,6 +190,8 @@ export default class GameController {
     private static async createGameRound(matchId: number, roundNumber: number): Promise<{ success: boolean, gameRoundId?: number, errorMessage?: string }> {
         console.log(`Attempting to create round ${roundNumber} for match ${matchId}`);
         try {
+
+
             // Check if the round already exists
             const { data: existingRound, error: existingRoundError } = await dbClient
                 .from('game_rounds')

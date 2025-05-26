@@ -801,4 +801,158 @@ export default class GameController {
             return { success: false, errorMessage: "Internal Server Error." };
         }
     }
+
+
+    //Tourney stuff
+
+    static async addTournamentParticipant(tournamentId: number, userId: number): Promise<{ success: boolean, errorMessage?: string }> {
+        try {
+            // Check if tournament exists and is in 'waiting' status and not full
+            const { data: tournament, error: tournamentError } = await dbClient
+                .from('tournaments')
+                .select('id, status, current_players, max_players')
+                .eq('id', tournamentId)
+                .single();
+
+            if (tournamentError || !tournament) {
+                return { success: false, errorMessage: "Tournament not found." };
+            }
+            if (tournament.status !== 'waiting') {
+                return { success: false, errorMessage: "Tournament is not in 'waiting' status and cannot be joined." };
+            }
+            if (tournament.current_players! >= tournament.max_players!) {
+                return { success: false, errorMessage: "Tournament is full." };
+            }
+
+            // Check if user is already in this tournament
+            const { data: existingParticipant, error: existingParticipantError } = await dbClient
+                .from('tournament_participants')
+                .select('id')
+                .eq('tournament_id', tournamentId)
+                .eq('user_id', userId)
+                .single();
+
+            if (existingParticipant) {
+                return { success: false, errorMessage: "User is already a participant in this tournament." };
+            }
+            if (existingParticipantError && existingParticipantError.code !== 'PGRST116') { // PGRST116 = no rows found
+                console.error("Error checking existing tournament participant:", existingParticipantError);
+                return { success: false, errorMessage: "Database error checking participant." };
+            }
+
+            // Add participant
+            const participantData: TablesInsert<'tournament_participants'> = {
+                tournament_id: tournamentId,
+                user_id: userId,
+                joined_at: new Date().toISOString(),
+                is_ready: false, // Assuming 'is_ready' might be a future field
+                has_staked: false, // Assuming 'has_staked' might be a future field
+            };
+
+            const { error: insertError } = await dbClient
+                .from('tournament_participants')
+                .insert([participantData]);
+
+            if (insertError) {
+                console.error("Error inserting tournament participant:", insertError);
+                return { success: false, errorMessage: "Failed to add tournament participant." };
+            }
+
+            // Update current_players count in tournaments table
+            const { error: updateError } = await dbClient
+                .from('tournaments')
+                .update({ current_players: tournament.current_players! + 1 })
+                .eq('id', tournamentId);
+
+            if (updateError) {
+                console.error("Error updating tournament player count:", updateError);
+                // Consider rolling back participant insertion if this fails
+                return { success: false, errorMessage: "Failed to update tournament player count." };
+            }
+
+            return { success: true };
+
+        } catch (error) {
+            console.error("addTournamentParticipant error:", error);
+            return { success: false, errorMessage: "Internal Server Error." };
+        }
+    }
+
+    static async createTournament(req: Request, res: Response) {
+        try {
+            // Updated: Removed prize_pool from destructuring, added stake_amount
+            const { name, created_by, max_players, stake_amount } = req.body;
+
+            // Updated: Validate required fields based on new input
+            if (!name || !created_by || !max_players || !stake_amount) {
+                return res.status(400).json({ error: "Missing required tournament fields: name, created_by, max_players, stake_amount." });
+            }
+
+            // Updated: Validate max_players to be strictly 4 or 8
+            const allowedMaxPlayers = [4, 8];
+            if (!allowedMaxPlayers.includes(max_players)) {
+                return res.status(400).json({ error: `Invalid max_players. Must be either ${allowedMaxPlayers.join(' or ')}.` });
+            }
+
+            // Validate stake_amount against allowed values (from lobby_migration.sql or similar standard)
+            const allowedStakes = ['250000000', '500000000', '750000000', '1000000000'];
+            if (!allowedStakes.includes(stake_amount.toString())) {
+                return res.status(400).json({ error: `Invalid stake amount. Allowed values: ${allowedStakes.join(', ')}` });
+            }
+
+            // Calculate prize_pool based on stake_amount and max_players
+            const calculatedPrizePool = (parseInt(stake_amount) * max_players).toString();
+
+            // Check if the user is already in an active tournament
+            const { data: existingTournamentParticipant, error: participantError } = await dbClient
+                .from('tournament_participants')
+                .select('id')
+                .eq('user_id', created_by)
+                .is('eliminated_at', null) // Not yet eliminated
+                .limit(1);
+
+            if (existingTournamentParticipant && existingTournamentParticipant.length > 0) {
+                return res.status(409).json({ error: "User is already participating in another active tournament." });
+            }
+
+            const tournamentData: TablesInsert<'tournaments'> = {
+                name: name,
+                created_by: created_by,
+                max_players: max_players,
+                // Updated: Use the calculated prize_pool
+                prize_pool: calculatedPrizePool,
+                current_players: 0, // Initialize with 0, creator will join explicitly
+                status: 'waiting',
+            };
+
+            const { data, error } = await dbClient
+                .from('tournaments')
+                .insert([tournamentData])
+                .select()
+                .single();
+
+            if (error) {
+                console.error("Error creating tournament:", error);
+                return res.status(500).json({ error: "Failed to create tournament." });
+            }
+
+            // Automatically add the creator as a participant
+            const { success: participantAdded, errorMessage: participantAddError } = await GameController.addTournamentParticipant(data.id, created_by);
+
+            if (!participantAdded) {
+                console.error("Error adding creator to tournament participants:", participantAddError);
+                await dbClient.from('tournaments').delete().eq('id', data.id); // Rollback tournament creation
+                return res.status(500).json({ error: `Failed to add creator to tournament: ${participantAddError}` });
+            }
+
+            res.status(201).json({
+                message: "Tournament created successfully",
+                tournament: data
+            });
+
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ error: "Internal Server Error." });
+        }
+    }
 }

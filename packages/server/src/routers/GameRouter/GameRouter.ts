@@ -17,6 +17,9 @@ gameRouter.post('/join-lobby', GameController.joinLobby as RequestHandler);
 gameRouter.post('/start-match', GameController.startMatch as RequestHandler);
 gameRouter.post('/submit-move', GameController.submitMove as unknown as RequestHandler);
 
+gameRouter.post('/create-tournament', GameController.createTournament as unknown as RequestHandler);
+
+
 
 
 

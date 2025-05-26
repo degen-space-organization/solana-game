@@ -408,7 +408,9 @@ export type Database = {
         Row: {
           eliminated_at: string | null
           final_position: number | null
+          has_staked: boolean | null
           id: number
+          is_ready: boolean | null
           joined_at: string | null
           tournament_id: number
           user_id: number
@@ -416,7 +418,9 @@ export type Database = {
         Insert: {
           eliminated_at?: string | null
           final_position?: number | null
+          has_staked?: boolean | null
           id?: number
+          is_ready?: boolean | null
           joined_at?: string | null
           tournament_id: number
           user_id: number
@@ -424,7 +428,9 @@ export type Database = {
         Update: {
           eliminated_at?: string | null
           final_position?: number | null
+          has_staked?: boolean | null
           id?: number
+          is_ready?: boolean | null
           joined_at?: string | null
           tournament_id?: number
           user_id?: number
@@ -450,6 +456,7 @@ export type Database = {
         Row: {
           completed_at: string | null
           created_at: string | null
+          created_by: number
           current_players: number | null
           id: number
           max_players: number | null
@@ -461,6 +468,7 @@ export type Database = {
         Insert: {
           completed_at?: string | null
           created_at?: string | null
+          created_by: number
           current_players?: number | null
           id?: number
           max_players?: number | null
@@ -472,6 +480,7 @@ export type Database = {
         Update: {
           completed_at?: string | null
           created_at?: string | null
+          created_by?: number
           current_players?: number | null
           id?: number
           max_players?: number | null
@@ -480,7 +489,15 @@ export type Database = {
           started_at?: string | null
           status?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tournaments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       users: {
         Row: {

@@ -19,6 +19,7 @@ import {
 } from './routers'
 import gameRouter from "./routers/GameRouter/GameRouter";
 
+import { startWatchingGameRounds } from "./controllers/GameController/GameWatcher";
 
 // Config the env vars
 config({ 
@@ -59,4 +60,6 @@ app.listen(PORT, () => {
     console.error('==========================');
 })
 
+// This goes on and on and on
+startWatchingGameRounds();
 

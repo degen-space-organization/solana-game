@@ -448,33 +448,38 @@ export default class GameController {
             if (updateError) {
                 console.error("Error submitting move:", updateError);
                 return res.status(500).json({ error: "Failed to submit move." });
-            }
-
-            // After a move is submitted, check if both players have made a move for the round.
-            // If so, trigger the round processing function.
-            const { data: updatedRound, error: checkError } = await dbClient
-                .from('game_rounds')
-                .select('player1_move, player2_move')
-                .eq('id', gameRound.id)
-                .single();
-
-            if (checkError) {
-                console.error("Error re-fetching round after move submission:", checkError);
-                // Continue, as the move was likely saved, but logging is important.
-            }
-
-            if (updatedRound?.player1_move && updatedRound?.player2_move) {
-                // Both players have made a move, process the round immediately
-                console.log(`Both players made moves for match ${match_id}, round ${round_number}. Processing round...`);
-                const { success, errorMessage } = await GameController.processRound(match_id, round_number);
-                if (!success) {
-                    console.error(`Failed to process round ${round_number} for match ${match_id}: ${errorMessage}`);
-                    return res.status(500).json({ message: "Move submitted, but round processing failed.", error: errorMessage });
-                }
-                res.status(200).json({ message: "Move submitted successfully and round processed." });
             } else {
-                res.status(200).json({ message: "Move submitted successfully. Waiting for opponent." });
+                console.log(`Move submitted successfully for match ${match_id}, round ${round_number} by user ${user_id}.`);
+                // TODO - luka addded this
+                res.status(200).json({ message: "Move submitted successfully." });
             }
+
+            // TODO - luka commented this out
+            // // After a move is submitted, check if both players have made a move for the round.
+            // // If so, trigger the round processing function.
+            // const { data: updatedRound, error: checkError } = await dbClient
+            //     .from('game_rounds')
+            //     .select('player1_move, player2_move')
+            //     .eq('id', gameRound.id)
+            //     .single();
+
+            // if (checkError) {
+            //     console.error("Error re-fetching round after move submission:", checkError);
+            //     // Continue, as the move was likely saved, but logging is important.
+            // }
+
+            // if (updatedRound?.player1_move && updatedRound?.player2_move) {
+            //     // Both players have made a move, process the round immediately
+            //     console.log(`Both players made moves for match ${match_id}, round ${round_number}. Processing round...`);
+            //     const { success, errorMessage } = await GameController.processRound(match_id, round_number);
+            //     if (!success) {
+            //         console.error(`Failed to process round ${round_number} for match ${match_id}: ${errorMessage}`);
+            //         return res.status(500).json({ message: "Move submitted, but round processing failed.", error: errorMessage });
+            //     }
+            //     res.status(200).json({ message: "Move submitted successfully and round processed." });
+            // } else {
+            //     res.status(200).json({ message: "Move submitted successfully. Waiting for opponent." });
+            // }
 
         } catch (error) {
             console.error("submitMove error:", error);
@@ -533,10 +538,9 @@ export default class GameController {
                 console.log(`Player 2 failed to move, Player 1 (User ID: ${player1UserId}) wins round ${roundNumber}.`);
             } else if (!player1Move && !player2Move) {
                 // Both failed to move. In a best of 5, this might count as a 'lost' round for both
-                // or simply be a 'no winner' round. For now, we'll say no winner, effectively a 'tie'
-                // in terms of points for the match, but still marking the round as completed.
-                console.log(`Both players failed to move for round ${roundNumber}. It's a tie for this round.`);
-                roundWinnerId = null; // No winner for this round
+                // in this case player1 is a winner
+                roundWinnerId = player1UserId; // Player 1 wins by default if both fail to move
+                console.log(`Both players failed to move, Player 1 (User ID: ${player1UserId}) wins round ${roundNumber} by default.`);
             } else {
                 // Both players made a move, determine winner based on RPS rules
                 // 'rock' > 'scissors', 'scissors' > 'paper', 'paper' > 'rock'

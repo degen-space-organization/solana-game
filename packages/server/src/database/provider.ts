@@ -13,7 +13,7 @@ config({path: `${path.join(__dirname, "../../.env")}`});
 
 
 const supabaseUrl: string = process.env.SUPABASE_URL || "default_url";
-const supabaseAnonKey: string = process.env.SUPABASE_KEY || "default_key";
+const supabaseAnonKey: string = process.env.SUPABASE_ANON_KEY || "default_key";
 
 
 /** Check if they exist */

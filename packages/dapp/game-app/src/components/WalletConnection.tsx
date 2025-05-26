@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Wallet, ExternalLink, Copy, RefreshCw } from 'lucide-react';
-
+import { Box, Button, Flex, VStack, Text, Card, Heading, HStack } from "@chakra-ui/react";
+import { database } from '@/supabase/Database';
 // TypeScript interfaces for Phantom wallet
 interface PhantomWalletEvents {
   connect(publicKey: PublicKey): void;
@@ -53,6 +54,9 @@ const SolanaWeb3App: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [initializing, setInitializing] = useState<boolean>(true);
 
+  const [currentUserDb, setCurrentUserDb] = useState<any>(null); // You might want to define a more specific User type
+
+
   // Check if Phantom wallet is installed
   const getProvider = (): PhantomWallet | null => {
     if ('solana' in window) {
@@ -76,15 +80,18 @@ const SolanaWeb3App: React.FC = () => {
       setLoading(true);
       const response = await provider.connect();
       const pubKeyString = response.publicKey.toString();
-      
+
       setWallet(provider);
       setPublicKey(pubKeyString);
       setConnected(true);
-      
+
       // Clear any previous explicit disconnect flag since user is connecting again
       localStorage.removeItem('walletExplicitlyDisconnected');
-      
+
       await getBalance(pubKeyString);
+      const userData = await database.users.createUser(pubKeyString);
+      setCurrentUserDb(userData || null); // Assuming upsertUser returns an array of data
+
     } catch (error) {
       console.error('Connection failed:', error);
       alert('Failed to connect wallet');
@@ -102,7 +109,7 @@ const SolanaWeb3App: React.FC = () => {
         setConnected(false);
         setPublicKey(null);
         setBalance(null);
-        
+
         // Mark that user explicitly disconnected to prevent auto-reconnection
         localStorage.setItem('walletExplicitlyDisconnected', 'true');
       } catch (error) {
@@ -113,29 +120,16 @@ const SolanaWeb3App: React.FC = () => {
 
   // Get SOL balance
   const getBalance = async (pubKey: string): Promise<void> => {
-    try {
-      const response = await fetch('https://api.mainnet-beta.solana.com', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          id: 1,
-          method: 'getBalance',
-          params: [pubKey]
-        })
-      });
-      
-      const data: SolanaRPCResponse = await response.json();
-      if (data.result) {
-        const solBalance = data.result.value / 1000000000; // Convert lamports to SOL
-        setBalance(solBalance.toFixed(4));
-      }
-    } catch (error) {
-      console.error('Failed to get balance:', error);
-    }
-  };
+  try {
+    const response = await fetch(`http://localhost:3001/get-balance/${pubKey}`);
+    const data = await response.json();
+    console.log(data.balance)
+    setBalance(data.balance.toFixed(4));
+    
+  } catch (error) {
+    console.error('Error fetching balance from backend:', error);
+  }
+};
 
   // Refresh balance
   const refreshBalance = async (): Promise<void> => {
@@ -178,7 +172,7 @@ const SolanaWeb3App: React.FC = () => {
         // Try to connect silently using the wallet's built-in persistence
         // This respects the user's previous connection choice stored by Phantom
         const response = await provider.connect({ onlyIfTrusted: true });
-        
+
         if (response.publicKey) {
           const pubKeyString = response.publicKey.toString();
           setWallet(provider);
@@ -236,136 +230,329 @@ const SolanaWeb3App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
-      <div className="container mx-auto px-4 py-8">
+    <Box className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900">
+      <Box className="container mx-auto px-4 py-8">
         {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-5xl font-bold text-white mb-4 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+        <Box className="text-center mb-12">
+          <Heading as="h1" size="2xl" fontWeight="black" color="white" mb="4"
+            bgGradient="linear(to-r, purple.400, pink.400)" bgClip="text"
+            textShadow="4px 4px 0px rgba(0,0,0,0.4)"
+          >
             Solana Web3 DApp
-          </h1>
-          <p className="text-xl text-gray-300">
+          </Heading>
+          <Text fontSize="xl" color="gray.300">
             Connect your Phantom wallet to interact with the Solana blockchain
-          </p>
-        </div>
+          </Text>
+        </Box>
 
         {/* Main Content */}
-        <div className="max-w-2xl mx-auto">
+        <Box maxWidth="2xl" mx="auto">
           {initializing ? (
             /* Loading State */
-            <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-8 text-center">
-              <div className="w-24 h-24 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-6">
-                <RefreshCw className="w-12 h-12 text-white animate-spin" />
-              </div>
-              <h2 className="text-3xl font-bold text-white mb-4">Initializing...</h2>
-              <p className="text-gray-300">
+            <Card.Root
+              borderWidth="4px"
+              borderStyle="solid"
+              borderColor="gray.900"
+              bg="white"
+              shadow="8px 8px 0px rgba(0,0,0,0.8)"
+              borderRadius="0"
+              transform="rotate(-0.5deg)"
+              transition="all 0.2s ease"
+              position="relative"
+              p="8"
+              textAlign="center"
+              display="flex"
+              flexDirection="column"
+              alignItems="center"
+            >
+              <Box
+                w="24"
+                h="24"
+                bgGradient="linear(to-br, purple.500, pink.500)"
+                borderRadius="0"
+                border="4px solid"
+                borderColor="gray.900"
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+                mx="auto"
+                mb="6"
+                shadow="4px 4px 0px rgba(0,0,0,0.8)"
+              >
+                <RefreshCw size={48} color="white" className="animate-spin" />
+              </Box>
+              <Heading size="lg" fontWeight="black" color="gray.900" mb="4">Initializing...</Heading>
+              <Text color="gray.600">
                 Checking for existing wallet connection
-              </p>
-            </div>
+              </Text>
+            </Card.Root>
           ) : !connected ? (
             /* Connection Card */
-            <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-8 text-center">
-              <div className="w-24 h-24 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Wallet className="w-12 h-12 text-white" />
-              </div>
-              <h2 className="text-3xl font-bold text-white mb-4">Connect Your Wallet</h2>
-              <p className="text-gray-300 mb-8">
+            <Card.Root
+              borderWidth="4px"
+              borderStyle="solid"
+              borderColor="gray.900"
+              bg="white"
+              shadow="8px 8px 0px rgba(0,0,0,0.8)"
+              borderRadius="0"
+              transform="rotate(-0.5deg)"
+              _hover={{
+                transform: "rotate(0deg) scale(1.02)",
+                shadow: "12px 12px 0px rgba(0,0,0,0.8)",
+              }}
+              transition="all 0.2s ease"
+              position="relative"
+              p="8"
+              textAlign="center"
+              display="flex"
+              flexDirection="column"
+              alignItems="center"
+            >
+              <Box
+                w="24"
+                h="24"
+                bgGradient="linear(to-br, purple.500, pink.500)"
+                borderRadius="0"
+                border="4px solid"
+                borderColor="gray.900"
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+                mx="auto"
+                mb="6"
+                shadow="4px 4px 0px rgba(0,0,0,0.8)"
+              >
+                <Wallet size={48} color="white" />
+              </Box>
+              <Heading size="lg" fontWeight="black" color="gray.900" mb="4">Connect Your Wallet</Heading>
+              <Text color="gray.600" mb="8">
                 Connect your Phantom wallet to start using this decentralized application
-              </p>
-              <button
+              </Text>
+              <Button
                 onClick={connectWallet}
                 disabled={loading}
-                className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3 mx-auto"
+                bgGradient="linear(to-r, purple.600, pink.600)"
+                color="white"
+                fontWeight="black"
+                fontSize="xl"
+                py="4"
+                px="8"
+                borderRadius="0"
+                border="4px solid"
+                borderColor="gray.900"
+                shadow="6px 6px 0px rgba(0,0,0,0.8)"
+                _hover={!loading ? {
+                  bgGradient: "linear(to-r, purple.700, pink.700)",
+                  transform: "translate(-3px, -3px)",
+                  shadow: "9px 9px 0px rgba(0,0,0,0.8)",
+                } : {}}
+                _active={!loading ? {
+                  transform: "translate(0px, 0px)",
+                  shadow: "3px 3px 0px rgba(0,0,0,0.8)",
+                } : {}}
+                transition="all 0.1s ease"
+                display="flex"
+                alignItems="center"
+                gap="3"
+                mx="auto"
               >
                 {loading ? (
                   <>
-                    <RefreshCw className="w-5 h-5 animate-spin" />
+                    <RefreshCw size={20} className="animate-spin" />
                     Connecting...
                   </>
                 ) : (
                   <>
-                    <Wallet className="w-5 h-5" />
+                    <Wallet size={20} />
                     Connect Phantom Wallet
                   </>
                 )}
-              </button>
-            </div>
+              </Button>
+            </Card.Root>
           ) : (
             /* Wallet Dashboard */
-            <div className="space-y-6">
+            <VStack padding="6">
               {/* Wallet Info Card */}
-              <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-bold text-white">Wallet Connected</h2>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={refreshBalance}
-                      disabled={loading}
-                      className="p-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50"
-                    >
-                      <RefreshCw className={`w-4 h-4 text-white ${loading ? 'animate-spin' : ''}`} />
-                    </button>
-                    <button
-                      onClick={disconnectWallet}
-                      className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
-                    >
-                      Disconnect
-                    </button>
-                  </div>
-                </div>
+              <Card.Root
+                borderWidth="4px"
+                borderStyle="solid"
+                borderColor="gray.900"
+                bg="white"
+                shadow="8px 8px 0px rgba(0,0,0,0.8)"
+                borderRadius="0"
+                transform="rotate(-0.5deg)"
+                _hover={{
+                  transform: "rotate(0deg) scale(1.02)",
+                  shadow: "12px 12px 0px rgba(0,0,0,0.8)",
+                }}
+                transition="all 0.2s ease"
+                position="relative"
+                p="6"
+              >
+                <Card.Body p="0">
+                  <Flex justify="space-between" align="flex-start" mb="6">
+                    <Heading size="md" fontWeight="black" color="gray.900">Wallet Connected</Heading>
+                    <HStack padding="2">
+                      <Button
+                        onClick={refreshBalance}
+                        disabled={loading}
+                        bg="#118AB2"
+                        color="white"
+                        fontWeight="black"
+                        fontSize="sm"
+                        px="3"
+                        py="2"
+                        borderRadius="0"
+                        border="2px solid"
+                        borderColor="gray.900"
+                        shadow="3px 3px 0px rgba(0,0,0,0.8)"
+                        _hover={!loading ? {
+                          bg: "#0E7FA1",
+                          transform: "translate(-1px, -1px)",
+                          shadow: "4px 4px 0px rgba(0,0,0,0.8)",
+                        } : {}}
+                        _active={!loading ? {
+                          transform: "translate(0px, 0px)",
+                          shadow: "1px 1px 0px rgba(0,0,0,0.8)",
+                        } : {}}
+                        transition="all 0.1s ease"
+                      >
+                        <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+                      </Button>
+                      <Button
+                        onClick={disconnectWallet}
+                        bg="#DC143C"
+                        color="white"
+                        fontWeight="black"
+                        fontSize="sm"
+                        px="3"
+                        py="2"
+                        borderRadius="0"
+                        border="2px solid"
+                        borderColor="gray.900"
+                        shadow="3px 3px 0px rgba(0,0,0,0.8)"
+                        _hover={{
+                          bg: "#B01030",
+                          transform: "translate(-1px, -1px)",
+                          shadow: "4px 4px 0px rgba(0,0,0,0.8)",
+                        }}
+                        _active={{
+                          transform: "translate(0px, 0px)",
+                          shadow: "1px 1px 0px rgba(0,0,0,0.8)",
+                        }}
+                        transition="all 0.1s ease"
+                      >
+                        Disconnect
+                      </Button>
+                    </HStack>
+                  </Flex>
 
-                {/* Public Key */}
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Public Key
-                  </label>
-                  <div className="flex items-center gap-2 p-3 bg-black/20 rounded-lg">
-                    <span className="text-white font-mono text-sm flex-1">
-                      {formatPublicKey(publicKey)}
-                    </span>
-                    <button
-                      onClick={copyPublicKey}
-                      className="p-1 hover:bg-white/10 rounded transition-colors"
+                  {/* Public Key */}
+                  <Box mb="4">
+                    <Text fontSize="xs" fontWeight="bold" color="gray.700" mb="2">
+                      PUBLIC KEY
+                    </Text>
+                    <Flex
+                      align="center"
+                      gap="2"
+                      p="3"
+                      bg="gray.100"
+                      borderRadius="0"
+                      border="3px solid"
+                      borderColor="gray.900"
+                      shadow="3px 3px 0px rgba(0,0,0,0.8)"
                     >
-                      <Copy className="w-4 h-4 text-gray-300" />
-                    </button>
-                    <a
-                      href={`https://solscan.io/account/${publicKey}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-1 hover:bg-white/10 rounded transition-colors"
+                      <Text color="gray.900" fontFamily="mono" fontSize="sm" flex="1">
+                        {formatPublicKey(publicKey)}
+                      </Text>
+                      <Button
+                        onClick={copyPublicKey}
+                        bg="transparent"
+                        _hover={{ bg: "gray.200" }}
+                        _active={{ bg: "gray.300" }}
+                        p="1"
+                        borderRadius="0"
+                        border="2px solid"
+                        borderColor="gray.900"
+                        shadow="2px 2px 0px rgba(0,0,0,0.8)"
+                      >
+                        <Copy size={16} color="gray.700" />
+                      </Button>
+                      <Button
+                        as="a"
+                        // href={`https://solscan.io/account/${publicKey}`}
+                        // target="_blank"
+                        rel="noopener noreferrer"
+                        bg="transparent"
+                        _hover={{ bg: "gray.200" }}
+                        _active={{ bg: "gray.300" }}
+                        p="1"
+                        borderRadius="0"
+                        border="2px solid"
+                        borderColor="gray.900"
+                        shadow="2px 2px 0px rgba(0,0,0,0.8)"
+                      >
+                        <ExternalLink size={16} color="gray.700" />
+                      </Button>
+                    </Flex>
+                  </Box>
+
+                  {/* Balance */}
+                  <Box>
+                    <Text fontSize="xs" fontWeight="bold" color="gray.700" mb="2">
+                      SOL BALANCE
+                    </Text>
+                    <Box
+                      p="3"
+                      bg="yellow.100"
+                      borderRadius="0"
+                      border="3px solid"
+                      borderColor="yellow.600"
+                      shadow="3px 3px 0px rgba(0,0,0,0.8)"
                     >
-                      <ExternalLink className="w-4 h-4 text-gray-300" />
-                    </a>
-                  </div>
-                </div>
+                      <Text fontSize="2xl" fontWeight="black" color="yellow.900">
+                        {balance !== null ? `${balance} SOL` : 'Loading...'}
+                      </Text>
+                    </Box>
+                  </Box>
+                </Card.Body>
+              </Card.Root>
 
-                {/* Balance */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    SOL Balance
-                  </label>
-                  <div className="p-3 bg-black/20 rounded-lg">
-                    <span className="text-2xl font-bold text-white">
-                      {balance !== null ? `${balance} SOL` : 'Loading...'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Actions Card */}
-              <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-6">
-                
-              </div>
-            </div>
+              {/* Actions Card - Placeholder, keep as is */}
+              <Card.Root
+                borderWidth="4px"
+                borderStyle="solid"
+                borderColor="gray.900"
+                bg="white"
+                shadow="8px 8px 0px rgba(0,0,0,0.8)"
+                borderRadius="0"
+                transform="rotate(-0.5deg)"
+                _hover={{
+                  transform: "rotate(0deg) scale(1.02)",
+                  shadow: "12px 12px 0px rgba(0,0,0,0.8)",
+                }}
+                transition="all 0.2s ease"
+                position="relative"
+                p="6"
+              >
+                <Card.Body p="0">
+                  {/* Content for actions can go here */}
+                  <Heading size="md" fontWeight="black" color="gray.900">Wallet Actions</Heading>
+                  <Text color="gray.600" mt="2">
+                    Future actions will be displayed here.
+                  </Text>
+                </Card.Body>
+              </Card.Root>
+            </VStack>
           )}
-        </div>
+        </Box>
 
         {/* Footer */}
-        <div className="text-center mt-12 text-gray-400">
-          <p className="text-sm mt-2">Make sure you have Phantom wallet installed</p>
-        </div>
-      </div>
-    </div>
+        <Box className="text-center mt-12 text-gray-400">
+          <Text fontSize="sm" mt="2" color="gray.500">Make sure you have Phantom wallet installed</Text>
+        </Box>
+      </Box>
+    </Box>
   );
 };
 

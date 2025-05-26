@@ -17,7 +17,9 @@ import path from 'path';
 import {
     GameRouter
 } from './routers'
+import gameRouter from "./routers/GameRouter/GameRouter";
 
+import { startWatchingGameRounds } from "./controllers/GameController/GameWatcher";
 
 // Config the env vars
 config({ 
@@ -35,9 +37,12 @@ app.use(express.json());
 
 
 /** Routes */
-const prefix = { get: (route: string) => `/api/${API_VERSION}/${route}`}; 
+const prefix = { 
+    get: (route: string) => `/api/${API_VERSION}/${route}`,
+    post: (route: string) => `/api/${API_VERSION}/${route}`
+}; 
 app.use(prefix.get('game'), GameRouter.default);
-
+app.use(prefix.post('game'), GameRouter.default)
 
 
 
@@ -55,4 +60,6 @@ app.listen(PORT, () => {
     console.error('==========================');
 })
 
+// This goes on and on and on
+startWatchingGameRounds();
 

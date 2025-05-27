@@ -605,7 +605,7 @@ function App() {
                         {isCreateLobbyModalOpen ? (
                           <CreateLobbyModal
                             isOpen={isCreateLobbyModalOpen}
-                            onClose={closeCreateLobbyModal}
+                            onClose={() => setIsCreateLobbyModalOpen(false)}
                             onLobbyCreated={handleLobbyCreated}
                             // currentUser={currentUserFromHeader} // Pass current user to modal
                           />

@@ -10,15 +10,18 @@ import { WalletContextProvider } from './web3/provider.tsx'
 import App from './App.tsx'
 
 import './index.css'
+import { BrowserRouter } from 'react-router-dom'
 
 
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <Provider defaultTheme='light' attribute='class'>
-      <WalletContextProvider>
-        <App />
-      </WalletContextProvider>
-    </Provider>
+    <BrowserRouter>
+      <Provider defaultTheme='light' attribute='class'>
+        <WalletContextProvider>
+          <App />
+        </WalletContextProvider>
+      </Provider>
+    </BrowserRouter>
   </StrictMode>,
 )

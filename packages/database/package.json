@@ -5,6 +5,7 @@
     "supabase": "2.23.4"
   },
   "scripts": {
-    "typegen": "./scripts/typegen-local.sh"
+    "typegen": "./scripts/typegen-local.sh",
+    "migrations": "./scripts/dump-migrations.sh"
   }
 }

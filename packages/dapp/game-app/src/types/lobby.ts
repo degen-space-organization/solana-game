@@ -59,3 +59,24 @@ export interface PendingLobby extends LobbyWithDetails {
   is_tournament: boolean;
   time_since_created: string;
 }
+
+export type ActiveLobbyDetails = {
+  id: number;
+  name: string | null;
+  created_by: number;
+  created_by_user_name: string | null; // From join
+  stake_amount: string;
+  stake_amount_sol: number;
+  max_players: number;
+  current_players: number;
+  status: 'waiting' | 'in_game' | 'completed' | 'cancelled';
+  type: '1v1' | 'tournament';
+  total_prize_pool_sol?: number;
+  // Array of participants with their user details
+  participants: {
+    user_id: number;
+    username: string; // Assuming this comes from a join on lobby_participants -> users
+    is_ready: boolean;
+    has_staked: boolean;
+  }[];
+};

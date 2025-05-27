@@ -708,50 +708,6 @@ export default class GameController {
                 matchWinnerId = player2Id;
                 matchStatus = 'completed';
             } 
-            // else if (gameRounds.length === 5 && player1Wins < 3 && player2Wins < 3) {
-                // // All 5 rounds played and no one reached 3 wins (e.g., 2-2 tie after 5 rounds, implies one round was a tie).
-                // // This means the logic might need to handle a specific tie-breaker or declare a draw.
-                // // For now, let's assume the current 'winner_id' for the 5th round correctly determines a winner or a final draw.
-                // // If it's 2-2, and the 5th round was a tie, then it's a draw, and we might need to decide on a winner arbitrarily or refund.
-                // // The current setup expects a clear winner for a match status of 'completed'.
-                // // If 5 rounds are done and no one has 3 wins, it implies some rounds were ties.
-                // // A common RPS rule is that ties don't count towards the 'best of X' unless specified.
-                // // Here, we count 'winner_id IS NOT NULL' rounds.
-                // // If after 5 rounds, no one has 3 'winner_id's, then we need a rule for this.
-                // // For now, if max rounds are played and no winner, keep it 'in_progress' or mark as 'draw'.
-                // // Let's explicitly check the win count against the "best of 5" rule.
-                // console.log(`Match ${matchId}: All 5 rounds played. Scores: P1: ${player1Wins}, P2: ${player2Wins}.`);
-                // // If after 5 rounds, still no winner, this might mean a specific scenario (e.g., 2-2, with one round being a draw)
-                // // For a "best of 5", a game must end when one player wins 3 rounds.
-                // // If the game reaches 5 rounds and neither has 3 wins, it means there were ties.
-                // // The current logic based on `winner_id IS NOT NULL` handles this.
-                // // If the match ends without a winner by normal means (e.g., 3-2 score), it's a bug in previous logic.
-                // // If this `else if` block is hit, it suggests 5 rounds have been completed, but neither player has 3 wins.
-                // // This scenario could occur if `winner_id` was NULL for some rounds (ties).
-                // // In such a case, you might need a specific tie-breaking mechanism or declare a draw.
-                // // For simplicity, if 5 rounds are completed and no one has 3 wins, let's treat it as completed without a clear winner,
-                // // perhaps leading to a refund.
-                // if (player1Wins === player2Wins) {
-                //      matchStatus = 'completed'; // It's a draw/tie-game after all rounds
-                //      matchWinnerId = null; // Explicitly set to null for a draw
-                //      console.log(`Match ${matchId}: Declared a draw after 5 rounds (P1: ${player1Wins}, P2: ${player2Wins}).`);
-                // } else {
-                //     // This implies a logical flaw if someone should have won. Re-evaluating.
-                //     // Given 'best of 5' and 'winner_id IS NOT NULL' is counted, a 2-2 scenario after 5 rounds is possible if one round was a tie.
-                //     // The code needs to handle this.
-                //     // If it's 2-2 after 5 rounds, and the 5th round was a tie, it means the earlier logic failed to account for a scenario where someone should have won.
-                //     // For the "best of 5" to enforce a winner, you can't have 2-2 after 5.
-                //     // Let's assume the rules enforce a winner, and if we are here, it means we have played 5 rounds and someone *should* have 3 wins.
-                //     // If not, it means the previous `winner_id` assignment for rounds needs to be re-evaluated.
-                //     // For now, if we reach this and no one has 3 wins, the match is implicitly still in progress or an error state.
-                //     // The `gameRounds.length === 5` check only makes sense if ties don't count towards round completion or require a different way to end.
-                //     // Best of 5 means `max_rounds_to_play` is not fixed at 5. It's max of 5, but ends when one hits 3.
-                //     // Let's remove this `else if (gameRounds.length === 5)` branch to avoid misinterpretation of "best of 5".
-                //     // The current logic of checking `player1Wins >=3` or `player2Wins >=3` is sufficient for determining completion.
-                //     // If it *doesn't* hit those, the match is `in_progress`.
-                // }
-            // }
-
 
             if (matchWinnerId !== null) {
                 // Update match status and winner in the 'matches' table
@@ -793,6 +749,41 @@ export default class GameController {
                             // Handle error, e.g., by logging or setting tournament status to error
                         }
                     } else if (matchData.lobby_id && !matchData.tournament_id) {
+                        // Cleanup afterwards
+                        // 1. Remove lobby participands
+                        // 2. Remove match participants
+                        // 3. Remove lobby
+                        const { error: cleanupError } = await dbClient
+                            .from('lobby_participants')
+                            .delete()
+                            .eq('lobby_id', matchData.lobby_id);
+                        if (cleanupError) {
+                            console.error(`Error cleaning up lobby participants for lobby ${matchData.lobby_id}:`, cleanupError);
+                            // Handle cleanup error, e.g., log it or notify admins
+                        } else {
+                            console.log(`Successfully cleaned up lobby participants for lobby ${matchData.lobby_id}.`);
+                        }
+                        const { error: matchParticipantsCleanupError } = await dbClient
+                            .from('match_participants')
+                            .delete()
+                            .eq('match_id', matchId);
+                        if (matchParticipantsCleanupError) {
+                            console.error(`Error cleaning up match participants for match ${matchId}:`, matchParticipantsCleanupError);
+                            // Handle cleanup error, e.g., log it or notify admins
+                        } else {
+                            console.log(`Successfully cleaned up match participants for match ${matchId}.`);
+                        }
+                        const { error: lobbyCleanupError } = await dbClient
+                            .from('lobbies')
+                            .delete()
+                            .eq('id', matchData.lobby_id);
+                        if (lobbyCleanupError) {
+                            console.error(`Error cleaning up lobby ${matchData.lobby_id}:`, lobbyCleanupError);
+                            // Handle cleanup error, e.g., log it or notify admins
+                        } else {
+                            console.log(`Successfully cleaned up lobby ${matchData.lobby_id}.`);
+                        }
+
                         // This is a 1v1 match, proceed with direct payout
                         console.log(`Match ${matchId} is 1v1. Initiating payout via smart contract.`);
                         // TODO: Implement initiatePayout(matchId, matchWinnerId);

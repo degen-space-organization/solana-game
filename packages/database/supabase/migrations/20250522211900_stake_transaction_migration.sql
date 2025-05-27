@@ -19,12 +19,8 @@ CREATE TABLE stake_transactions (
     CONSTRAINT stake_transactions_type_valid CHECK (transaction_type IN ('stake', 'prize_payout', 'refund')),
     CONSTRAINT stake_transactions_status_valid CHECK (status IN ('pending', 'confirmed', 'failed')),
     CONSTRAINT stake_transactions_amount_valid CHECK (amount ~ '^[0-9]+$'),
-    CONSTRAINT stake_transactions_transaction_hash_not_empty CHECK (LENGTH(TRIM(transaction_hash)) > 0),
-    CONSTRAINT stake_transactions_confirmed_after_created CHECK (confirmed_at IS NULL OR confirmed_at >= created_at),
-    CONSTRAINT stake_transactions_confirmation_consistency CHECK (
-        (status = 'confirmed' AND confirmed_at IS NOT NULL) OR
-        (status != 'confirmed' AND confirmed_at IS NULL)
-    )
+    CONSTRAINT stake_transactions_transaction_hash_not_empty CHECK (LENGTH(TRIM(transaction_hash)) > 0)
+
 );
 
 -- Indexes

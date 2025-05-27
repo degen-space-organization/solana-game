@@ -4,6 +4,7 @@ import { determineResult, isValidMove, Move } from '../../types/Game/gameEngine'
 
 import { dbClient } from '../../database/provider';
 import { TablesInsert, Tables, TablesUpdate } from '../../database/types'
+import VaultController from "../VaultController/VaultController";
 
 type player_move = 'rock' | 'paper' | 'scissors';
 
@@ -16,35 +17,53 @@ export default class GameController {
     constructor() { };
 
 
-    static async hello(req: Request, res: Response) {
+
+    static async submitStakeForLobby(req: Request, res: Response) {
         try {
-            res.status(200).json({
-                message: "Hello from GameController"
-            });
+            const { user_id, lobby_id, txHash } = req.body;
+
+            if (!user_id || !lobby_id || !txHash) {
+                return res.status(400).json({ error: "Missing required fields: user_id, lobby_id, txHash" });
+            }
+
+            // Validate deposit for the lobby creation
+            const isDepositValid = await VaultController.validateDepositLobbyCreation(txHash, user_id, lobby_id);
+
+            if (!isDepositValid) {
+                return res.status(400).json({ error: "Deposit validation failed. Lobby not created." });
+            }
+
+
+            res.status(200).json({ message: "Stake submitted successfully." });
+
         } catch (error) {
-            console.error(error);
+            console.error("Error submitting stake for lobby:", error);
             res.status(500).json({ error: "Internal Server Error" });
         }
-    };
+    }
 
     static async createLobby(req: Request, res: Response) {
         try {
-            const { name, created_by, stake_amount, max_players } = req.body;
-
+            // TODO
+            const { 
+                name,
+                created_by,
+                stake_amount,
+                max_players,
+                txHash,
+            } = req.body;
+            console.log('Received payload for lobby creation:', req.body);
+            console.log('nigga')
             if (!created_by || !stake_amount) {
                 return res.status(400).json({ error: "Missing required lobby fields: created_by, stake_amount" });
             }
 
             // Validate stake_amount against allowed values (from lobby_migration.sql)
-            const allowedStakes = ['250000000', '500000000', '750000000', '1000000000'];
+            const allowedStakes = ['100000000','250000000', '500000000', '750000000', '1000000000'];
             if (!allowedStakes.includes(stake_amount.toString())) {
                 return res.status(400).json({ error: `Invalid stake amount. Allowed values: ${allowedStakes.join(', ')}` });
             }
-
-            // const allowedMaxPlayers = [2, 4, 8];
-            // if (!allowedMaxPlayers.includes(max_players)) {
-            //     return res.status(400).json({ error: `Invalid max players count. Allowed values: ${allowedMaxPlayers.join(', ')}` });
-            // }
+            
 
             const lobbyData: TablesInsert<'lobbies'> = {
                 name: name || `Lobby by ${created_by}`,
@@ -84,6 +103,22 @@ export default class GameController {
                 // Optionally, delete the lobby if participant addition failed
                 await dbClient.from('lobbies').delete().eq('id', data.id);
                 res.status(500).json({ error: "Failed to add creator to lobby" });
+            }
+
+            // sleep for 3 second
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // validate the
+            //  deposit for the lobby creation
+            const isDepositValid = await VaultController.validateDepositLobbyCreation(txHash, created_by, data.id);
+
+
+            if (!isDepositValid) {
+                console.error("Deposit validation failed for lobby creation.");
+                // Optionally, delete the lobby if deposit validation fails
+                await dbClient.from('lobbies').delete().eq('id', data.id);
+                await dbClient.from('lobby_participants').delete().eq('lobby_id', data.id).eq('user_id', created_by);
+                return res.status(400).json({ error: "Deposit validation failed. Lobby not created." });
             }
 
             res.status(201).json({

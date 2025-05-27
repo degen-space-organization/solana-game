@@ -1,8 +1,17 @@
 // packages/dapp/game-app/src/components/Lobby/CreateLobbyModal.tsx
 import React, { useState, useEffect } from 'react';
-import { useWallet } from '@solana/wallet-adapter-react';
+import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { toaster } from '../ui/toaster';
 import { database } from '@/supabase/Database';
+import {
+  Transaction,
+  SystemProgram,
+  PublicKey,
+  LAMPORTS_PER_SOL
+} from '@solana/web3.js';
+import { solConnection } from '@/web3';
+
+const GAME_VAULT_ADDRESS = new PublicKey('48wcCEj1hdV5UGwr3PmhqvU3ix1eN5rMqEsBxT4XKRfc'); // Replace with your actual vault address
 
 interface CreateLobbyModalProps {
   isOpen: boolean;
@@ -11,7 +20,7 @@ interface CreateLobbyModalProps {
 }
 
 const stakeOptions = [
-  // { value: '100000000', label: '0.1 SOL' },
+  { value: '100000000', label: '0.1 SOL' },
   { value: '250000000', label: '0.25 SOL' },
   { value: '500000000', label: '0.5 SOL' },
   { value: '750000000', label: '0.75 SOL' },
@@ -32,7 +41,8 @@ export const CreateLobbyModal: React.FC<CreateLobbyModalProps> = ({
   // IMPORTANT: This conditional return must be at the top
   if (!isOpen) return null;
 
-  const { publicKey, connected } = useWallet();
+  const { publicKey, connected, signTransaction } = useWallet();
+  const { connection } = useConnection();
   const [lobbyName, setLobbyName] = useState('');
   const [stakeAmount, setStakeAmount] = useState<string>(stakeOptions[0].value);
   const [maxPlayers, setMaxPlayers] = useState<number>(maxPlayersOptions[0].value);
@@ -69,6 +79,32 @@ export const CreateLobbyModal: React.FC<CreateLobbyModalProps> = ({
     setIsLoading(true);
 
     try {
+      // NEW: Create and sign transaction first
+      const stakeAmountLamports = parseInt(stakeAmount);
+
+      const transaction = new Transaction().add(
+        SystemProgram.transfer({
+          fromPubkey: publicKey,
+          toPubkey: GAME_VAULT_ADDRESS,
+          lamports: stakeAmountLamports,
+        })
+      );
+
+      const { blockhash, lastValidBlockHeight } = await solConnection.getLatestBlockhash();
+      transaction.recentBlockhash = blockhash;
+      transaction.lastValidBlockHeight = lastValidBlockHeight;
+      transaction.feePayer = publicKey;
+
+      // Sign transaction (opens wallet)
+      const signedTransaction = await signTransaction!(transaction);
+
+      // Send and get signature
+      const txSignature = await solConnection.sendRawTransaction(signedTransaction.serialize());
+      console.log('Transaction signature:', txSignature);
+      if (!txSignature) {
+        throw new Error('Transaction signature is null');
+      }
+      console.log('Transaction sent with signature:', txSignature);
       const response = await fetch('http://localhost:4000/api/v1/game/create-lobby', {
         method: 'POST',
         headers: {
@@ -79,6 +115,7 @@ export const CreateLobbyModal: React.FC<CreateLobbyModalProps> = ({
           created_by: currentUserId,
           stake_amount: (Number(stakeAmount)).toString(),
           max_players: maxPlayers,
+          txHash: txSignature,
         }),
       });
       console.log((Number(stakeAmount)).toString())

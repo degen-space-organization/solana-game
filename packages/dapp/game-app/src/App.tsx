@@ -144,22 +144,18 @@ const ChatDrawer: React.FC<{
 function App() {
   const [isChatOpen, setIsChatOpen] = useState(false);
 
-  // const [activeSection, setActiveSection] = useState<'lobbies' | 'tournaments' | 'leaderboard' | 'joinedLobby'>('lobbies');
-  
-  const [activeSection, setActiveSection] = useState('lobbies');
-
-
+  const [activeSection, setActiveSection] = useState<'lobbies' | 'tournaments' | 'leaderboard' | 'joined_lobbies' | 'mygame'>('lobbies');
   const [isCreateLobbyModalOpen, setIsCreateLobbyModalOpen] = useState(false);
-
   const { onClose: closeCreateLobbyModal } = useDisclosure();
   const [lobbiesRefreshTrigger, setLobbiesRefreshTrigger] = useState(0); // New state
-
   const { publicKey, connected } = useWallet();
   const [currentUserId, setCurrentUserId] = useState<number | null>(null); // State to store user ID
-
+  const [currentUserFromHeader, setCurrentUserFromHeader] = useState<User | null>(null); //
   const [activeLobby, setActiveLobby] = useState<ActiveLobbyDetails | null>(null);
 
+
   const navigate = useNavigate()
+
 
   useEffect(() => {
     const fetchCurrentUser = async () => {
@@ -186,7 +182,6 @@ function App() {
 
 
   // Fetch the current user data from the HeaderWallet component state
-  const [currentUserFromHeader, setCurrentUserFromHeader] = useState<User | null>(null); //
 
   // This effect listens for changes in HeaderWallet's currentUserDb state
   useEffect(() => {
@@ -220,8 +215,6 @@ function App() {
     }
   }, []);
 
-  const [activeSection, setActiveSection] = useState<'lobbies' | 'tournaments' | 'leaderboard' | 'mygame'>('mygame');
-
 
   const handleJoinLobby = (lobbyId: number) => {
     toaster.create({
@@ -242,33 +235,33 @@ function App() {
           user_id: currentUserFromHeader.id,
         }),
       })
-      .then(response => response.json())
-      .then(data => {
-        if (data.error) {
+        .then(response => response.json())
+        .then(data => {
+          if (data.error) {
+            toaster.create({
+              title: "Join Failed",
+              description: data.error,
+              type: "error",
+              duration: 5000,
+            });
+          } else {
+            toaster.create({
+              title: "Success! 🎉",
+              description: `Successfully joined lobby #${lobbyId}! Get ready to play!`,
+              type: "success",
+              duration: 4000,
+            });
+          }
+        })
+        .catch(error => {
+          console.error('Error joining lobby:', error);
           toaster.create({
-            title: "Join Failed",
-            description: data.error,
+            title: "Network Error",
+            description: "Failed to connect to game server.",
             type: "error",
             duration: 5000,
           });
-        } else {
-          toaster.create({
-            title: "Success! 🎉",
-            description: `Successfully joined lobby #${lobbyId}! Get ready to play!`,
-            type: "success",
-            duration: 4000,
-          });
-        }
-      })
-      .catch(error => {
-        console.error('Error joining lobby:', error);
-        toaster.create({
-          title: "Network Error",
-          description: "Failed to connect to game server.",
-          type: "error",
-          duration: 5000,
         });
-      });
     } else {
       toaster.create({
         title: "Wallet Not Connected",
@@ -362,21 +355,25 @@ function App() {
     });
   };
 
-  const handleLobbyCreated = async (newLobbyId: number) => {
+  const handleCreateLobby = () => {
+    setIsCreateLobbyModalOpen(true);
+  };
+
+  const handleLobbyCreated = async () => {
     closeCreateLobbyModal();
     setLobbiesRefreshTrigger(prev => prev + 1); // Refresh list for others
 
     // After creating, fetch and set this lobby as the active lobby
-    
+
     toaster.create({
-        title: "Lobby Created!",
-        description: "Could not load details for the new lobby.",
-        type: "warning",
-        duration: 4000,
+      title: "Lobby Created!",
+      description: "Could not load details for the new lobby.",
+      type: "warning",
+      duration: 4000,
     });
-    
+
   };
-  
+
 
   return (
     <Box minH="100vh" bg="gray.50">
@@ -455,9 +452,9 @@ function App() {
         <Container maxW="100%">
           <HStack padding="2" justify="center">
 
-            {(['lobbies', 'joined_lobbies', 'tournaments', 'leaderboard'] as const).map((section) => (
+            {(['lobbies', 'joined_lobbies', 'tournaments', 'leaderboard', 'mygame'] as const).map((section) => (
 
-            {(['mygame', 'lobbies', 'tournaments', 'leaderboard'] as const).map((section) => (
+              // {(['mygame', 'lobbies', 'tournaments', 'leaderboard'] as const).map((section) => (
 
               <Button
                 key={section}
@@ -508,207 +505,195 @@ function App() {
         <Routes> {/* Define your routes here */}
           <Route path="/" element={
             <>
-              {activeSection === 'lobbies' && (
-                <VStack padding="6">
-                  {/* Action Buttons */}
-                  <HStack padding="4" mb="4">
-                    <Button
-                      onClick={createNewGame}
-                      bg="#06D6A0"
-                      color="white"
-                      fontWeight="black"
-                      fontSize="xl"
-                      textTransform="uppercase"
-                      letterSpacing="wider"
-                      borderRadius="0"
-                      border="4px solid"
+              {/* {activeSection === 'lobbies' && ( */}
+              <VStack padding="6">
+                {/* Action Buttons */}
+                <HStack padding="4" mb="4">
+
+
+                  {/* My game section */}
+                  {activeSection === 'mygame' && (
+                    <Card.Root
+                      borderWidth="4px"
+                      borderStyle="solid"
                       borderColor="gray.900"
-                      shadow="6px 6px 0px rgba(0,0,0,0.8)"
-                      _hover={{
-                        bg: "#04C28D",
-                        transform: "translate(-3px, -3px)",
-                        shadow: "9px 9px 0px rgba(0,0,0,0.8)",
-                      }}
-                      _active={{
-                        transform: "translate(0px, 0px)",
-                        shadow: "3px 3px 0px rgba(0,0,0,0.8)",
-                      }}
-                      size="lg"
-                      px="12"
-                      py="6"
-                    >
-                      🚀 Create New Game
-                    </Button>
-
-
-        {/* My game section */}
-        {activeSection === 'mygame' && (
-          <Card.Root
-            borderWidth="4px"
-            borderStyle="solid"
-            borderColor="gray.900"
-            bg="white"
-            shadow="8px 8px 0px rgba(0,0,0,0.8)"
-            borderRadius="0"
-            p="12"
-            textAlign="center"
-            transform="rotate(-0.5deg)"
-            _hover={{
-              transform: "rotate(0deg) scale(1.02)",
-              shadow: "12px 12px 0px rgba(0,0,0,0.8)",
-            }}
-            transition="all 0.2s ease"
-          >
-            <Card.Body>
-              <Heading size="xl" fontWeight="black" color="gray.900" mb="6" textTransform="uppercase">
-                🎮 MY GAME
-              </Heading>
-              <Game />
-            </Card.Body>
-          </Card.Root>
-        )}
-
-        {activeSection === 'lobbies' && (
-          <VStack padding="6">
-            {/* Action Buttons */}
-            <HStack padding="4" mb="4">
-              <Button
-                onClick={createNewGame}
-                bg="#06D6A0"
-                color="white"
-                fontWeight="black"
-                fontSize="xl"
-                textTransform="uppercase"
-                letterSpacing="wider"
-                borderRadius="0"
-                border="4px solid"
-                borderColor="gray.900"
-                shadow="6px 6px 0px rgba(0,0,0,0.8)"
-                _hover={{
-                  bg: "#04C28D",
-                  transform: "translate(-3px, -3px)",
-                  shadow: "9px 9px 0px rgba(0,0,0,0.8)",
-                }}
-                _active={{
-                  transform: "translate(0px, 0px)",
-                  shadow: "3px 3px 0px rgba(0,0,0,0.8)",
-                }}
-                size="lg"
-                px="12"
-                py="6"
-              >
-                🚀 Create New Game
-              </Button>
-
-
-                    <Button
-                      onClick={() => window.location.reload()}
-                      bg="#7B2CBF"
-                      color="white"
-                      fontWeight="black"
-                      fontSize="xl"
-                      textTransform="uppercase"
-                      letterSpacing="wider"
+                      bg="white"
+                      shadow="8px 8px 0px rgba(0,0,0,0.8)"
                       borderRadius="0"
-                      border="4px solid"
-                      borderColor="gray.900"
-                      shadow="6px 6px 0px rgba(0,0,0,0.8)"
+                      p="12"
+                      textAlign="center"
+                      transform="rotate(-0.5deg)"
                       _hover={{
-                        bg: "#6A1B9A",
-                        transform: "translate(-3px, -3px)",
-                        shadow: "9px 9px 0px rgba(0,0,0,0.8)",
+                        transform: "rotate(0deg) scale(1.02)",
+                        shadow: "12px 12px 0px rgba(0,0,0,0.8)",
                       }}
-                      _active={{
-                        transform: "translate(0px, 0px)",
-                        shadow: "3px 3px 0px rgba(0,0,0,0.8)",
-                      }}
-                      size="lg"
-                      px="12"
-                      py="6"
+                      transition="all 0.2s ease"
                     >
-                      🔄 Refresh Games
-                    </Button>
-                  </HStack>
+                      <Card.Body>
+                        <Heading size="xl" fontWeight="black" color="gray.900" mb="6" textTransform="uppercase">
+                          🎮 MY GAME
+                        </Heading>
+                        <Game />
+                      </Card.Body>
+                    </Card.Root>
+                  )}
 
-                  {/* Lobbies List */}
-                  <Box w="100%">
-                    <LobbyPending onJoinLobby={handleJoinLobby} useMockData={false} onViewDetails={handleViewLobbyDetails} /> {/* Pass onViewDetails */}
-                  </Box>
-                </VStack>
-              )}
+                  {activeSection === 'lobbies' && (
+                    <VStack padding="6">
+                      {/* Action Buttons */}
+                      <HStack padding="4" mb="4">
+                        <Button
+                          onClick={handleCreateLobby}
+                          bg="#06D6A0"
+                          color="white"
+                          fontWeight="black"
+                          fontSize="xl"
+                          textTransform="uppercase"
+                          letterSpacing="wider"
+                          borderRadius="0"
+                          border="4px solid"
+                          borderColor="gray.900"
+                          shadow="6px 6px 0px rgba(0,0,0,0.8)"
+                          _hover={{
+                            bg: "#04C28D",
+                            transform: "translate(-3px, -3px)",
+                            shadow: "9px 9px 0px rgba(0,0,0,0.8)",
+                          }}
+                          _active={{
+                            transform: "translate(0px, 0px)",
+                            shadow: "3px 3px 0px rgba(0,0,0,0.8)",
+                          }}
+                          size="lg"
+                          px="12"
+                          py="6"
+                        >
+                          🚀 Create New Game
+                        </Button>
 
-              {activeSection === 'joined_lobbies' && (
-                <VStack padding="6">
-                  <Box w="100%">
-                    <LobbyJoined
-                      onViewLobbyDetails={handleViewLobbyDetails}
-                      currentUser={currentUserFromHeader}
-                    />
-                  </Box>
-                </VStack>
-              )}
 
-              {activeSection === 'tournaments' && (
-                <Card.Root
-                  borderWidth="4px"
-                  borderStyle="solid"
-                  borderColor="gray.900"
-                  bg="white"
-                  shadow="8px 8px 0px rgba(0,0,0,0.8)"
-                  borderRadius="0"
-                  p="12"
-                  textAlign="center"
-                  transform="rotate(-0.5deg)"
-                  _hover={{
-                    transform: "rotate(0deg) scale(1.02)",
-                    shadow: "12px 12px 0px rgba(0,0,0,0.8)",
-                  }}
-                  transition="all 0.2s ease"
-                >
-                  <Card.Body>
-                    <Heading size="xl" fontWeight="black" color="gray.900" mb="6" textTransform="uppercase">
-                      🏆 TOURNAMENTS
-                    </Heading>
-                    <Text fontSize="xl" color="gray.600" mb="4">
-                      Tournament brackets coming soon!
-                    </Text>
-                    <Text fontSize="md" color="gray.500">
-                      Get ready for epic multi-player competitions with prize pools!
-                    </Text>
-                  </Card.Body>
-                </Card.Root>
-              )}
+                        <Button
+                          onClick={() => window.location.reload()}
+                          bg="#7B2CBF"
+                          color="white"
+                          fontWeight="black"
+                          fontSize="xl"
+                          textTransform="uppercase"
+                          letterSpacing="wider"
+                          borderRadius="0"
+                          border="4px solid"
+                          borderColor="gray.900"
+                          shadow="6px 6px 0px rgba(0,0,0,0.8)"
+                          _hover={{
+                            bg: "#6A1B9A",
+                            transform: "translate(-3px, -3px)",
+                            shadow: "9px 9px 0px rgba(0,0,0,0.8)",
+                          }}
+                          _active={{
+                            transform: "translate(0px, 0px)",
+                            shadow: "3px 3px 0px rgba(0,0,0,0.8)",
+                          }}
+                          size="lg"
+                          px="12"
+                          py="6"
+                        >
+                          🔄 Refresh Games
+                        </Button>
+                      </HStack>
 
-              {activeSection === 'leaderboard' && (
-                <Card.Root
-                  borderWidth="4px"
-                  borderStyle="solid"
-                  borderColor="gray.900"
-                  bg="white"
-                  shadow="8px 8px 0px rgba(0,0,0,0.8)"
-                  borderRadius="0"
-                  p="12"
-                  textAlign="center"
-                  transform="rotate(0.5deg)"
-                  _hover={{
-                    transform: "rotate(0deg) scale(1.02)",
-                    shadow: "12px 12px 0px rgba(0,0,0,0.8)",
-                  }}
-                  transition="all 0.2s ease"
-                >
-                  <Card.Body>
-                    <Heading size="xl" fontWeight="black" color="gray.900" mb="6" textTransform="uppercase">
-                      👑 LEADERBOARD
-                    </Heading>
-                    <Text fontSize="xl" color="gray.600" mb="4">
-                      Player rankings coming soon!
-                    </Text>
-                    <Text fontSize="md" color="gray.500">
-                      See who's dominating the Solana gaming scene!
-                    </Text>
-                  </Card.Body>
-                </Card.Root>
-              )}
+                      {/* Lobbies List */}
+                      <Box w="100%">
+                        {isCreateLobbyModalOpen ? (
+                          <CreateLobbyModal
+                            isOpen={isCreateLobbyModalOpen}
+                            onClose={closeCreateLobbyModal}
+                            onLobbyCreated={handleLobbyCreated}
+                            // currentUser={currentUserFromHeader} // Pass current user to modal
+                          />
+                        ) : (
+                          <LobbyPending 
+                          onJoinLobby={handleJoinLobby}
+                          useMockData={false}
+                          // onViewDetails={handleViewLobbyDetails}
+                          />
+                        )}
+                      </Box>
+                    </VStack>
+                  )}
+
+                  {activeSection === 'joined_lobbies' && (
+                    <VStack padding="6">
+                      <Box w="100%">
+                        <LobbyJoined
+                          onViewLobbyDetails={handleViewLobbyDetails}
+                          currentUser={currentUserFromHeader}
+                        />
+                      </Box>
+                    </VStack>
+                  )}
+
+                  {activeSection === 'tournaments' && (
+                    <Card.Root
+                      borderWidth="4px"
+                      borderStyle="solid"
+                      borderColor="gray.900"
+                      bg="white"
+                      shadow="8px 8px 0px rgba(0,0,0,0.8)"
+                      borderRadius="0"
+                      p="12"
+                      textAlign="center"
+                      transform="rotate(-0.5deg)"
+                      _hover={{
+                        transform: "rotate(0deg) scale(1.02)",
+                        shadow: "12px 12px 0px rgba(0,0,0,0.8)",
+                      }}
+                      transition="all 0.2s ease"
+                    >
+                      <Card.Body>
+                        <Heading size="xl" fontWeight="black" color="gray.900" mb="6" textTransform="uppercase">
+                          🏆 TOURNAMENTS
+                        </Heading>
+                        <Text fontSize="xl" color="gray.600" mb="4">
+                          Tournament brackets coming soon!
+                        </Text>
+                        <Text fontSize="md" color="gray.500">
+                          Get ready for epic multi-player competitions with prize pools!
+                        </Text>
+                      </Card.Body>
+                    </Card.Root>
+                  )}
+
+                  {activeSection === 'leaderboard' && (
+                    <Card.Root
+                      borderWidth="4px"
+                      borderStyle="solid"
+                      borderColor="gray.900"
+                      bg="white"
+                      shadow="8px 8px 0px rgba(0,0,0,0.8)"
+                      borderRadius="0"
+                      p="12"
+                      textAlign="center"
+                      transform="rotate(0.5deg)"
+                      _hover={{
+                        transform: "rotate(0deg) scale(1.02)",
+                        shadow: "12px 12px 0px rgba(0,0,0,0.8)",
+                      }}
+                      transition="all 0.2s ease"
+                    >
+                      <Card.Body>
+                        <Heading size="xl" fontWeight="black" color="gray.900" mb="6" textTransform="uppercase">
+                          👑 LEADERBOARD
+                        </Heading>
+                        <Text fontSize="xl" color="gray.600" mb="4">
+                          Player rankings coming soon!
+                        </Text>
+                        <Text fontSize="md" color="gray.500">
+                          See who's dominating the Solana gaming scene!
+                        </Text>
+                      </Card.Body>
+                    </Card.Root>
+                  )}
+                </HStack>
+              </VStack>
             </>
           } />
           <Route path="/lobby/:lobbyId" element={<LobbyDetailsPage />} /> {/* New route for Lobby Details Page */}

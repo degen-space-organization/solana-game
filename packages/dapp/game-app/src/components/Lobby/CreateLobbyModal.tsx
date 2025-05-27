@@ -11,7 +11,7 @@ interface CreateLobbyModalProps {
 }
 
 const stakeOptions = [
-  { value: '100000000', label: '0.1 SOL' },
+  // { value: '100000000', label: '0.1 SOL' },
   { value: '250000000', label: '0.25 SOL' },
   { value: '500000000', label: '0.5 SOL' },
   { value: '750000000', label: '0.75 SOL' },

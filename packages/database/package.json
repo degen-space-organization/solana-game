@@ -6,6 +6,6 @@
   },
   "scripts": {
     "typegen": "./scripts/typegen-local.sh",
-    "migrations" : "./scripts/dump-migrations.sh"
+    "migrations": "./scripts/dump-migrations.sh"
   }
 }

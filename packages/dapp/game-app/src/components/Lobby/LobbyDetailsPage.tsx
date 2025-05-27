@@ -101,7 +101,7 @@ const LobbyDetailsPage: React.FC = () => {
       {/* Back Button */}
       <Button
         onClick={() => navigate(-1)} // Go back to the previous page
-        lefticon={<ChevronLeft size={20} />}
+        // lefticon={<ChevronLeft size={20} />}
         mb="6"
         bg="gray.700"
         color="white"
@@ -203,41 +203,15 @@ const LobbyDetailsPage: React.FC = () => {
         {/* Other Details */}
         <HStack justify="space-between" p="4" bg="gray.50" border="2px solid gray.200" borderRadius="0">
           <Text fontSize="lg" fontWeight="bold" color="gray.800">Minimum Players:</Text>
-          <Text fontSize="lg" fontWeight="black" color="gray.900">{lobby.min_players}</Text>
+          {/* <Text fontSize="lg" fontWeight="black" color="gray.900">{lobby.min_players}</Text> */}
         </HStack>
 
         <HStack justify="space-between" p="4" bg="gray.50" border="2px solid gray.200" borderRadius="0">
           <Text fontSize="lg" fontWeight="bold" color="gray.800">Max Rounds:</Text>
-          <Text fontSize="lg" fontWeight="black" color="gray.900">{lobby.max_rounds}</Text>
+          {/* <Text fontSize="lg" fontWeight="black" color="gray.900">{lobby.max_rounds}</Text> */}
         </HStack>
 
-        {/* Optional: Add a join button if lobby status is 'waiting' and user hasn't joined */}
-        {/* {lobby.status === 'waiting' && (
-          <Button
-            mt="6"
-            size="lg"
-            width="100%"
-            bg="#06D6A0"
-            color="white"
-            fontWeight="black"
-            fontSize="xl"
-            textTransform="uppercase"
-            letterSpacing="wider"
-            borderRadius="0"
-            border="3px solid"
-            borderColor="gray.900"
-            shadow="4px 4px 0px rgba(0,0,0,0.8)"
-            _hover={{ bg: "#04C28D", transform: "translate(-2px, -2px)", shadow: "6px 6px 0px rgba(0,0,0,0.8)" }}
-            _active={{ transform: "translate(0px, 0px)", shadow: "2px 2px 0px rgba(0,0,0,0.8)" }}
-            onClick={() => toaster.create({
-              title: "Feature Coming Soon",
-              description: "Joining from details page will be implemented later.",
-              type: "info"
-            })}
-          >
-            JOIN LOBBY
-          </Button>
-        )} */}
+
       </VStack>
     </Container>
   );

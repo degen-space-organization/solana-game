@@ -327,9 +327,21 @@ const LobbyDetailsPage: React.FC = () => {
         type: "loading",
         duration: 3000,
       });
+      const response = await fetch('http://localhost:4000/api/v1/game/start-match', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          lobby_id: lobby!.id,
+          creator_user_id: lobby!.created_by,
+        }),
+      });
 
-      // TODO: Implement actual match start logic via your API
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      if (!response.ok) {
+        console.error('Failed to start match:', response.statusText);
+        throw new Error('Failed to start match');
+      }
 
       toaster.create({
         title: "Match Started! 🎮",

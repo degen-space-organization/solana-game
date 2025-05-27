@@ -110,4 +110,39 @@ export const lobbies = {
         }
     },
 
+
+    /**
+     * Fetches active lobby details by ID
+     * @param lobbyId The ID of the lobby to fetch details for
+     * @returns {Promise<ActiveLobbyDetails | null>} - Returns the active lobby details or null if not found
+     */
+    async getParticipants(lobbyId: number): Promise<any[]> {
+        try {
+            const { data, error } = await supabase
+                .from('lobby_participants')
+                .select(`
+                    *,
+                    users (
+                        id,
+                        nickname,
+                        solana_address,
+                        matches_won,
+                        matches_lost
+                    )
+                `)
+                .eq('lobby_id', lobbyId)
+                .order('joined_at', { ascending: true });
+
+            if (error) {
+                console.error("Error fetching lobby participants:", error);
+                return [];
+            }
+
+            return data || [];
+        } catch (err) {
+            console.error("Error in getParticipants:", err);
+            return [];
+        }
+    },
+
 }

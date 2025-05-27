@@ -15,7 +15,6 @@ import {
 } from '@chakra-ui/react';
 import type { PendingLobby, User } from '../../types/lobby';
 import { database } from '@/supabase/Database';
-import { useWallet } from '@solana/wallet-adapter-react';
 
 interface LobbyCardProps {
   lobby: PendingLobby;

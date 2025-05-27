@@ -1,6 +1,6 @@
 CREATE TABLE lobbies (
     id SERIAL,
-    name VARCHAR(100),
+    name VARCHAR(100) NOT NULL, -- Lobby name, can be NULL for 1v1 matches
     tournament_id INTEGER NULL, -- NULL for 1v1 matches
     status VARCHAR(20) DEFAULT 'waiting',
     max_players INTEGER DEFAULT 2,

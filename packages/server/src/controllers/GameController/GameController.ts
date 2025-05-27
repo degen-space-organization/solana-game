@@ -25,16 +25,21 @@ export default class GameController {
             if (!user_id || !lobby_id || !txHash) {
                 return res.status(400).json({ error: "Missing required fields: user_id, lobby_id, txHash" });
             }
+            await new Promise(resolve => setTimeout(resolve, 1500));
 
+            console.log('Received payload for lobby stake submission:', req.body);
             // Validate deposit for the lobby creation
             const isDepositValid = await VaultController.validateDepositLobbyCreation(txHash, user_id, lobby_id);
 
             if (!isDepositValid) {
+                console.error("Deposit validation failed for lobby creation.");
+                // Optionally, delete the lobby if deposit validation fails
                 return res.status(400).json({ error: "Deposit validation failed. Lobby not created." });
             }
 
-
-            res.status(200).json({ message: "Stake submitted successfully." });
+            res.status(201).json({
+                message: "Deposit created successfully",
+            });
 
         } catch (error) {
             console.error("Error submitting stake for lobby:", error);

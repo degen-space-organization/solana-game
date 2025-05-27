@@ -36,6 +36,11 @@ import {
 import { database } from '@/supabase/Database';
 import { toaster } from '@/components/ui/toaster';
 import type { PendingLobby } from '@/types/lobby';
+import { PublicKey, SystemProgram, Transaction } from '@solana/web3.js';
+import { solConnection } from '@/web3';
+
+const GAME_VAULT_ADDRESS = new PublicKey('48wcCEj1hdV5UGwr3PmhqvU3ix1eN5rMqEsBxT4XKRfc'); // Replace with your actual vault address
+
 
 interface LobbyParticipant {
   id: number;
@@ -58,8 +63,8 @@ interface LobbyParticipant {
 const LobbyDetailsPage: React.FC = () => {
   const { lobbyId } = useParams<{ lobbyId: string }>();
   const navigate = useNavigate();
-  const { publicKey } = useWallet();
-  
+  const { publicKey, signTransaction } = useWallet();
+
   const [lobby, setLobby] = useState<PendingLobby | null>(null);
   const [participants, setParticipants] = useState<LobbyParticipant[]>([]);
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -140,8 +145,8 @@ const LobbyDetailsPage: React.FC = () => {
 
   const canStartMatch = () => {
     if (!lobby || !isCreator()) return false;
-    return lobby.current_players === lobby.max_players && 
-           participants.every(p => p.has_staked);
+    return lobby.current_players === lobby.max_players &&
+      participants.every(p => p.has_staked);
   };
 
   const handleStake = async () => {
@@ -157,8 +162,35 @@ const LobbyDetailsPage: React.FC = () => {
         duration: 3000,
       });
 
-      // For now, just simulate the staking process
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const curentUser = await database.users.getByWallet(walletAddress);
+      const lobbyFetch = await database.lobbies.getById(lobby.id);
+      const stakeAmountInLamports = lobbyFetch!.stake_amount_sol * 1e9; // Convert SOL to Lamports
+
+      const transaction = new Transaction().add(
+        SystemProgram.transfer({
+          fromPubkey: publicKey!,
+          toPubkey: GAME_VAULT_ADDRESS,
+          lamports: stakeAmountInLamports,
+        })
+      );
+
+      const { blockhash, lastValidBlockHeight } = await solConnection.getLatestBlockhash();
+      transaction.recentBlockhash = blockhash;
+      transaction.lastValidBlockHeight = lastValidBlockHeight;
+      transaction.feePayer = publicKey!;
+
+      // Sign transaction (opens wallet)
+      const signedTransaction = await signTransaction!(transaction);
+      console.log('Sending out tx with following params: ', {
+        from: signedTransaction.feePayer!.toBase58(),
+        to: GAME_VAULT_ADDRESS.toBase58(),
+        amount: lobbyFetch!.stake_amount_sol,
+        blockhash: signedTransaction.recentBlockhash,
+      })
+      // Send and get signature
+      const txSignature = await solConnection.sendRawTransaction(signedTransaction.serialize());
+      if (!txSignature) throw new Error('Transaction signature is null');
+      console.log('Transaction signature:', txSignature);      
 
       toaster.create({
         title: "Staked Successfully! 💰",
@@ -166,6 +198,20 @@ const LobbyDetailsPage: React.FC = () => {
         type: "success",
         duration: 4000,
       });
+
+      const response = await fetch('http://localhost:4000/api/v1/game/submit-stake', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: curentUser?.id,
+          lobby_id: lobbyFetch?.id,
+          txHash: txSignature,
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to update stake status');
 
       // Refresh the data
       window.location.reload();
@@ -541,7 +587,7 @@ const LobbyDetailsPage: React.FC = () => {
                   >
                     {lobby.name || `Game #${lobby.id}`}
                   </Heading>
-                  </HStack>
+                </HStack>
                 <Text fontSize="md" color="gray.300">
                   Created by {getDisplayName(lobby.created_by_user)} • {new Date(lobby.created_at).toLocaleDateString()}
                 </Text>
@@ -567,8 +613,8 @@ const LobbyDetailsPage: React.FC = () => {
                 <Badge
                   bg={
                     lobby.status === 'waiting' ? "#06D6A0" :
-                    lobby.status === 'starting' ? "#FF6B35" :
-                    lobby.status === 'closed' ? "#DC143C" : "#118AB2"
+                      lobby.status === 'starting' ? "#FF6B35" :
+                        lobby.status === 'closed' ? "#DC143C" : "#118AB2"
                   }
                   color="white"
                   fontSize="xs"
@@ -583,7 +629,7 @@ const LobbyDetailsPage: React.FC = () => {
                 </Badge>
               </VStack>
             </Flex>
-            
+
             {isCreator() && (
               <Box
                 bg="orange.500"
@@ -634,7 +680,7 @@ const LobbyDetailsPage: React.FC = () => {
                     Players ({participants.length}/{lobby.max_players})
                   </Heading>
                 </HStack>
-                
+
                 <Progress.Root
                   value={(participants.length / lobby.max_players) * 100}
                   bg="gray.300"
@@ -732,25 +778,25 @@ const LobbyDetailsPage: React.FC = () => {
                         )}
 
                         {/* Kick Button (only for creator, only for non-staked players) */}
-                        {isCreator() && 
-                         participant.user_id !== currentUser?.id && 
-                         !participant.has_staked && (
-                          <IconButton
-                            onClick={() => handleKickPlayer(participant.user_id, getDisplayName(participant.users))}
-                            disabled={actionLoading}
-                            bg="red.500"
-                            color="white"
-                            _hover={{ bg: "red.600" }}
-                            _active={{ bg: "red.700" }}
-                            border="2px solid"
-                            borderColor="gray.900"
-                            borderRadius="0"
-                            shadow="2px 2px 0px rgba(0,0,0,0.8)"
-                            size="sm"
-                          >
-                            <UserX size={16} />
-                          </IconButton>
-                        )}
+                        {isCreator() &&
+                          participant.user_id !== currentUser?.id &&
+                          !participant.has_staked && (
+                            <IconButton
+                              onClick={() => handleKickPlayer(participant.user_id, getDisplayName(participant.users))}
+                              disabled={actionLoading}
+                              bg="red.500"
+                              color="white"
+                              _hover={{ bg: "red.600" }}
+                              _active={{ bg: "red.700" }}
+                              border="2px solid"
+                              borderColor="gray.900"
+                              borderRadius="0"
+                              shadow="2px 2px 0px rgba(0,0,0,0.8)"
+                              size="sm"
+                            >
+                              <UserX size={16} />
+                            </IconButton>
+                          )}
                       </HStack>
                     </Flex>
                   </Box>
@@ -1039,7 +1085,7 @@ const LobbyDetailsPage: React.FC = () => {
                       )}
 
                       <Text fontSize="xs" color="gray.600" textAlign="center" fontWeight="bold">
-                        {hasUserStaked() 
+                        {hasUserStaked()
                           ? "You have staked and are ready to play!"
                           : "Stake your SOL to secure your spot in the game"
                         }
@@ -1080,7 +1126,7 @@ const LobbyDetailsPage: React.FC = () => {
                       </Button>
 
                       <Text fontSize="xs" color="gray.600" textAlign="center" fontWeight="bold">
-                        {lobby.current_players >= lobby.max_players 
+                        {lobby.current_players >= lobby.max_players
                           ? "This lobby is at maximum capacity"
                           : "Join this lobby to participate in the game"
                         }

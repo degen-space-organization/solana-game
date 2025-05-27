@@ -110,12 +110,15 @@ export default class VaultController {
 
     static async validateDepositLobbyCreation(txHash: string, userId: number, lobbyId: number): Promise<boolean> {
         try {
+            console.log('Validating deposit for lobby creation:', txHash, userId, lobbyId);
             // fetch the user first
             const user = await dbClient.from('users').select('*').eq('id', userId).single();
             if (!user) {
                 console.error('User not found for ID:', userId);
                 return false;
             }
+            console.log('retard')
+
 
             // fetch the lobby
             const lobby = await dbClient.from('lobbies').select('*').eq('id', lobbyId).single();
@@ -130,6 +133,12 @@ export default class VaultController {
             const depositAmount = await this._obtainDepositAmount(txHash, user.data?.solana_address!, adminWallet);
             const expectedAmountInLamports: string = lobby.data?.stake_amount!
             const stakeInLamports = parseInt(expectedAmountInLamports, 10);
+            
+            console.log('calculation results')
+            console.log('deposit amount', depositAmount)
+            console.log(expectedAmountInLamports)
+            console.log(stakeInLamports)
+
             if (depositAmount !== stakeInLamports / 1e9) {
                 console.error(`Deposit amount mismatch: expected ${stakeInLamports / 1e9} SOL, got ${depositAmount} SOL`);
                 return false;
@@ -152,6 +161,8 @@ export default class VaultController {
                 console.error('Failed to insert deposit record into database');
                 return false;
             }
+            console.log('retard')
+
 
             // update the players in the lobby participating
             const updateLobbyParticipant = await dbClient.from('lobby_participants')
@@ -163,6 +174,8 @@ export default class VaultController {
                 .eq('user_id', userId)
                 .eq('lobby_id', lobbyId)
             console.log(updateLobbyParticipant)
+            console.log('retard')
+
 
             if (!updateLobbyParticipant) {
                 console.error('Failed to update lobby participant status');

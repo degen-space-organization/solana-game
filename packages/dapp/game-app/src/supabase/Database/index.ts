@@ -2,6 +2,7 @@
 import { lobbies } from "./lobbies";
 import { users } from "./users";
 import { games } from "./game";
+import { spectate } from "./spectate";
 
 
 
@@ -12,5 +13,6 @@ import { games } from "./game";
 export const database = {
     lobbies,
     users,
-    games
+    games,
+    spectate
 };

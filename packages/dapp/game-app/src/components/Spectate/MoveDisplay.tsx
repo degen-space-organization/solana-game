@@ -24,8 +24,12 @@ const MoveDisplay: React.FC<MoveDisplayProps> = ({
   hasSubmittedMove = false,
 }) => {
   const getMoveEmoji = (move: Move | null): string => {
-    if (!showMove && hasSubmittedMove) return '🤐'; // Move submitted but hidden
-    if (!showMove || !move) return '❓'; // Waiting for move
+    // Never show actual move emoji unless explicitly showing moves
+    if (!showMove) {
+      return hasSubmittedMove ? '🤐' : '❓'; // Submitted but hidden vs waiting
+    }
+    // Only show actual move if showMove is true
+    if (!move) return '❓';
     switch (move) {
       case 'rock': return '🗿';
       case 'paper': return '📄';
@@ -35,9 +39,12 @@ const MoveDisplay: React.FC<MoveDisplayProps> = ({
   };
 
   const getMoveGif = (move: Move | null): string => {
-    if (!showMove && hasSubmittedMove) return '/gifs/submitted.gif'; // You can add this GIF
-    if (!showMove || !move) return '/gifs/waiting.gif';
-    // These paths would need to be added to your public/gifs folder
+    // Never show actual move GIF unless explicitly showing moves
+    if (!showMove) {
+      return hasSubmittedMove ? '/gifs/submitted.gif' : '/gifs/waiting.gif';
+    }
+    // Only show actual move GIF if showMove is true
+    if (!move) return '/gifs/waiting.gif';
     switch (move) {
       case 'rock': return '/gifs/rock.gif';
       case 'paper': return '/gifs/paper.gif';
@@ -127,7 +134,7 @@ const MoveDisplay: React.FC<MoveDisplayProps> = ({
       >
         <Image
           src={getMoveGif(move)}
-          alt={move || 'waiting'}
+          alt={showMove && move ? move : 'hidden move'}
           w="full"
           h="full"
           objectFit="cover"
@@ -156,7 +163,10 @@ const MoveDisplay: React.FC<MoveDisplayProps> = ({
           textTransform="uppercase"
           letterSpacing="wider"
         >
-          {showMove && move ? move : hasSubmittedMove ? 'READY' : 'WAITING'}
+          {!showMove 
+            ? (hasSubmittedMove ? 'READY' : 'WAITING')
+            : (move ? move.toUpperCase() : 'UNKNOWN')
+          }
         </Text>
       </Box>
     </VStack>

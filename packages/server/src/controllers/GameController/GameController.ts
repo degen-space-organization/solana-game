@@ -592,6 +592,9 @@ export default class GameController {
                 return { success: false, errorMessage: "Failed to update round with winner." };
             }
 
+            // sleep for 5 seconds
+            // await new Promise(resolve => setTimeout(resolve, 5000));
+
             console.log(`Round ${roundNumber} completed for match ${matchId}. Winner: ${roundWinnerId ? `User ${roundWinnerId}` : 'Tie'}`);
 
             // After processing a round, check if the match is over

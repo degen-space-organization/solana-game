@@ -102,6 +102,7 @@ export type Database = {
           player1_move: string | null
           player2_move: string | null
           round_number: number
+          status: string | null
           winner_id: number | null
         }
         Insert: {
@@ -112,6 +113,7 @@ export type Database = {
           player1_move?: string | null
           player2_move?: string | null
           round_number: number
+          status?: string | null
           winner_id?: number | null
         }
         Update: {
@@ -122,6 +124,7 @@ export type Database = {
           player1_move?: string | null
           player2_move?: string | null
           round_number?: number
+          status?: string | null
           winner_id?: number | null
         }
         Relationships: [
@@ -503,6 +506,7 @@ export type Database = {
         Row: {
           created_at: string | null
           id: number
+          is_in_game: boolean | null
           matches_lost: number | null
           matches_won: number | null
           nickname: string | null
@@ -512,6 +516,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           id?: number
+          is_in_game?: boolean | null
           matches_lost?: number | null
           matches_won?: number | null
           nickname?: string | null
@@ -521,6 +526,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           id?: number
+          is_in_game?: boolean | null
           matches_lost?: number | null
           matches_won?: number | null
           nickname?: string | null

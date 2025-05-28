@@ -10,8 +10,7 @@ import {
   LAMPORTS_PER_SOL
 } from '@solana/web3.js';
 import { solConnection } from '@/web3';
-
-const GAME_VAULT_ADDRESS = new PublicKey('48wcCEj1hdV5UGwr3PmhqvU3ix1eN5rMqEsBxT4XKRfc'); // Replace with your actual vault address
+import { GAME_VAULT_ADDRESS } from '@/web3/constants';
 
 interface CreateLobbyModalProps {
   isOpen: boolean;

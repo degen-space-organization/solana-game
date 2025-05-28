@@ -4,10 +4,10 @@ import {
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import { useEffect, useState } from 'react';
-import { Connection, LAMPORTS_PER_SOL } from '@solana/web3.js';
-import { createClient } from '@supabase/supabase-js';
+import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { toaster } from '../ui/toaster';
 import { supabase } from '@/supabase';
+import { solConnection as connection } from '@/web3';
 
 const shortenAddress = (address: string) =>
     `${address.slice(0, 4)}...${address.slice(-4)}`;
@@ -15,7 +15,8 @@ const shortenAddress = (address: string) =>
 // Supabase
 
 
-const connection = new Connection('https://api.devnet.solana.com');
+// const connection = new Connection('https://api.devnet.solana.com');
+// const connection = new Connection('https://api.mainnet-beta.solana.com');
 
 export const ConnectWalletButton = () => {
     const { publicKey, disconnect, connected, wallet } = useWallet();

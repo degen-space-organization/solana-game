@@ -13,47 +13,77 @@ import {
   Badge,
   Card,
   Container,
-  Spinner,
   useDisclosure,
 } from "@chakra-ui/react";
+
 import {
   MessageCircle,
   X,
   Menu,
-  Wallet,
-  RefreshCw,
-  Copy,
-  ExternalLink,
   ChevronLeft,
-  ChevronRight
 } from 'lucide-react';
-import { toaster } from './components/ui/toaster';
 import './index.css';
 
-// Import your existing components
-import LobbyPending from './components/Lobby/LobbyPending';
+import { useWallet } from '@solana/wallet-adapter-react';
+import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 
 import { database } from '@/supabase/Database';
+import type { ActiveLobbyDetails, User } from './types/lobby';
 
+
+
+// Components
 import Game from './components/Game/Game';
-
-import { ConnectWalletButton } from './components/Wallet/WalletConnect';
+import Spectate from './components/Spectate/Spectate';
+import LobbyJoined from './components/Lobby/LobbyJoined';
+import LobbyPending from './components/Lobby/LobbyPending';
+import Leaderboard from './components/Leaderboard/Leaderboard';
+import LobbyDetailsPage from './components/Lobby/LobbyDetailsPage';
 import GlobalChatWrapper from './components/Chat/GlobalChat';
 
-
-import type { User } from "./types/lobby"
+import { toaster } from './components/ui/toaster';
 import { CreateLobbyModal } from './components/Lobby/CreateLobbyModal';
-import { useWallet } from '@solana/wallet-adapter-react';
-
-import type { ActiveLobbyDetails } from './types/lobby';
-
-import LobbyJoined from './components/Lobby/LobbyJoined';
+import { ConnectWalletButton } from './components/Wallet/WalletConnect';
 
 
 
-import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
-import LobbyDetailsPage from './components/Lobby/LobbyDetailsPage';
 
+
+
+
+interface RankedPlayer extends User {
+  net_wins: number;
+  rank: 'Unranked' | 'Bronze' | 'Silver' | 'Gold' | 'Legendary';
+}
+
+const getPlayerRank = (netWins: number): 'Unranked' | 'Bronze' | 'Silver' | 'Gold' | 'Legendary' => {
+  if (netWins > 20) {
+    return 'Legendary';
+  } else if (netWins > 15) {
+    return 'Gold';
+  } else if (netWins > 10) {
+    return 'Silver';
+  } else if (netWins > 5) {
+    return 'Bronze';
+  }
+  return 'Unranked'; // Players with 0 to 5 net wins, or negative net wins but filtered out
+};
+
+// Function to get color scheme for rank badge
+const getRankColorScheme = (rank: RankedPlayer['rank']): string => {
+  switch (rank) {
+    case 'Bronze':
+      return 'orange'; // Or a custom bronze color
+    case 'Silver':
+      return 'gray'; // Or a custom silver color
+    case 'Gold':
+      return 'yellow'; // Or a custom gold color
+    case 'Legendary':
+      return 'purple'; // Or a custom legendary color
+    default:
+      return 'blue'; // For Unranked or other cases
+  }
+};
 
 
 // Types for wallet
@@ -144,13 +174,15 @@ const ChatDrawer: React.FC<{
 function App() {
   const [isChatOpen, setIsChatOpen] = useState(false);
 
-  const [activeSection, setActiveSection] = useState<'lobbies' | 'tournaments' | 'leaderboard' | 'joined_lobbies' | 'mygame'>('lobbies');
+  const [activeSection, setActiveSection] = useState<'lobbies' | 'tournaments' | 'leaderboard' | 'joined_lobbies' | 'mygame' | 'spectate'>('lobbies');
   const [isCreateLobbyModalOpen, setIsCreateLobbyModalOpen] = useState(false);
   const { onClose: closeCreateLobbyModal } = useDisclosure();
   const [lobbiesRefreshTrigger, setLobbiesRefreshTrigger] = useState(0); // New state
   const { publicKey, connected } = useWallet();
   const [currentUserId, setCurrentUserId] = useState<number | null>(null); // State to store user ID
   const [currentUserFromHeader, setCurrentUserFromHeader] = useState<User | null>(null); //
+    const [currentUserRank, setCurrentUserRank] = useState<'Unranked' | 'Bronze' | 'Silver' | 'Gold' | 'Legendary'>('Unranked'); // New state for user rank
+
   const [activeLobby, setActiveLobby] = useState<ActiveLobbyDetails | null>(null);
 
 
@@ -163,8 +195,17 @@ function App() {
       if (walletPublicKey) {
         const user = await database.users.getByWallet(walletPublicKey);
         setCurrentUserFromHeader(user);
+        
+        if (user) {
+          const netWins = (user.matches_won ?? 0) - (user.matches_lost ?? 0);
+          setCurrentUserRank(getPlayerRank(netWins)); // Calculate and set rank
+        } else {
+          setCurrentUserRank('Unranked');
+        }
+
       } else {
         setCurrentUserFromHeader(null);
+        setCurrentUserRank('Unranked');
       }
     };
     fetchCurrentUser();
@@ -435,7 +476,22 @@ function App() {
             </HStack>
 
             {/* Right side - Wallet */}
-            <ConnectWalletButton />
+            <HStack padding={4}> {/* Use HStack to align wallet button and rank */}
+              {currentUserFromHeader && currentUserRank !== 'Unranked' && (
+                <Badge
+                  colorScheme={getRankColorScheme(currentUserRank)}
+                  variant="solid"
+                  px="3"
+                  py="1"
+                  borderRadius="full"
+                  fontSize="md"
+                  fontWeight="bold"
+                >
+                  {currentUserRank}
+                </Badge>
+              )}
+              <ConnectWalletButton />
+            </HStack>
           </Flex>
         </Container>
       </Box>
@@ -452,7 +508,7 @@ function App() {
         <Container maxW="100%">
           <HStack padding="2" justify="center">
 
-            {(['lobbies', 'joined_lobbies', 'tournaments', 'leaderboard', 'mygame'] as const).map((section) => (
+            {(['lobbies', 'joined_lobbies', 'tournaments', 'leaderboard', 'mygame', 'spectate'] as const).map((section) => (
 
               // {(['mygame', 'lobbies', 'tournaments', 'leaderboard'] as const).map((section) => (
 
@@ -522,7 +578,7 @@ function App() {
                       borderRadius="0"
                       p="12"
                       textAlign="center"
-                      transform="rotate(-0.5deg)"
+                      // transform="rotate(-0.5deg)"
                       _hover={{
                         transform: "rotate(0deg) scale(1.02)",
                         shadow: "12px 12px 0px rgba(0,0,0,0.8)",
@@ -530,9 +586,9 @@ function App() {
                       transition="all 0.2s ease"
                     >
                       <Card.Body>
-                        <Heading size="xl" fontWeight="black" color="gray.900" mb="6" textTransform="uppercase">
+                        {/* <Heading size="xl" fontWeight="black" color="gray.900" mb="6" textTransform="uppercase">
                           🎮 MY GAME
-                        </Heading>
+                        </Heading> */}
                         <Game />
                       </Card.Body>
                     </Card.Root>
@@ -662,36 +718,18 @@ function App() {
                     </Card.Root>
                   )}
 
-                  {activeSection === 'leaderboard' && (
-                    <Card.Root
-                      borderWidth="4px"
-                      borderStyle="solid"
-                      borderColor="gray.900"
-                      bg="white"
-                      shadow="8px 8px 0px rgba(0,0,0,0.8)"
-                      borderRadius="0"
-                      p="12"
-                      textAlign="center"
-                      transform="rotate(0.5deg)"
-                      _hover={{
-                        transform: "rotate(0deg) scale(1.02)",
-                        shadow: "12px 12px 0px rgba(0,0,0,0.8)",
-                      }}
-                      transition="all 0.2s ease"
-                    >
-                      <Card.Body>
-                        <Heading size="xl" fontWeight="black" color="gray.900" mb="6" textTransform="uppercase">
-                          👑 LEADERBOARD
-                        </Heading>
-                        <Text fontSize="xl" color="gray.600" mb="4">
-                          Player rankings coming soon!
-                        </Text>
-                        <Text fontSize="md" color="gray.500">
-                          See who's dominating the Solana gaming scene!
-                        </Text>
-                      </Card.Body>
-                    </Card.Root>
+                  {
+                    activeSection === 'leaderboard' && <Leaderboard />
+                  }
+
+                  {activeSection === 'spectate' && (
+                    <VStack padding="6">
+                      <Box w="100%">
+                        <Spectate />
+                      </Box>
+                    </VStack>
                   )}
+                  
                 </HStack>
               </VStack>
             </>

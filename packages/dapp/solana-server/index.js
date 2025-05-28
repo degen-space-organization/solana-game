@@ -7,7 +7,8 @@ const port = 3001;
 
 app.use(cors());
 
-const connection = new Connection('https://api.mainnet-beta.solana.com');
+const connection = new Connection('https://api.devnet.solana.com');
+
 
 app.get('/get-balance/:pubkey', async (req, res) => {
   try {

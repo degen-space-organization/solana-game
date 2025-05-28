@@ -5,6 +5,7 @@ import { determineResult, isValidMove, Move } from '../../types/Game/gameEngine'
 import { dbClient } from '../../database/provider';
 import { TablesInsert, Tables, TablesUpdate } from '../../database/types'
 import VaultController from "../VaultController/VaultController";
+import AdminWallet from "../../utils/adminWallet";
 
 type player_move = 'rock' | 'paper' | 'scissors';
 
@@ -15,8 +16,6 @@ type player_move = 'rock' | 'paper' | 'scissors';
 export default class GameController {
 
     constructor() { };
-
-
 
     static async submitStakeForLobby(req: Request, res: Response) {
         try {
@@ -49,8 +48,7 @@ export default class GameController {
 
     static async createLobby(req: Request, res: Response) {
         try {
-            // TODO
-            const { 
+            const {
                 name,
                 created_by,
                 stake_amount,
@@ -64,11 +62,11 @@ export default class GameController {
             }
 
             // Validate stake_amount against allowed values (from lobby_migration.sql)
-            const allowedStakes = ['100000000','250000000', '500000000', '750000000', '1000000000'];
+            const allowedStakes = ['100000000', '250000000', '500000000', '750000000', '1000000000'];
             if (!allowedStakes.includes(stake_amount.toString())) {
                 return res.status(400).json({ error: `Invalid stake amount. Allowed values: ${allowedStakes.join(', ')}` });
             }
-            
+
 
             const lobbyData: TablesInsert<'lobbies'> = {
                 name: name || `Lobby by ${created_by}`,
@@ -112,7 +110,7 @@ export default class GameController {
 
             // sleep for 3 second
             await new Promise(resolve => setTimeout(resolve, 2000));
-            
+
             // validate the
             //  deposit for the lobby creation
             const isDepositValid = await VaultController.validateDepositLobbyCreation(txHash, created_by, data.id);
@@ -326,7 +324,11 @@ export default class GameController {
                 return res.status(400).json({ error: "Not enough players in lobby to start match." });
             }
 
-            console.log("PARTICIPANTS: ", participants)
+            // dont allow creation of lobby if withdrawal is in progress
+            if (lobby.status === 'withdrawal') {
+                return res.status(400).json({ error: "Lobby is currently in withdrawal status and cannot start a match." });
+            };
+
             // Check if all participants are ready and staked (example; add actual staking logic)
             // For now, assuming they are ready if they are present.
             // In a real app, you'd check `has_staked` on each participant.
@@ -492,36 +494,10 @@ export default class GameController {
                 return res.status(500).json({ error: "Failed to submit move." });
             } else {
                 console.log(`Move submitted successfully for match ${match_id}, round ${round_number} by user ${user_id}.`);
-                // TODO - luka addded this
                 res.status(200).json({ message: "Move submitted successfully." });
             }
 
-            // TODO - luka commented this out
-            // // After a move is submitted, check if both players have made a move for the round.
-            // // If so, trigger the round processing function.
-            // const { data: updatedRound, error: checkError } = await dbClient
-            //     .from('game_rounds')
-            //     .select('player1_move, player2_move')
-            //     .eq('id', gameRound.id)
-            //     .single();
 
-            // if (checkError) {
-            //     console.error("Error re-fetching round after move submission:", checkError);
-            //     // Continue, as the move was likely saved, but logging is important.
-            // }
-
-            // if (updatedRound?.player1_move && updatedRound?.player2_move) {
-            //     // Both players have made a move, process the round immediately
-            //     console.log(`Both players made moves for match ${match_id}, round ${round_number}. Processing round...`);
-            //     const { success, errorMessage } = await GameController.processRound(match_id, round_number);
-            //     if (!success) {
-            //         console.error(`Failed to process round ${round_number} for match ${match_id}: ${errorMessage}`);
-            //         return res.status(500).json({ message: "Move submitted, but round processing failed.", error: errorMessage });
-            //     }
-            //     res.status(200).json({ message: "Move submitted successfully and round processed." });
-            // } else {
-            //     res.status(200).json({ message: "Move submitted successfully. Waiting for opponent." });
-            // }
 
         } catch (error) {
             console.error("submitMove error:", error);
@@ -529,7 +505,7 @@ export default class GameController {
         }
     }
 
-   static async processRound(matchId: number, roundNumber: number): Promise<{ success: boolean, winnerId?: number | null, errorMessage?: string }> {
+    static async processRound(matchId: number, roundNumber: number): Promise<{ success: boolean, winnerId?: number | null, errorMessage?: string }> {
         console.log(`Processing match ${matchId}, round ${roundNumber}`);
         try {
             const { data: gameRound, error: fetchError } = await dbClient
@@ -538,7 +514,7 @@ export default class GameController {
                 .eq('match_id', matchId)
                 .eq('round_number', roundNumber)
                 .single();
-            
+
             console.log('ProcessRound - Fetched game round:', gameRound);
             console.log(gameRound);
 
@@ -625,10 +601,10 @@ export default class GameController {
                 // Match is still in progress (no winner yet), create the next round
                 const nextRoundNumber = roundNumber + 1;
                 const { success: createNextRoundSuccess, errorMessage: createNextRoundError } = await GameController.createGameRound(matchId, nextRoundNumber);
-                    if (!createNextRoundSuccess) {
-                        console.error(`Failed to create next round ${nextRoundNumber} for match ${matchId}: ${createNextRoundError}`);
-                        // Handle this error appropriately, perhaps by marking match as cancelled or error.
-                    }
+                if (!createNextRoundSuccess) {
+                    console.error(`Failed to create next round ${nextRoundNumber} for match ${matchId}: ${createNextRoundError}`);
+                    // Handle this error appropriately, perhaps by marking match as cancelled or error.
+                }
                 // if (nextRoundNumber <= 5) { // "best of 5" means up to 5 rounds
                 //     const { success: createNextRoundSuccess, errorMessage: createNextRoundError } = await GameController.createGameRound(matchId, nextRoundNumber);
                 //     if (!createNextRoundSuccess) {
@@ -747,7 +723,7 @@ export default class GameController {
             } else if (player2Wins >= 3) {
                 matchWinnerId = player2Id;
                 matchStatus = 'completed';
-            } 
+            }
 
             if (matchWinnerId !== null) {
                 // Update match status and winner in the 'matches' table
@@ -782,7 +758,7 @@ export default class GameController {
                 if (!mError && matchData) {
                     if (matchData.tournament_id) {
                         console.log(`Match ${matchId} is part of tournament ${matchData.tournament_id}. Triggering tournament advancement logic.`);
-                        
+
                         const { success: advanceSuccess, errorMessage: advanceError } = await GameController.advanceTournament(matchData.tournament_id);
                         if (!advanceSuccess) {
                             console.error(`Failed to advance tournament ${matchData.tournament_id}:`, advanceError);
@@ -1103,7 +1079,7 @@ export default class GameController {
                 });
                 matchParticipantsInserts.push({
                     match_id: matchId,
-                    user_id: shuffledParticipants[i+1].user_id,
+                    user_id: shuffledParticipants[i + 1].user_id,
                     position: 2,
                 });
                 matchIndex++;
@@ -1321,8 +1297,8 @@ export default class GameController {
                     return { success: true, tournamentWinnerId: null };
                 }
             } else { // numActivePlayers is 0 or negative - unexpected state, possibly all players eliminated without a clear winner
-                 console.log(`Tournament ${tournamentId} has no active players left (0 or negative). Should have been completed or indicates an error. Active players: ${numActivePlayers}`);
-                 return { success: true, tournamentWinnerId: null };
+                console.log(`Tournament ${tournamentId} has no active players left (0 or negative). Should have been completed or indicates an error. Active players: ${numActivePlayers}`);
+                return { success: true, tournamentWinnerId: null };
             }
 
         } catch (error) {
@@ -1382,6 +1358,272 @@ export default class GameController {
 
         } catch (error) {
             console.error("Error in updateTournamentFinalPositions:", error);
+        }
+    }
+
+    static async withdrawFromLobby(req: Request, res: Response) {
+        try {
+            
+            const { user_id, lobby_id } = req.body;
+            console.log('Withdraw request received:', { user_id, lobby_id });
+
+            if (!user_id || !lobby_id) {
+                return res.status(400).json({ error: "Missing required fields: user_id, lobby_id" });
+            }
+            // fetch user first
+            const { data: user, error: userError } = await dbClient
+                .from('users')
+                .select('id, solana_address')
+                .eq('id', user_id)
+                .single();
+            if (userError || !user) {
+                console.error("Error fetching user for withdrawal:", userError);
+                return res.status(404).json({ error: "User not found" });
+            }
+
+            // Fetch participant details to check if they have staked
+            const { data: participant, error: participantError } = await dbClient
+                .from('lobby_participants')
+                .select('has_staked')
+                .eq('user_id', user_id)
+                .eq('lobby_id', lobby_id)
+                .single();
+
+            if (participantError || !participant) {
+                console.error("Error fetching participant for withdrawal:", participantError);
+                return res.status(404).json({ error: "Participant not found in this lobby" });
+            }
+
+            // Fetch lobby details to get stake amount and current players
+            const { data: lobby, error: lobbyError } = await dbClient
+                .from('lobbies')
+                .select('current_players, stake_amount, status')
+                .eq('id', lobby_id)
+                .single();
+
+            if (lobbyError || !lobby) {
+                console.error("Error fetching lobby for withdrawal:", lobbyError);
+                return res.status(404).json({ error: "Lobby not found or error fetching lobby data" });
+            }
+
+            // Update the status of lobby to "withdrawal"
+            const { error: updateLobbyError } = await dbClient
+                .from('lobbies')
+                .update({ status: 'withdrawal' })
+                .eq('id', lobby_id);
+            if (updateLobbyError) {
+                console.error("Error updating lobby status to withdrawal:", updateLobbyError);
+                return res.status(500).json({ error: "Failed to update lobby status" });
+            }
+
+            // format stake amount from lamports to sol number
+            const stakeAmountInSol = parseFloat(lobby.stake_amount) / 1e9; // Convert lamports to SOL
+            const signature = await AdminWallet.processWithdrawal(user.solana_address, stakeAmountInSol);
+
+            if (!signature) {
+                console.error("Withdrawal failed, no signature returned.");
+                const { error: rollbackError } = await dbClient
+                    .from('lobbies')
+                    .update({ status: lobby.status }) // Rollback to previous status
+                    .eq('id', lobby_id);
+                return res.status(500).json({ error: "Failed to process withdrawal" });
+            }
+
+            // Delete the participant from the lobby_participants table
+            const { error: deleteParticipantError } = await dbClient
+                .from('lobby_participants')
+                .delete()
+                .eq('user_id', user_id)
+                .eq('lobby_id', lobby_id);
+
+            if (deleteParticipantError) {
+                console.error("Error deleting lobby participant:", deleteParticipantError);
+                return res.status(500).json({ error: "Failed to remove participant from lobby" });
+            }
+
+            // Decrement current_players in lobbies table and update total_prize_pool
+            const newCurrentPlayers = lobby.current_players! - 1;
+
+
+            const { error: lobbyUpdateError } = await dbClient
+                .from('lobbies')
+                .update({
+                    current_players: newCurrentPlayers,
+                    status: newCurrentPlayers === 0 ? 'disbanded' : lobby.status
+                })
+                .eq('id', lobby_id);
+
+
+            if (lobbyUpdateError) {
+                console.error("Error updating lobby current players count and prize pool after withdrawal:", lobbyUpdateError);
+                return res.status(500).json({ error: "Failed to update lobby details after withdrawal" });
+            }
+
+            return res.status(200).json({ message: "Successfully withdrawn from lobby" });
+
+        } catch (error) {
+            console.error("Error in withdrawFromLobby:", error);
+            return res.status(500).json({ error: "Internal server error during lobby withdrawal" });
+        }
+    }
+
+    static async kickPlayer(req: Request, res: Response) {
+        try {
+            const { lobby_id, player_to_kick_id, creator_user_id } = req.body;
+
+            if (!lobby_id || !player_to_kick_id || !creator_user_id) {
+                return res.status(400).json({ error: "Missing required fields: lobby_id, player_to_kick_id, creator_user_id" });
+            }
+
+            // Verify the caller is the lobby creator
+            const { data: lobby, error: lobbyError } = await dbClient
+                .from('lobbies')
+                .select('created_by, current_players, stake_amount, status')
+                .eq('id', lobby_id)
+                .single();
+
+            if (lobbyError || !lobby) {
+                console.error("Error fetching lobby for kicking player:", lobbyError);
+                return res.status(404).json({ error: "Lobby not found" });
+            }
+
+            if (lobby.created_by !== creator_user_id) {
+                return res.status(403).json({ error: "Only the lobby creator can kick players" });
+            }
+
+            // Ensure the player to be kicked is actually in the lobby
+            const { data: participant, error: participantError } = await dbClient
+                .from('lobby_participants')
+                .select('has_staked')
+                .eq('user_id', player_to_kick_id)
+                .eq('lobby_id', lobby_id)
+                .single();
+
+            if (participantError || !participant) {
+                console.error("Error fetching participant to kick:", participantError);
+                return res.status(404).json({ error: "Player not found in this lobby" });
+            }
+
+            // Prevent kicking if the player has already staked
+            if (participant.has_staked) {
+                return res.status(400).json({ error: "Cannot kick a player who has already staked" });
+            }
+
+            // Delete the participant from the lobby_participants table
+            const { error: deleteParticipantError } = await dbClient
+                .from('lobby_participants')
+                .delete()
+                .eq('user_id', player_to_kick_id)
+                .eq('lobby_id', lobby_id);
+
+            if (deleteParticipantError) {
+                console.error("Error deleting kicked player from lobby_participants:", deleteParticipantError);
+                return res.status(500).json({ error: "Failed to remove player from lobby" });
+            }
+
+            // Decrement current_players in lobbies table and update total_prize_pool (if applicable)
+            const newCurrentPlayers = lobby.current_players! - 1;
+            // No need to adjust total_prize_pool as the kicked player hadn't staked
+            const { error: lobbyUpdateError } = await dbClient
+                .from('lobbies')
+                .update({
+                    current_players: newCurrentPlayers,
+                    status: newCurrentPlayers === 0 ? 'disbanded' : lobby.status // Disband if no players left
+                })
+                .eq('id', lobby_id);
+
+            if (lobbyUpdateError) {
+                console.error("Error updating lobby current players count after kicking:", lobbyUpdateError);
+                return res.status(500).json({ error: "Failed to update lobby details after kicking player" });
+            }
+
+            return res.status(200).json({ message: "Player kicked successfully" });
+
+        } catch (error) {
+            console.error("Error in kickPlayer:", error);
+            return res.status(500).json({ error: "Internal server error during player kick" });
+        }
+    }
+
+    static async deleteLobby(req: Request, res: Response) {
+        try {
+            const { lobby_id, user_id } = req.body;
+
+            if (!lobby_id || !user_id) {
+                return res.status(400).json({ error: "Missing required fields: lobby_id, user_id" });
+            }
+
+            // Fetch the lobby to check if the user is the creator
+            const { data: lobby, error: lobbyError } = await dbClient
+                .from('lobbies')
+                .select('*')
+                .eq('id', lobby_id)
+                .single();
+
+            // fetch all users from lobby_participants
+            const { data: participants, error: participantsError } = await dbClient
+                .from('lobby_participants')
+                .select('*')
+                .eq('lobby_id', lobby_id);
+            if (!participants || participants.length === 0) {
+                console.error("No participants found for lobby deletion.");
+                return res.status(404).json({ error: "No participants found for this lobby" });
+            }
+
+            // fetch all users based on the ids from lobby_participants
+            const participantWalletAddresses = await dbClient
+                .from('users')
+                .select('solana_address')
+                .in('id', participants.map(p => p.user_id));
+
+
+            if (lobbyError || !lobby) {
+                console.error("Error fetching lobby for deletion:", lobbyError);
+                return res.status(404).json({ error: "Lobby not found" });
+            }
+
+            if (lobby.created_by !== user_id) {
+                return res.status(403).json({ error: "Only the lobby creator can delete the lobby" });
+            }
+
+            // issue a refund to all participants if they have staked
+            const arrayOfWalletAddresses = participantWalletAddresses.data!.map(p => p.solana_address);
+            const stakeAmountInSol = parseFloat(lobby.stake_amount) / 1e9; // Convert lamports to SOL
+            const result = await AdminWallet.processLobbyDeletion(arrayOfWalletAddresses, stakeAmountInSol);
+
+            if (!result) {
+                console.error("Failed to process refunds for lobby participants.");
+                return res.status(500).json({ error: "Failed to process refunds for lobby participants" });
+            }
+            console.log("Refunds processed successfully for lobby participants.");
+
+            // Delete all participants in this lobby
+            const { error: deleteParticipantsError } = await dbClient
+                .from('lobby_participants')
+                .delete()
+                .eq('lobby_id', lobby_id);
+
+            if (deleteParticipantsError) {
+                console.error("Error deleting participants from lobby:", deleteParticipantsError);
+                return res.status(500).json({ error: "Failed to delete participants from lobby" });
+            }
+
+            // Delete the lobby itself
+            const { error: deleteLobbyError } = await dbClient
+                .from('lobbies')
+                .delete()
+                .eq('id', lobby_id);
+
+            if (deleteLobbyError) {
+                console.error("Error deleting lobby:", deleteLobbyError);
+                return res.status(500).json({ error: "Failed to delete the lobby" });
+            }
+
+            return res.status(200).json({ message: "Lobby deleted successfully" });
+
+        } catch (error) {
+            console.error("Error in deleteLobby:", error);
+            return res.status(500).json({ error: "Internal server error during lobby deletion" });
         }
     }
 }

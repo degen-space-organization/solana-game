@@ -1361,7 +1361,7 @@ export default class GameController {
         }
     }
 
-    static async leaveLobby(req: Request, res: Response) {
+    static async withdrawFromLobby(req: Request, res: Response) {
         try {
             
             const { user_id, lobby_id } = req.body;

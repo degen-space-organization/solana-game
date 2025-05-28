@@ -19,7 +19,7 @@ import '@solana/wallet-adapter-react-ui/styles.css';
 export const WalletContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
     // Choose network: 'devnet', 'testnet', or 'mainnet-beta'
     // const network = WalletAdapterNetwork.Devnet;
-    const network = WalletAdapterNetwork.Mainnet;
+    const network = WalletAdapterNetwork.Devnet;
     const endpoint = useMemo(() => clusterApiUrl(network), [network]);
 
     // Configure the wallets you want to support (Phantom, Solflare, etc.)

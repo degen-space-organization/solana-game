@@ -245,7 +245,7 @@ const LobbyDetailsPage: React.FC = () => {
       });
 
       // Call the backend API to handle withdrawal logic including Solana refund
-      const response = await fetch('http://localhost:4000/api/v1/game/leave-lobby', {
+      const response = await fetch('http://localhost:4000/api/v1/game/withdraw-lobby', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

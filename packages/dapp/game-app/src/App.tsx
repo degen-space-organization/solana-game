@@ -13,49 +13,42 @@ import {
   Badge,
   Card,
   Container,
-  Spinner,
   useDisclosure,
 } from "@chakra-ui/react";
+
 import {
   MessageCircle,
   X,
   Menu,
-  Wallet,
-  RefreshCw,
-  Copy,
-  ExternalLink,
   ChevronLeft,
-  ChevronRight
 } from 'lucide-react';
-import { toaster } from './components/ui/toaster';
 import './index.css';
 
-// Import your existing components
-import LobbyPending from './components/Lobby/LobbyPending';
+import { useWallet } from '@solana/wallet-adapter-react';
+import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 
 import { database } from '@/supabase/Database';
+import type { ActiveLobbyDetails, User } from './types/lobby';
 
+
+
+// Components
 import Game from './components/Game/Game';
-
-import { ConnectWalletButton } from './components/Wallet/WalletConnect';
+import Spectate from './components/Spectate/Spectate';
+import LobbyJoined from './components/Lobby/LobbyJoined';
+import LobbyPending from './components/Lobby/LobbyPending';
+import Leaderboard from './components/Leaderboard/Leaderboard';
+import LobbyDetailsPage from './components/Lobby/LobbyDetailsPage';
 import GlobalChatWrapper from './components/Chat/GlobalChat';
 
-
-import type { User } from "./types/lobby"
+import { toaster } from './components/ui/toaster';
 import { CreateLobbyModal } from './components/Lobby/CreateLobbyModal';
-import { useWallet } from '@solana/wallet-adapter-react';
-
-import type { ActiveLobbyDetails } from './types/lobby';
-
-import LobbyJoined from './components/Lobby/LobbyJoined';
-
-import Leaderboard from './components/Leaderboard/Leaderboard';
+import { ConnectWalletButton } from './components/Wallet/WalletConnect';
 
 
 
-import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
-import LobbyDetailsPage from './components/Lobby/LobbyDetailsPage';
-import Spectate from './components/Spectate/Spectate';
+
+
 
 
 interface RankedPlayer extends User {

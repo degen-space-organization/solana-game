@@ -38,9 +38,11 @@ import { toaster } from '@/components/ui/toaster';
 import type { PendingLobby } from '@/types/lobby';
 import { PublicKey, SystemProgram, Transaction } from '@solana/web3.js';
 import { solConnection } from '@/web3';
+import { GAME_VAULT_ADDRESS } from '@/web3/constants';
 
-const GAME_VAULT_ADDRESS = new PublicKey('48wcCEj1hdV5UGwr3PmhqvU3ix1eN5rMqEsBxT4XKRfc'); // Replace with your actual vault address
 
+// const GAME_VAULT_ADDRESS = new PublicKey('48wcCEj1hdV5UGwr3PmhqvU3ix1eN5rMqEsBxT4XKRfc'); // Replace with your actual vault address
+// const GAME_VAULT_ADDRESS = pubkey; // Import from constants
 
 interface LobbyParticipant {
   id: number;
@@ -254,6 +256,14 @@ const LobbyDetailsPage: React.FC = () => {
         }),
       });
 
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Withdraw API error:', errorData.error);
+        throw new Error(errorData.error || 'Failed to withdraw');
+      }
+
+      console.log('Withdrawal successful');
+
       toaster.create({
         title: "Withdrawn Successfully! 🔄",
         description: "You have successfully withdrawn from the lobby",
@@ -404,8 +414,31 @@ const LobbyDetailsPage: React.FC = () => {
         duration: 3000,
       });
 
-      // TODO: Implement actual lobby close logic
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const user = await database.users.getByWallet(publicKey!.toBase58());
+      const userId = user?.id;
+      if (!userId) {
+        throw new Error('Current user not found');
+      }
+
+      console.log('Closing lobby with user ID:', userId);
+      console.log('Lobby ID:', lobby!.id);
+
+      const response = await fetch('http://localhost:4000/api/v1/game/close-lobby', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          lobby_id: lobby!.id,
+          user_id: userId,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Close lobby API error:', errorData.error);
+        throw new Error(errorData.error || 'Failed to close lobby');
+      }
 
       toaster.create({
         title: "Lobby Closed! 🔐",
@@ -441,8 +474,23 @@ const LobbyDetailsPage: React.FC = () => {
         duration: 3000,
       });
 
-      // TODO: Implement actual join lobby logic via your API
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Call the backend API to handle joining the lobby
+      const response = await fetch('http://localhost:4000/api/v1/game/join-lobby', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: currentUser.id,
+          lobby_id: lobby!.id,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Join lobby API error:', errorData.error);
+        throw new Error(errorData.error || 'Failed to join lobby');
+      }
 
       toaster.create({
         title: "Joined Successfully! 🎉",

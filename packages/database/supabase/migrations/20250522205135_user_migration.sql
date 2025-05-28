@@ -5,6 +5,8 @@ CREATE TABLE users (
     nickname VARCHAR(50),
     matches_won INTEGER DEFAULT 0,
     matches_lost INTEGER DEFAULT 0,
+    is_in_game BOOLEAN DEFAULT FALSE,
+    
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 

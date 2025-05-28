@@ -13,6 +13,7 @@ interface MoveDisplayProps {
   playerName: string;
   isWinner?: boolean;
   showMove?: boolean; // For hiding moves until both players have moved
+  hasSubmittedMove?: boolean; // To show if this player has submitted their move
 }
 
 const MoveDisplay: React.FC<MoveDisplayProps> = ({
@@ -20,9 +21,11 @@ const MoveDisplay: React.FC<MoveDisplayProps> = ({
   playerName,
   isWinner = false,
   showMove = true,
+  hasSubmittedMove = false,
 }) => {
   const getMoveEmoji = (move: Move | null): string => {
-    if (!move || !showMove) return '❓';
+    if (!showMove && hasSubmittedMove) return '🤐'; // Move submitted but hidden
+    if (!showMove || !move) return '❓'; // Waiting for move
     switch (move) {
       case 'rock': return '🗿';
       case 'paper': return '📄';
@@ -32,32 +35,26 @@ const MoveDisplay: React.FC<MoveDisplayProps> = ({
   };
 
   const getMoveGif = (move: Move | null): string => {
-    if (!move || !showMove) 
-      return '/gifs/waiting.gif'; 
-    
+    if (!showMove && hasSubmittedMove) return '/gifs/submitted.gif'; // You can add this GIF
+    if (!showMove || !move) return '/gifs/waiting.gif';
+    // These paths would need to be added to your public/gifs folder
     switch (move) {
-      case 'rock': 
-        return '/gifs/rock.gif';
-      case 'paper': 
-        return '/gifs/paper.gif';
-      case 'scissors': 
-        return '/gifs/scissors.gif';
-      default: 
-        return '/gifs/waiting.gif';
+      case 'rock': return '/gifs/rock.gif';
+      case 'paper': return '/gifs/paper.gif';
+      case 'scissors': return '/gifs/scissors.gif';
+      default: return '/gifs/waiting.gif';
     }
   };
 
   const getMoveColor = (): string => {
-    if (isWinner) 
-        return '#06D6A0'; // Green for winner
-    if (!showMove || !move) 
-      return '#6B7280'; // Gray for hidden/no move
-    return '#FF6B35'; // Orange for regular move
+    if (isWinner) return '#06D6A0'; // Green for winner
+    if (!showMove && hasSubmittedMove) return '#118AB2'; // Blue for submitted but hidden
+    if (!showMove || !move) return '#6B7280'; // Gray for waiting/no move
+    return '#FF6B35'; // Orange for revealed move
   };
 
   const getBorderColor = (): string => {
-    if (isWinner) 
-      return '#06D6A0';
+    if (isWinner) return '#06D6A0';
     return '#000000';
   };
 
@@ -159,7 +156,7 @@ const MoveDisplay: React.FC<MoveDisplayProps> = ({
           textTransform="uppercase"
           letterSpacing="wider"
         >
-          {showMove && move ? move : '???'}
+          {showMove && move ? move : hasSubmittedMove ? 'READY' : 'WAITING'}
         </Text>
       </Box>
     </VStack>

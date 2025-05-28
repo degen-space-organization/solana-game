@@ -10,8 +10,8 @@ import {
   Badge,
 } from '@chakra-ui/react';
 import { Gamepad2, Clock } from 'lucide-react';
-import type { Tables } from '@/supabase/types';
 import MoveDisplay from './MoveDisplay';
+import type { Tables } from '@/supabase/types';
 
 type Move = 'rock' | 'paper' | 'scissors';
 
@@ -143,7 +143,8 @@ const GameRounds: React.FC<GameRoundsProps> = ({ rounds, participants }) => {
               {sortedRounds.map((round) => {
                 const { result, winner } = getRoundResult(round);
                 const isCompleted = round.completed_at !== null;
-                const showMoves = isCompleted;
+                const bothMovesSubmitted = round.player1_move !== null && round.player2_move !== null;
+                const showMoves = bothMovesSubmitted; // Only show moves when both players have submitted
 
                 return (
                   <Box
@@ -207,6 +208,7 @@ const GameRounds: React.FC<GameRoundsProps> = ({ rounds, participants }) => {
                           playerName={getDisplayName(player1?.users)}
                           isWinner={round.winner_id === player1?.user_id}
                           showMove={showMoves}
+                          hasSubmittedMove={round.player1_move !== null}
                         />
                         
                         <Box
@@ -232,23 +234,51 @@ const GameRounds: React.FC<GameRoundsProps> = ({ rounds, participants }) => {
                           playerName={getDisplayName(player2?.users)}
                           isWinner={round.winner_id === player2?.user_id}
                           showMove={showMoves}
+                          hasSubmittedMove={round.player2_move !== null}
                         />
                       </Flex>
 
                       {/* Round Status */}
                       {!isCompleted && (
                         <Box
-                          bg="yellow.100"
+                          bg={bothMovesSubmitted ? "blue.100" : "yellow.100"}
                           border="2px solid"
-                          borderColor="yellow.500"
+                          borderColor={bothMovesSubmitted ? "blue.500" : "yellow.500"}
                           borderRadius="0"
                           p="3"
                           textAlign="center"
-                          shadow="2px 2px 0px rgba(245,158,11,0.3)"
+                          shadow={bothMovesSubmitted ? "2px 2px 0px rgba(59,130,246,0.3)" : "2px 2px 0px rgba(245,158,11,0.3)"}
                         >
-                          <Text fontSize="sm" color="yellow.700" fontWeight="bold">
-                            ⏳ Round in progress - waiting for players to make their moves
-                          </Text>
+                          {bothMovesSubmitted ? (
+                            <Text fontSize="sm" color="blue.700" fontWeight="bold">
+                              ⚡ Both moves submitted! Processing round...
+                            </Text>
+                          ) : (
+                            <VStack gap="2">
+                              <Text fontSize="sm" color="yellow.700" fontWeight="bold">
+                                ⏳ Waiting for players to make their moves
+                              </Text>
+                              <HStack gap="4" justify="center">
+                                <HStack gap="1">
+                                  <Text fontSize="xs" color="yellow.600">
+                                    {getDisplayName(player1?.users)}:
+                                  </Text>
+                                  <Text fontSize="xs" fontWeight="bold" color={round.player1_move ? "green.600" : "red.600"}>
+                                    {round.player1_move ? "✅ Ready" : "⏸️ Thinking..."}
+                                  </Text>
+                                </HStack>
+                                <Text fontSize="xs" color="yellow.600">|</Text>
+                                <HStack gap="1">
+                                  <Text fontSize="xs" color="yellow.600">
+                                    {getDisplayName(player2?.users)}:
+                                  </Text>
+                                  <Text fontSize="xs" fontWeight="bold" color={round.player2_move ? "green.600" : "red.600"}>
+                                    {round.player2_move ? "✅ Ready" : "⏸️ Thinking..."}
+                                  </Text>
+                                </HStack>
+                              </HStack>
+                            </VStack>
+                          )}
                         </Box>
                       )}
                     </VStack>

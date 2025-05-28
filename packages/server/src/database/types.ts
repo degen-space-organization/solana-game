@@ -503,6 +503,7 @@ export type Database = {
         Row: {
           created_at: string | null
           id: number
+          is_in_game: boolean | null
           matches_lost: number | null
           matches_won: number | null
           nickname: string | null
@@ -512,6 +513,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           id?: number
+          is_in_game?: boolean | null
           matches_lost?: number | null
           matches_won?: number | null
           nickname?: string | null
@@ -521,6 +523,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           id?: number
+          is_in_game?: boolean | null
           matches_lost?: number | null
           matches_won?: number | null
           nickname?: string | null

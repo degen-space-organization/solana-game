@@ -49,11 +49,47 @@ import type { ActiveLobbyDetails } from './types/lobby';
 
 import LobbyJoined from './components/Lobby/LobbyJoined';
 
+import Leaderboard from './components/Leaderboard/Leaderboard';
+
 
 
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import LobbyDetailsPage from './components/Lobby/LobbyDetailsPage';
 
+
+interface RankedPlayer extends User {
+  net_wins: number;
+  rank: 'Unranked' | 'Bronze' | 'Silver' | 'Gold' | 'Legendary';
+}
+
+const getPlayerRank = (netWins: number): 'Unranked' | 'Bronze' | 'Silver' | 'Gold' | 'Legendary' => {
+  if (netWins > 20) {
+    return 'Legendary';
+  } else if (netWins > 15) {
+    return 'Gold';
+  } else if (netWins > 10) {
+    return 'Silver';
+  } else if (netWins > 5) {
+    return 'Bronze';
+  }
+  return 'Unranked'; // Players with 0 to 5 net wins, or negative net wins but filtered out
+};
+
+// Function to get color scheme for rank badge
+const getRankColorScheme = (rank: RankedPlayer['rank']): string => {
+  switch (rank) {
+    case 'Bronze':
+      return 'orange'; // Or a custom bronze color
+    case 'Silver':
+      return 'gray'; // Or a custom silver color
+    case 'Gold':
+      return 'yellow'; // Or a custom gold color
+    case 'Legendary':
+      return 'purple'; // Or a custom legendary color
+    default:
+      return 'blue'; // For Unranked or other cases
+  }
+};
 
 
 // Types for wallet
@@ -151,6 +187,8 @@ function App() {
   const { publicKey, connected } = useWallet();
   const [currentUserId, setCurrentUserId] = useState<number | null>(null); // State to store user ID
   const [currentUserFromHeader, setCurrentUserFromHeader] = useState<User | null>(null); //
+    const [currentUserRank, setCurrentUserRank] = useState<'Unranked' | 'Bronze' | 'Silver' | 'Gold' | 'Legendary'>('Unranked'); // New state for user rank
+
   const [activeLobby, setActiveLobby] = useState<ActiveLobbyDetails | null>(null);
 
 
@@ -163,8 +201,17 @@ function App() {
       if (walletPublicKey) {
         const user = await database.users.getByWallet(walletPublicKey);
         setCurrentUserFromHeader(user);
+        
+        if (user) {
+          const netWins = (user.matches_won ?? 0) - (user.matches_lost ?? 0);
+          setCurrentUserRank(getPlayerRank(netWins)); // Calculate and set rank
+        } else {
+          setCurrentUserRank('Unranked');
+        }
+
       } else {
         setCurrentUserFromHeader(null);
+        setCurrentUserRank('Unranked');
       }
     };
     fetchCurrentUser();
@@ -435,7 +482,22 @@ function App() {
             </HStack>
 
             {/* Right side - Wallet */}
-            <ConnectWalletButton />
+            <HStack padding={4}> {/* Use HStack to align wallet button and rank */}
+              {currentUserFromHeader && currentUserRank !== 'Unranked' && (
+                <Badge
+                  colorScheme={getRankColorScheme(currentUserRank)}
+                  variant="solid"
+                  px="3"
+                  py="1"
+                  borderRadius="full"
+                  fontSize="md"
+                  fontWeight="bold"
+                >
+                  {currentUserRank}
+                </Badge>
+              )}
+              <ConnectWalletButton />
+            </HStack>
           </Flex>
         </Container>
       </Box>
@@ -662,7 +724,11 @@ function App() {
                     </Card.Root>
                   )}
 
-                  {activeSection === 'leaderboard' && (
+                  {
+                  
+                  activeSection === 'leaderboard' && <Leaderboard />
+                  
+                  /* {activeSection === 'leaderboard' && (
                     <Card.Root
                       borderWidth="4px"
                       borderStyle="solid"
@@ -691,7 +757,8 @@ function App() {
                         </Text>
                       </Card.Body>
                     </Card.Root>
-                  )}
+                  )} */
+                  }
                 </HStack>
               </VStack>
             </>

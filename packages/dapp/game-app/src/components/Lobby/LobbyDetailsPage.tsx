@@ -230,7 +230,8 @@ const LobbyDetailsPage: React.FC = () => {
   };
 
   const handleWithdraw = async () => {
-    if (!walletAddress || !lobby) return;
+    if (!walletAddress || !lobby) 
+      return;
 
     setActionLoading(true);
     try {
@@ -241,8 +242,17 @@ const LobbyDetailsPage: React.FC = () => {
         duration: 3000,
       });
 
-      // TODO: Implement actual withdrawal logic
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Call the backend API to handle withdrawal logic including Solana refund
+      const response = await fetch('http://localhost:4000/api/v1/game/withdraw-lobby', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: currentUser.id, // Pass current user's ID
+          lobby_id: lobby.id,
+        }),
+      });
 
       toaster.create({
         title: "Withdrawn Successfully! 🔄",
@@ -290,8 +300,24 @@ const LobbyDetailsPage: React.FC = () => {
         duration: 3000,
       });
 
-      // TODO: Implement actual kick logic
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Call the backend API to handle kicking a player
+      const response = await fetch('http://localhost:4000/api/v1/game/kick-player', { // Calling the new kick-player endpoint
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          lobby_id: lobby!.id,
+          user_id: playerId,
+          creator_user_id: currentUser!.id,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Kick API error:', errorData.error);
+        throw new Error(errorData.error || 'Failed to kick player');
+      }
 
       toaster.create({
         title: "Player Kicked! 👋",
@@ -300,14 +326,14 @@ const LobbyDetailsPage: React.FC = () => {
         duration: 4000,
       });
 
-      // Refresh the data
+      // Refresh the data to reflect the kicked player's removal
       window.location.reload();
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Kick player error:', error);
       toaster.create({
         title: "Kick Failed",
-        description: "Failed to kick player. Please try again.",
+        description: error.message || "Failed to kick player. Please try again.",
         type: "error",
         duration: 5000,
       });
@@ -1037,63 +1063,91 @@ const LobbyDetailsPage: React.FC = () => {
                     // Participant Actions
                     <VStack align="stretch" padding="2">
                       {hasUserStaked() ? (
-                        <Button
-                          onClick={handleWithdraw}
-                          disabled={actionLoading}
-                          bg="#FF6B35"
-                          color="white"
-                          fontWeight="black"
-                          fontSize="lg"
-                          py="6"
-                          borderRadius="0"
-                          border="3px solid"
-                          borderColor="gray.900"
-                          shadow="4px 4px 0px rgba(0,0,0,0.8)"
-                          textTransform="uppercase"
-                          _hover={!actionLoading ? {
-                            bg: "#E55A2B",
-                            transform: "translate(-2px, -2px)",
-                            shadow: "6px 6px 0px rgba(0,0,0,0.8)",
-                          } : {}}
-                        >
-                          {actionLoading ? (
-                            <Spinner size="sm" />
-                          ) : (
-                            <HStack>
-                              <LogOut size={20} />
-                              <Text>Withdraw from Lobby</Text>
-                            </HStack>
-                          )}
-                        </Button>
+
+                          <Button
+                            onClick={handleWithdraw}
+                            disabled={actionLoading}
+                            bg="#FF6B35"
+                            color="white"
+                            fontWeight="black"
+                            fontSize="lg"
+                            py="6"
+                            borderRadius="0"
+                            border="3px solid"
+                            borderColor="gray.900"
+                            shadow="4px 4px 0px rgba(0,0,0,0.8)"
+                            textTransform="uppercase"
+                            _hover={!actionLoading ? {
+                              bg: "#E55A2B",
+                              transform: "translate(-2px, -2px)",
+                              shadow: "6px 6px 0px rgba(0,0,0,0.8)",
+                            } : {}}
+                          >
+                            {actionLoading ? (
+                              <Spinner size="sm" />
+                            ) : (
+                              <HStack>
+                                <LogOut size={20} />
+                                <Text>Withdraw from Lobby</Text>
+                              </HStack>
+                            )}
+                          </Button>  
                       ) : (
-                        <Button
-                          onClick={handleStake}
-                          disabled={actionLoading}
-                          bg="#7B2CBF"
-                          color="white"
-                          fontWeight="black"
-                          fontSize="lg"
-                          py="6"
-                          borderRadius="0"
-                          border="3px solid"
-                          borderColor="gray.900"
-                          shadow="4px 4px 0px rgba(0,0,0,0.8)"
-                          textTransform="uppercase"
-                          _hover={!actionLoading ? {
-                            bg: "#6A1B9A",
-                            transform: "translate(-2px, -2px)",
-                            shadow: "6px 6px 0px rgba(0,0,0,0.8)",
-                          } : {}}
-                        >
-                          {actionLoading ? (
-                            <Spinner size="sm" />
-                          ) : (
+                        <VStack> 
+                          <Button
+                            onClick={handleStake}
+                            disabled={actionLoading}
+                            bg="#7B2CBF"
+                            color="white"
+                            fontWeight="black"
+                            fontSize="lg"
+                            py="6"
+                            borderRadius="0"
+                            border="3px solid"
+                            borderColor="gray.900"
+                            shadow="4px 4px 0px rgba(0,0,0,0.8)"
+                            textTransform="uppercase"
+                            _hover={!actionLoading ? {
+                              bg: "#6A1B9A",
+                              transform: "translate(-2px, -2px)",
+                              shadow: "6px 6px 0px rgba(0,0,0,0.8)",
+                            } : {}}
+                          >
+                            {actionLoading ? (
+                              <Spinner size="sm" />
+                            ) : (
+                              <HStack>
+                                <Coins size={20} />
+                                <Text>Stake {lobby.stake_amount_sol} SOL</Text>
+                              </HStack>
+                            )}
+                          </Button>
+
+                          <Button
+                            onClick={handleWithdraw}
+                            disabled={actionLoading}
+                            bg="#FF6B35"
+                            color="white"
+                            fontWeight="black"
+                            fontSize="lg"
+                            py="6"
+                            borderRadius="0"
+                            border="3px solid"
+                            borderColor="gray.900"
+                            shadow="4px 4px 0px rgba(0,0,0,0.8)"
+                            textTransform="uppercase"
+                            _hover={!actionLoading ? {
+                              bg: "#E55A2B",
+                              transform: "translate(-2px, -2px)",
+                              shadow: "6px 6px 0px rgba(0,0,0,0.8)",
+                            } : {}}
+                          >
                             <HStack>
-                              <Coins size={20} />
-                              <Text>Stake {lobby.stake_amount_sol} SOL</Text>
-                            </HStack>
-                          )}
-                        </Button>
+                                <LogOut size={20} />
+                                <Text>Leave Lobby</Text>
+                              </HStack>
+                          </Button>
+                        </VStack>
                       )}
 
                       <Text fontSize="xs" color="gray.600" textAlign="center" fontWeight="bold">

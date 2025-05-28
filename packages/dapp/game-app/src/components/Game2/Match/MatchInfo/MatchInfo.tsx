@@ -448,7 +448,7 @@ export default function MatchInfo({ matchId, participants = [], status }: MatchI
         borderRadius="0"
         transform="rotate(-0.1deg)"
       >
-        <Card.Body p="6">
+        {/* <Card.Body p="6">
           <Flex align="center" justify="center" gap="8">
             <VStack gap="2" align="center">
               <Text fontSize="md" fontWeight="bold" color="white">
@@ -506,7 +506,7 @@ export default function MatchInfo({ matchId, participants = [], status }: MatchI
               First to 3 wins • {gameRounds.filter(r => r.completed_at).length} rounds completed
             </Text>
           </Box>
-        </Card.Body>
+        </Card.Body> */}
       </Card.Root>
 
       {/* Rounds History */}

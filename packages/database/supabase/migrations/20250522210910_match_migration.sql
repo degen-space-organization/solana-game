@@ -16,7 +16,7 @@ CREATE TABLE matches (
     CONSTRAINT matches_tournament_fkey FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE,
     CONSTRAINT matches_lobby_fkey FOREIGN KEY (lobby_id) REFERENCES lobbies(id) ON DELETE SET NULL,
     CONSTRAINT matches_winner_fkey FOREIGN KEY (winner_id) REFERENCES users(id) ON DELETE SET NULL,
-    CONSTRAINT matches_status_valid CHECK (status IN ('waiting', 'in_progress', 'completed', 'cancelled')),
+    CONSTRAINT matches_status_valid CHECK (status IN ('waiting', 'in_progress', 'completed', 'cancelled', 'showing_results')),
     CONSTRAINT matches_stake_amount_valid CHECK (stake_amount ~ '^[0-9]+$'),
     CONSTRAINT matches_total_prize_pool_valid CHECK (total_prize_pool ~ '^[0-9]+$'),
     CONSTRAINT matches_tournament_round_positive CHECK (tournament_round IS NULL OR tournament_round > 0),

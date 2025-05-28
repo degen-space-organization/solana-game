@@ -2,7 +2,7 @@
 CREATE TABLE users (
     id SERIAL,
     solana_address VARCHAR(44) NOT NULL,
-    nickname VARCHAR(50),
+    nickname VARCHAR(50) UNIQUE,
     matches_won INTEGER DEFAULT 0,
     matches_lost INTEGER DEFAULT 0,
     is_in_game BOOLEAN DEFAULT FALSE,

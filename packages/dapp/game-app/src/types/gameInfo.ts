@@ -16,13 +16,6 @@ export interface GameInfoProps {
   currentUserId: number | null;
 }
 
-export interface TournamentParticipant {
-  user_id: number;
-  eliminated_at: string | null;
-  final_position: number | null;
-  users: Tables<'users'>;
-}
-
 export interface GameStats {
   player1: {
     user_id: number;
@@ -39,12 +32,4 @@ export interface GameStats {
   totalRounds: number;
   completedRounds: number;
   recentRounds?: Tables<'game_rounds'>[];
-}
-
-export interface TournamentStats {
-  activePlayers: number;
-  eliminatedPlayers: number;
-  prizePerWinner: string;
-  currentUserEliminated: boolean;
-  currentUserPosition: number | null;
 }

@@ -8,7 +8,6 @@ const gameRouter = express.Router();
 
 
 /** GET Routes */
-gameRouter.get('/test', async (req: Request, res: Response) => GameController.hello(req, res));
 
 gameRouter.get('/list-tournaments', GameController.listTournaments as unknown as RequestHandler);
 
@@ -17,6 +16,7 @@ gameRouter.get('/list-tournaments', GameController.listTournaments as unknown as
 gameRouter.post('/create-lobby', GameController.createLobby as RequestHandler); // Explicitly cast (only way it works...)
 gameRouter.post('/join-lobby', GameController.joinLobby as RequestHandler);
 gameRouter.post('/start-match', GameController.startMatch as RequestHandler);
+gameRouter.post('/submit-stake', GameController.submitStakeForLobby as RequestHandler);
 gameRouter.post('/submit-move', GameController.submitMove as unknown as RequestHandler);
 
 gameRouter.post('/create-tournament', GameController.createTournament as unknown as RequestHandler);

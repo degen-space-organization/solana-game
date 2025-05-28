@@ -28,55 +28,8 @@ import {
 } from 'lucide-react';
 import { database } from '@/supabase/Database';
 
-// Types based on your database schema
-interface User {
-  id: number;
-  nickname: string | null;
-  solana_address: string;
-  matches_won: number | null;
-  matches_lost: number | null;
-  created_at: string | null;
-  updated_at: string | null;
-}
+import type { CurrentGameInfo, GameInformationProps } from './interfaces';
 
-interface Match {
-  id: number;
-  tournament_id: number | null;
-  status: string;
-  stake_amount: string;
-  total_prize_pool: string;
-  winner_id: number | null;
-  started_at: string | null;
-  completed_at: string | null;
-}
-
-interface Tournament {
-  id: number;
-  name: string;
-  status: string;
-  max_players: number;
-  current_players: number;
-  prize_pool: string;
-  created_at: string;
-  started_at: string | null;
-}
-
-interface MatchParticipant {
-  user_id: number | null;
-  position: number | null;
-  users: User;
-}
-
-interface CurrentGameInfo {
-  match: Match;
-  tournament?: Tournament | null;
-  participants: MatchParticipant[];
-  isUserInGame: boolean;
-}
-
-interface GameInformationProps {
-  userWalletAddress: string | null;
-}
 
 const GameInfo: React.FC<GameInformationProps> = ({ userWalletAddress }) => {
   const [gameInfo, setGameInfo] = useState<CurrentGameInfo | null>(null);

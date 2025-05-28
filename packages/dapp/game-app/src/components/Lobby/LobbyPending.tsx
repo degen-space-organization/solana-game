@@ -16,6 +16,8 @@ import {
 } from '@chakra-ui/react';
 import type { PendingLobby } from '../../types/lobby';
 import { database } from '@/supabase/Database';
+import { useWallet } from '@solana/wallet-adapter-react';
+
 
 interface LobbyCardProps {
   lobby: PendingLobby;
@@ -241,6 +243,7 @@ const LobbyPending: React.FC<LobbyPendingProps> = ({
 }) => {
 
   const [lobbies, setLobbies] = React.useState<PendingLobby[]>([]);
+  const {publicKey} = useWallet();
 
 
   const fetchLobies = async () => {
@@ -260,14 +263,31 @@ const LobbyPending: React.FC<LobbyPendingProps> = ({
     // } else {
     //   fetchLobies();
     // }
-      fetchLobies();
+    fetchLobies();
   }, [useMockData]);
 
-  const handleJoinLobby = (lobbyId: number) => {
+  const handleJoinLobby = async (lobbyId: number) => {
     onJoinLobby(lobbyId);
-    // TODO
-    // In real implementation, this would make an API call
+
     console.log(`Attempting to join lobby ${lobbyId}`);
+
+    const userId = await database.users.getByWallet(publicKey!.toBase58());
+
+    const response = await fetch('http://localhost:4000/api/v1/game/join-lobby', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        lobby_id: lobbyId,
+        user_id: userId?.id, // Replace with actual user ID
+      }),
+    }); 
+    if (!response.ok) {
+      console.error('Failed to join lobby:', response.statusText);
+      return;
+    }
+
   };
 
   if (lobbies.length === 0) {

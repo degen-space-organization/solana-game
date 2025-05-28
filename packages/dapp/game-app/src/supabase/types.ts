@@ -149,7 +149,7 @@ export type Database = {
           disbanded_at: string | null
           id: number
           max_players: number | null
-          name: string | null
+          name: string
           stake_amount: string
           status: string | null
           tournament_id: number | null
@@ -161,7 +161,7 @@ export type Database = {
           disbanded_at?: string | null
           id?: number
           max_players?: number | null
-          name?: string | null
+          name: string
           stake_amount: string
           status?: string | null
           tournament_id?: number | null
@@ -173,7 +173,7 @@ export type Database = {
           disbanded_at?: string | null
           id?: number
           max_players?: number | null
-          name?: string | null
+          name?: string
           stake_amount?: string
           status?: string | null
           tournament_id?: number | null

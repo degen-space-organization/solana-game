@@ -229,7 +229,7 @@ const LobbyDetailsPage: React.FC = () => {
     }
   };
 
-  const handleWithdraw = async () => {
+  const handleLeave = async () => {
     if (!walletAddress || !lobby) 
       return;
 
@@ -243,7 +243,7 @@ const LobbyDetailsPage: React.FC = () => {
       });
 
       // Call the backend API to handle withdrawal logic including Solana refund
-      const response = await fetch('http://localhost:4000/api/v1/game/withdraw-lobby', {
+      const response = await fetch('http://localhost:4000/api/v1/game/leave-lobby', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -255,8 +255,8 @@ const LobbyDetailsPage: React.FC = () => {
       });
 
       toaster.create({
-        title: "Withdrawn Successfully! 🔄",
-        description: "You have successfully withdrawn from the lobby",
+        title: "Left Successfully! 🔄",
+        description: "You have successfully left from the lobby",
         type: "success",
         duration: 4000,
       });
@@ -265,10 +265,10 @@ const LobbyDetailsPage: React.FC = () => {
       navigate('/');
 
     } catch (error) {
-      console.error('Withdrawal error:', error);
+      console.error('Leaving error:', error);
       toaster.create({
-        title: "Withdrawal Failed",
-        description: "Failed to withdraw. Please try again.",
+        title: "Leaving Failed",
+        description: "Failed to leave. Please try again.",
         type: "error",
         duration: 5000,
       });
@@ -1065,7 +1065,7 @@ const LobbyDetailsPage: React.FC = () => {
                       {hasUserStaked() ? (
 
                           <Button
-                            onClick={handleWithdraw}
+                            onClick={handleLeave}
                             disabled={actionLoading}
                             bg="#FF6B35"
                             color="white"
@@ -1124,7 +1124,7 @@ const LobbyDetailsPage: React.FC = () => {
                           </Button>
 
                           <Button
-                            onClick={handleWithdraw}
+                            onClick={handleLeave}
                             disabled={actionLoading}
                             bg="#FF6B35"
                             color="white"

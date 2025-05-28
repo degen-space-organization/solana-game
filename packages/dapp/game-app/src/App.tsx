@@ -55,6 +55,7 @@ import Leaderboard from './components/Leaderboard/Leaderboard';
 
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import LobbyDetailsPage from './components/Lobby/LobbyDetailsPage';
+import Spectate from './components/Spectate/Spectate';
 
 
 interface RankedPlayer extends User {
@@ -180,7 +181,7 @@ const ChatDrawer: React.FC<{
 function App() {
   const [isChatOpen, setIsChatOpen] = useState(false);
 
-  const [activeSection, setActiveSection] = useState<'lobbies' | 'tournaments' | 'leaderboard' | 'joined_lobbies' | 'mygame'>('lobbies');
+  const [activeSection, setActiveSection] = useState<'lobbies' | 'tournaments' | 'leaderboard' | 'joined_lobbies' | 'mygame' | 'spectate'>('lobbies');
   const [isCreateLobbyModalOpen, setIsCreateLobbyModalOpen] = useState(false);
   const { onClose: closeCreateLobbyModal } = useDisclosure();
   const [lobbiesRefreshTrigger, setLobbiesRefreshTrigger] = useState(0); // New state
@@ -514,7 +515,7 @@ function App() {
         <Container maxW="100%">
           <HStack padding="2" justify="center">
 
-            {(['lobbies', 'joined_lobbies', 'tournaments', 'leaderboard', 'mygame'] as const).map((section) => (
+            {(['lobbies', 'joined_lobbies', 'tournaments', 'leaderboard', 'mygame', 'spectate'] as const).map((section) => (
 
               // {(['mygame', 'lobbies', 'tournaments', 'leaderboard'] as const).map((section) => (
 
@@ -725,40 +726,17 @@ function App() {
                   )}
 
                   {
-                  
-                  activeSection === 'leaderboard' && <Leaderboard />
-                  
-                  /* {activeSection === 'leaderboard' && (
-                    <Card.Root
-                      borderWidth="4px"
-                      borderStyle="solid"
-                      borderColor="gray.900"
-                      bg="white"
-                      shadow="8px 8px 0px rgba(0,0,0,0.8)"
-                      borderRadius="0"
-                      p="12"
-                      textAlign="center"
-                      transform="rotate(0.5deg)"
-                      _hover={{
-                        transform: "rotate(0deg) scale(1.02)",
-                        shadow: "12px 12px 0px rgba(0,0,0,0.8)",
-                      }}
-                      transition="all 0.2s ease"
-                    >
-                      <Card.Body>
-                        <Heading size="xl" fontWeight="black" color="gray.900" mb="6" textTransform="uppercase">
-                          👑 LEADERBOARD
-                        </Heading>
-                        <Text fontSize="xl" color="gray.600" mb="4">
-                          Player rankings coming soon!
-                        </Text>
-                        <Text fontSize="md" color="gray.500">
-                          See who's dominating the Solana gaming scene!
-                        </Text>
-                      </Card.Body>
-                    </Card.Root>
-                  )} */
+                    activeSection === 'leaderboard' && <Leaderboard />
                   }
+
+                  {activeSection === 'spectate' && (
+                    <VStack padding="6">
+                      <Box w="100%">
+                        <Spectate />
+                      </Box>
+                    </VStack>
+                  )}
+                  
                 </HStack>
               </VStack>
             </>

@@ -522,7 +522,7 @@ function App() {
                       borderRadius="0"
                       p="12"
                       textAlign="center"
-                      transform="rotate(-0.5deg)"
+                      // transform="rotate(-0.5deg)"
                       _hover={{
                         transform: "rotate(0deg) scale(1.02)",
                         shadow: "12px 12px 0px rgba(0,0,0,0.8)",
@@ -530,9 +530,9 @@ function App() {
                       transition="all 0.2s ease"
                     >
                       <Card.Body>
-                        <Heading size="xl" fontWeight="black" color="gray.900" mb="6" textTransform="uppercase">
+                        {/* <Heading size="xl" fontWeight="black" color="gray.900" mb="6" textTransform="uppercase">
                           🎮 MY GAME
-                        </Heading>
+                        </Heading> */}
                         <Game />
                       </Card.Body>
                     </Card.Root>

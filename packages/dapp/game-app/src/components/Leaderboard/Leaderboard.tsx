@@ -8,29 +8,72 @@ import {
   HStack,
   Spinner,
   Avatar,
-  Button, // Ensure Button is imported
-  Badge,  // Ensure Badge is imported
+  Button,
+  Badge,
 } from '@chakra-ui/react';
 import { Crown, RefreshCw } from 'lucide-react';
 import { database } from '@/supabase/Database';
 import type { User } from '@/types/lobby';
 
+// Define a type for a player with calculated net wins and rank
+interface RankedPlayer extends User {
+  net_wins: number;
+  rank: 'Unranked' | 'Bronze' | 'Silver' | 'Gold' | 'Legendary';
+}
+
 const Leaderboard: React.FC = () => {
-  const [players, setPlayers] = useState<User[]>([]);
+  const [players, setPlayers] = useState<RankedPlayer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Function to determine player rank based on net wins
+  const getPlayerRank = (netWins: number): 'Unranked' | 'Bronze' | 'Silver' | 'Gold' | 'Legendary' => {
+    if (netWins > 20) {
+      return 'Legendary';
+    } else if (netWins > 15) {
+      return 'Gold';
+    } else if (netWins > 10) {
+      return 'Silver';
+    } else if (netWins > 5) {
+      return 'Bronze';
+    }
+    return 'Unranked'; // Players with 0 to 5 net wins, or negative net wins but filtered out
+  };
+
+  // Function to get color scheme for rank badge
+  const getRankColorScheme = (rank: RankedPlayer['rank']): string => {
+    switch (rank) {
+      case 'Bronze':
+        return 'orange'; // Or a custom bronze color
+      case 'Silver':
+        return 'gray'; // Or a custom silver color
+      case 'Gold':
+        return 'yellow'; // Or a custom gold color
+      case 'Legendary':
+        return 'purple'; // Or a custom legendary color
+      default:
+        return 'blue'; // For Unranked or other cases
+    }
+  };
 
   const fetchLeaderboard = async () => {
     setLoading(true);
     setError(null);
     try {
       const fetchedUsers: User[] = await database.users.getAll();
-      const sortedPlayers = [...fetchedUsers].sort((a, b) => {
-        const winsA = a.matches_won ?? 0;
-        const winsB = b.matches_won ?? 0;
-        return winsB - winsA;
-      });
-      setPlayers(sortedPlayers);
+
+      const rankedAndFilteredPlayers: RankedPlayer[] = fetchedUsers
+        .map(user => {
+          const wins = user.matches_won ?? 0;
+          const losses = user.matches_lost ?? 0;
+          const net_wins = wins - losses;
+          const rank = getPlayerRank(net_wins);
+          return { ...user, net_wins, rank };
+        })
+        // .filter(player => player.net_wins > 0) // Show only players with more wins than losses
+        .sort((a, b) => b.net_wins - a.net_wins); // Sort by net wins descending
+
+      setPlayers(rankedAndFilteredPlayers);
     } catch (err) {
       console.error('Error fetching leaderboard:', err);
       setError('Failed to load leaderboard. Please try again.');
@@ -111,7 +154,7 @@ const Leaderboard: React.FC = () => {
           👑 WINNERS LEADERBOARD
         </Heading>
         <Text textAlign="center" fontSize="sm" mt="2" opacity="0.8">
-          Top players ranked by wins
+          Top players ranked by net wins (wins - losses)
         </Text>
       </Box>
 
@@ -127,10 +170,10 @@ const Leaderboard: React.FC = () => {
           shadow="md"
         >
           <Text fontSize="2xl" fontWeight="black" color="gray.400" mb="2">
-            NO PLAYERS YET
+            NO RANKED PLAYERS YET
           </Text>
           <Text fontSize="md" color="gray.600">
-            Be the first to play and get on the leaderboard!
+            Play more matches and achieve more wins than losses to appear here!
           </Text>
         </Box>
       ) : (
@@ -157,13 +200,14 @@ const Leaderboard: React.FC = () => {
             fontSize="xs"
             color="gray.600"
             display={{ base: 'flex', md: 'grid' }}
-            gridTemplateColumns="0.5fr 2fr 1fr 1fr"
+            gridTemplateColumns="0.5fr 2fr 1fr 1fr 1fr" // Added column for Rank
             alignItems="center"
           >
             <Text>RANK</Text>
             <Text textAlign="left">PLAYER</Text>
             <Text textAlign="right">WINS</Text>
             <Text textAlign="right">LOSSES</Text>
+            <Text textAlign="right">NET WINS</Text> {/* New column for Net Wins */}
           </HStack>
 
           {/* Table Body */}
@@ -178,7 +222,7 @@ const Leaderboard: React.FC = () => {
                 borderTop="2px solid"
                 borderColor="gray.200"
                 display={{ base: 'flex', md: 'grid' }}
-                gridTemplateColumns="0.5fr 2fr 1fr 1fr"
+                gridTemplateColumns="0.5fr 2fr 1fr 1fr 1fr" // Added column for Rank
                 alignItems="center"
               >
                 <HStack>
@@ -202,6 +246,11 @@ const Leaderboard: React.FC = () => {
                 <Box textAlign="right">
                   <Badge colorScheme="red" variant="solid" px="3" py="1" borderRadius="full">
                     {player.matches_lost ?? 0}
+                  </Badge>
+                </Box>
+                <Box textAlign="right">
+                  <Badge colorScheme={getRankColorScheme(player.rank)} variant="solid" px="3" py="1" borderRadius="full">
+                    {player.rank} ({player.net_wins})
                   </Badge>
                 </Box>
               </HStack>

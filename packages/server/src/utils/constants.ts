@@ -1,11 +1,13 @@
 
 
 import { Keypair, PublicKey, Connection, LAMPORTS_PER_SOL } from '@solana/web3.js';
-import * as dotenv from 'dotenv';
 import bs58 from 'bs58';
+import { config } from 'dotenv';
 
-dotenv.config();
 
+config({
+    path: '../../.env',
+})
 
 
 export const FEES_PERCENT = 0.5; // %
@@ -14,7 +16,7 @@ export const TOURNAMENT_PRIZE_SHARE = [0.7, 0.3]; // First and second place only
 
 // wallet address
 // 42KWcJjJpqAsHBHw3Z8KPywqdz3TSRcAx1xfu9y569QY
-const adminKeypair = process.env.ADMIN_PRIVATE_KEY || '3ScfjX5Y7VeFVH9o1mDPVhHm6QpUFWpYZwWh4JDLSsGBAHhjbudhUTKnK5RFfeHLBT3UXvwsn64ZpJiKd6cfT7qv';
+const adminKeypair = process.env.ADMIN_PRIVATE_KEY || '';
 
 export const FEES_WALLET_ADDRESS = process.env.FEES_WALLET_ADDRESS || '48wcCEj1hdV5UGwr3PmhqvU3ix1eN5rMqEsBxT4XKRfc';
 

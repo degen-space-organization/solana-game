@@ -243,7 +243,7 @@ const LobbyDetailsPage: React.FC = () => {
         type: "loading",
         duration: 3000,
       });
-
+        
       // Call the backend API to handle withdrawal logic including Solana refund
       const response = await fetch('http://localhost:4000/api/v1/game/withdraw-lobby', {
         method: 'POST',

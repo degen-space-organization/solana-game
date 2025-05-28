@@ -1,158 +1,135 @@
-import React, { useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Card,
+  Flex,
+  VStack,
+  HStack,
   Text,
   Heading,
-  HStack,
-  VStack,
-  Flex,
   Badge,
   Avatar,
   Progress,
-  Grid,
+  Spinner,
 } from '@chakra-ui/react';
-import { Crown, Zap, Target, Clock } from 'lucide-react';
-import type { Tables } from '@/supabase/types';
+import { Swords, Trophy, Coins, Clock, Target } from 'lucide-react';
+import { supabase } from '@/supabase';
 
-interface GameData {
-  match: Tables<'matches'>;
-  tournament?: Tables<'tournaments'> | null;
+interface MatchData {
+  id: number;
+  status: string;
+  winner_id: number | null;
   participants: Array<{
     user_id: number;
     position: number;
-    users: Tables<'users'>;
+    users: {
+      id: number;
+      nickname: string | null;
+      solana_address: string;
+      matches_won: number;
+      matches_lost: number;
+    };
   }>;
-  rounds: Tables<'game_rounds'>[];
+  stake_amount: string;
+  total_prize_pool: string;
+}
+
+interface GameRound {
+  id: number;
+  round_number: number;
+  player1_move: string | null;
+  player2_move: string | null;
+  winner_id: number | null;
+  completed_at: string | null;
 }
 
 interface OneOnOneInfoProps {
-  gameData: GameData;
-  currentUserId: number | null;
+  match: MatchData;
 }
 
-/**
- * @function OneOnOneInfo
- * 
- * @description Displays information about a one-on-one game
- * Shows player names, scores, match status, and other relevant information
- * 
- * @param gameData - The game data including match, participants, and rounds
- * @param currentUserId - The current user's ID to highlight their info
- * @returns JSX.Element representing the OneOnOneInfo Component
- */
-export default function OneOnOneInfo({ gameData, currentUserId }: OneOnOneInfoProps) {
-  const { match, participants, rounds } = gameData;
+export default function OneOnOneInfo({ match }: OneOnOneInfoProps) {
+  const [gameRounds, setGameRounds] = useState<GameRound[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Calculate scores and game state
-  const gameStats = useMemo(() => {
-    const player1 = participants.find(p => p.position === 1);
-    const player2 = participants.find(p => p.position === 2);
-    
-    if (!player1 || !player2) {
-      return {
-        player1: null,
-        player2: null,
-        player1Score: 0,
-        player2Score: 0,
-        totalRounds: 0,
-        completedRounds: 0,
-        recentRounds: [],
-      };
+  const player1 = match.participants.find(p => p.position === 1);
+  const player2 = match.participants.find(p => p.position === 2);
+
+  const getDisplayName = (user: any): string => {
+    return user?.nickname || `${user?.solana_address?.slice(0, 4)}...${user?.solana_address?.slice(-4)}` || 'Unknown';
+  };
+
+  const getStatusColor = (status: string): string => {
+    switch (status) {
+      case 'waiting': return '#FF6B35';
+      case 'in_progress': return '#06D6A0';
+      case 'completed': return '#7B2CBF';
+      default: return '#6B7280';
     }
+  };
 
-    let player1Score = 0;
-    let player2Score = 0;
-    const completedRounds = rounds.filter(r => r.winner_id !== null);
-    
-    completedRounds.forEach(round => {
-      if (round.winner_id === player1.user_id) {
-        player1Score++;
-      } else if (round.winner_id === player2.user_id) {
-        player2Score++;
-      }
-    });
-
-    return {
-      player1,
-      player2,
-      player1Score,
-      player2Score,
-      totalRounds: rounds.length,
-      completedRounds: completedRounds.length,
-      recentRounds: completedRounds.slice(-3).reverse(), // Last 3 rounds, most recent first
-    };
-  }, [participants, rounds]);
-
-  const getDisplayName = (user: Tables<'users'>): string => {
-    return user.nickname || `${user.solana_address.slice(0, 4)}...${user.solana_address.slice(-4)}`;
+  const getStatusText = (status: string): string => {
+    switch (status) {
+      case 'waiting': return 'WAITING TO START';
+      case 'in_progress': return 'BATTLE IN PROGRESS';
+      case 'completed': return 'MATCH COMPLETED';
+      default: return status.toUpperCase();
+    }
   };
 
   const formatSolAmount = (lamports: string): string => {
     return (parseInt(lamports) / 1e9).toFixed(2);
   };
 
-  const getMatchStatusColor = (status: string): string => {
-    switch (status) {
-      case 'in_progress': return '#06D6A0';
-      case 'completed': return '#7B2CBF';
-      default: return '#FF6B35';
-    }
-  };
+  // Calculate scores
+  const player1Score = gameRounds.filter(round => round.winner_id === player1?.user_id).length;
+  const player2Score = gameRounds.filter(round => round.winner_id === player2?.user_id).length;
+  const totalRounds = gameRounds.length;
+  const completedRounds = gameRounds.filter(round => round.completed_at !== null).length;
 
-  const getMatchStatusText = (status: string): string => {
-    switch (status) {
-      case 'in_progress': return 'IN PROGRESS';
-      case 'completed': return 'COMPLETED';
-      default: return status.toUpperCase();
-    }
-  };
+  useEffect(() => {
+    const fetchGameRounds = async () => {
+      try {
+        const { data: rounds } = await supabase
+          .from('game_rounds')
+          .select('*')
+          .eq('match_id', match.id)
+          .order('round_number', { ascending: true });
 
-  const getMoveEmoji = (move: string | null): string => {
-    if (!move) return '❓';
-    switch (move) {
-      case 'rock': return '🗿';
-      case 'paper': return '📄';
-      case 'scissors': return '✂️';
-      default: return '❓';
-    }
-  };
+        setGameRounds(rounds || []);
+      } catch (error) {
+        console.error('Error fetching game rounds:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const getRoundWinnerText = (round: Tables<'game_rounds'>): string => {
-    if (!round.winner_id) return 'TIE';
-    const winner = participants.find(p => p.user_id === round.winner_id);
-    return winner ? getDisplayName(winner.users) : 'Unknown';
-  };
+    fetchGameRounds();
 
-  const isCurrentUser = (userId: number): boolean => {
-    return currentUserId === userId;
-  };
+    // Subscribe to real-time updates
+    const channel = supabase
+      .channel(`match-${match.id}-rounds`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'game_rounds',
+          filter: `match_id=eq.${match.id}`,
+        },
+        () => {
+          fetchGameRounds();
+        }
+      )
+      .subscribe();
 
-  if (!gameStats.player1 || !gameStats.player2) {
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [match.id]);
+
+  if (loading) {
     return (
-      <Card.Root
-        borderWidth="4px"
-        borderStyle="solid"
-        borderColor="red.500"
-        bg="red.50"
-        shadow="8px 8px 0px rgba(0,0,0,0.8)"
-        borderRadius="0"
-        p="6"
-        textAlign="center"
-      >
-        <Card.Body p="0">
-          <Text color="red.600" fontWeight="bold">
-            Error: Could not load player information
-          </Text>
-        </Card.Body>
-      </Card.Root>
-    );
-  }
-
-  return (
-    <VStack gap="6" align="stretch" w="100%">
-      {/* Players vs Players */}
-      <Card.Root
+      <Box
         borderWidth="4px"
         borderStyle="solid"
         borderColor="gray.900"
@@ -160,6 +137,87 @@ export default function OneOnOneInfo({ gameData, currentUserId }: OneOnOneInfoPr
         shadow="8px 8px 0px rgba(0,0,0,0.8)"
         borderRadius="0"
         p="6"
+        textAlign="center"
+      >
+        <VStack gap="4">
+          <Spinner color="purple.500" />
+          <Text fontWeight="bold" color="gray.600">Loading match details...</Text>
+        </VStack>
+      </Box>
+    );
+  }
+
+  const winner = match.winner_id === player1?.user_id ? player1 : 
+                 match.winner_id === player2?.user_id ? player2 : null;
+
+  return (
+    <VStack gap="6" align="stretch">
+      {/* Match Header */}
+      <Card.Root
+        borderWidth="4px"
+        borderStyle="solid"
+        borderColor="gray.900"
+        bg="white"
+        shadow="8px 8px 0px rgba(0,0,0,0.8)"
+        borderRadius="0"
+        transform="rotate(-0.5deg)"
+        _hover={{
+          transform: "rotate(0deg) scale(1.01)",
+          shadow: "12px 12px 0px rgba(0,0,0,0.8)",
+        }}
+        transition="all 0.2s ease"
+      >
+        <Card.Body p="6">
+          <VStack gap="4" align="stretch">
+            {/* Title and Status */}
+            <Flex justify="space-between" align="center">
+              <HStack gap="3">
+                <Swords size={32} color="#FF6B35" />
+                <Heading 
+                  size="xl" 
+                  fontWeight="black" 
+                  color="gray.900" 
+                  textTransform="uppercase"
+                  letterSpacing="wider"
+                >
+                  ⚔️ 1v1 DUEL
+                </Heading>
+              </HStack>
+              
+              <Badge
+                bg={getStatusColor(match.status)}
+                color="white"
+                fontSize="sm"
+                fontWeight="black"
+                px="4"
+                py="2"
+                borderRadius="0"
+                border="2px solid"
+                borderColor="gray.900"
+                shadow="2px 2px 0px rgba(0,0,0,0.8)"
+                textTransform="uppercase"
+                letterSpacing="wider"
+              >
+                {getStatusText(match.status)}
+              </Badge>
+            </Flex>
+
+            {/* Match Info */}
+            <Text fontSize="md" color="gray.600" fontWeight="medium">
+              Match #{match.id} • Best of 5 Rounds • Rock Paper Scissors
+            </Text>
+          </VStack>
+        </Card.Body>
+      </Card.Root>
+
+      {/* Players Versus Display */}
+      <Card.Root
+        borderWidth="4px"
+        borderStyle="solid"
+        borderColor="gray.900"
+        bg="gray.50"
+        shadow="8px 8px 0px rgba(0,0,0,0.8)"
+        borderRadius="0"
         transform="rotate(0.3deg)"
         _hover={{
           transform: "rotate(0deg) scale(1.01)",
@@ -167,60 +225,53 @@ export default function OneOnOneInfo({ gameData, currentUserId }: OneOnOneInfoPr
         }}
         transition="all 0.2s ease"
       >
-        <Card.Body p="0">
+        <Card.Body p="8">
           <Flex align="center" justify="space-between">
             {/* Player 1 */}
             <VStack gap="4" align="center" flex="1">
-              <Box position="relative">
-                <Avatar.Root 
-                  size="xl" 
-                  border="4px solid" 
-                  borderColor={isCurrentUser(gameStats.player1.user_id) ? "#06D6A0" : "gray.900"}
+              <Avatar.Root size="xl" border="4px solid black">
+                <Avatar.Fallback 
+                  bg="#FF6B35" 
+                  color="white" 
+                  fontSize="2xl" 
+                  fontWeight="black"
                 >
-                  <Avatar.Fallback 
-                    bg="#FF6B35" 
-                    color="white" 
-                    fontSize="xl" 
-                    fontWeight="black"
-                  >
-                    {getDisplayName(gameStats.player1.users).charAt(0).toUpperCase()}
-                  </Avatar.Fallback>
-                </Avatar.Root>
-                {isCurrentUser(gameStats.player1.user_id) && (
-                  <Box
-                    position="absolute"
-                    top="-2"
-                    right="-2"
-                    bg="#06D6A0"
-                    color="white"
-                    borderRadius="50%"
-                    w="8"
-                    h="8"
-                    display="flex"
-                    alignItems="center"
-                    justifyContent="center"
-                    border="2px solid white"
-                    fontSize="sm"
-                    fontWeight="black"
-                  >
-                    YOU
-                  </Box>
-                )}
-              </Box>
+                  {getDisplayName(player1?.users).charAt(0).toUpperCase()}
+                </Avatar.Fallback>
+              </Avatar.Root>
               
               <VStack gap="2" align="center">
-                <Text 
-                  fontSize="lg" 
+                <Heading 
+                  size="lg" 
                   fontWeight="black" 
                   color="gray.900"
                   textAlign="center"
                   textTransform="uppercase"
                 >
-                  {getDisplayName(gameStats.player1.users)}
-                </Text>
-                <Text fontSize="sm" color="gray.600" fontWeight="medium">
-                  {gameStats.player1.users.matches_won || 0}W - {gameStats.player1.users.matches_lost || 0}L
-                </Text>
+                  {getDisplayName(player1?.users)}
+                </Heading>
+                <HStack gap="4">
+                  <Badge colorScheme="green" variant="solid" px="2" py="1" borderRadius="0">
+                    {player1?.users?.matches_won || 0}W
+                  </Badge>
+                  <Badge colorScheme="red" variant="solid" px="2" py="1" borderRadius="0">
+                    {player1?.users?.matches_lost || 0}L
+                  </Badge>
+                </HStack>
+                {winner?.user_id === player1?.user_id && (
+                  <Badge 
+                    bg="#06D6A0" 
+                    color="white" 
+                    fontSize="sm" 
+                    fontWeight="black" 
+                    px="3" 
+                    py="1" 
+                    borderRadius="0"
+                    border="2px solid black"
+                  >
+                    👑 WINNER
+                  </Badge>
+                )}
               </VStack>
             </VStack>
 
@@ -249,7 +300,7 @@ export default function OneOnOneInfo({ gameData, currentUserId }: OneOnOneInfoPr
               
               <HStack gap="3" align="center">
                 <Box
-                  bg={gameStats.player1Score > gameStats.player2Score ? "#06D6A0" : "#FF6B35"}
+                  bg={player1Score > player2Score ? "#06D6A0" : player1Score < player2Score ? "#FF6B35" : "#6B7280"}
                   color="white"
                   w="16"
                   h="16"
@@ -260,10 +311,9 @@ export default function OneOnOneInfo({ gameData, currentUserId }: OneOnOneInfoPr
                   borderColor="gray.900"
                   borderRadius="0"
                   shadow="4px 4px 0px rgba(0,0,0,0.8)"
-                  transform="rotate(-2deg)"
                 >
                   <Text fontSize="2xl" fontWeight="black">
-                    {gameStats.player1Score}
+                    {player1Score}
                   </Text>
                 </Box>
                 
@@ -272,7 +322,7 @@ export default function OneOnOneInfo({ gameData, currentUserId }: OneOnOneInfoPr
                 </Text>
                 
                 <Box
-                  bg={gameStats.player2Score > gameStats.player1Score ? "#06D6A0" : "#FF6B35"}
+                  bg={player2Score > player1Score ? "#06D6A0" : player2Score < player1Score ? "#FF6B35" : "#6B7280"}
                   color="white"
                   w="16"
                   h="16"
@@ -283,10 +333,9 @@ export default function OneOnOneInfo({ gameData, currentUserId }: OneOnOneInfoPr
                   borderColor="gray.900"
                   borderRadius="0"
                   shadow="4px 4px 0px rgba(0,0,0,0.8)"
-                  transform="rotate(2deg)"
                 >
                   <Text fontSize="2xl" fontWeight="black">
-                    {gameStats.player2Score}
+                    {player2Score}
                   </Text>
                 </Box>
               </HStack>
@@ -294,65 +343,58 @@ export default function OneOnOneInfo({ gameData, currentUserId }: OneOnOneInfoPr
 
             {/* Player 2 */}
             <VStack gap="4" align="center" flex="1">
-              <Box position="relative">
-                <Avatar.Root 
-                  size="xl" 
-                  border="4px solid" 
-                  borderColor={isCurrentUser(gameStats.player2.user_id) ? "#06D6A0" : "gray.900"}
+              <Avatar.Root size="xl" border="4px solid black">
+                <Avatar.Fallback 
+                  bg="#06D6A0" 
+                  color="white" 
+                  fontSize="2xl" 
+                  fontWeight="black"
                 >
-                  <Avatar.Fallback 
-                    bg="#7B2CBF" 
-                    color="white" 
-                    fontSize="xl" 
-                    fontWeight="black"
-                  >
-                    {getDisplayName(gameStats.player2.users).charAt(0).toUpperCase()}
-                  </Avatar.Fallback>
-                </Avatar.Root>
-                {isCurrentUser(gameStats.player2.user_id) && (
-                  <Box
-                    position="absolute"
-                    top="-2"
-                    right="-2"
-                    bg="#06D6A0"
-                    color="white"
-                    borderRadius="50%"
-                    w="8"
-                    h="8"
-                    display="flex"
-                    alignItems="center"
-                    justifyContent="center"
-                    border="2px solid white"
-                    fontSize="sm"
-                    fontWeight="black"
-                  >
-                    YOU
-                  </Box>
-                )}
-              </Box>
+                  {getDisplayName(player2?.users).charAt(0).toUpperCase()}
+                </Avatar.Fallback>
+              </Avatar.Root>
               
               <VStack gap="2" align="center">
-                <Text 
-                  fontSize="lg" 
+                <Heading 
+                  size="lg" 
                   fontWeight="black" 
                   color="gray.900"
                   textAlign="center"
                   textTransform="uppercase"
                 >
-                  {getDisplayName(gameStats.player2.users)}
-                </Text>
-                <Text fontSize="sm" color="gray.600" fontWeight="medium">
-                  {gameStats.player2.users.matches_won || 0}W - {gameStats.player2.users.matches_lost || 0}L
-                </Text>
+                  {getDisplayName(player2?.users)}
+                </Heading>
+                <HStack gap="4">
+                  <Badge colorScheme="green" variant="solid" px="2" py="1" borderRadius="0">
+                    {player2?.users?.matches_won || 0}W
+                  </Badge>
+                  <Badge colorScheme="red" variant="solid" px="2" py="1" borderRadius="0">
+                    {player2?.users?.matches_lost || 0}L
+                  </Badge>
+                </HStack>
+                {winner?.user_id === player2?.user_id && (
+                  <Badge 
+                    bg="#06D6A0" 
+                    color="white" 
+                    fontSize="sm" 
+                    fontWeight="black" 
+                    px="3" 
+                    py="1" 
+                    borderRadius="0"
+                    border="2px solid black"
+                  >
+                    👑 WINNER
+                  </Badge>
+                )}
               </VStack>
             </VStack>
           </Flex>
         </Card.Body>
       </Card.Root>
 
-      {/* Match Details Grid */}
-      <Grid templateColumns={{ base: "1fr", md: "1fr 1fr" }} gap="6">
-        {/* Match Status & Prize */}
+      {/* Match Stats */}
+      <Flex gap="6">
+        {/* Rounds Progress */}
         <Card.Root
           borderWidth="4px"
           borderStyle="solid"
@@ -360,208 +402,80 @@ export default function OneOnOneInfo({ gameData, currentUserId }: OneOnOneInfoPr
           bg="white"
           shadow="8px 8px 0px rgba(0,0,0,0.8)"
           borderRadius="0"
-          p="6"
-          transform="rotate(-0.5deg)"
+          flex="1"
+          transform="rotate(-0.2deg)"
         >
-          <Card.Body p="0">
-            <VStack gap="4" align="stretch">
-              {/* Status */}
-              <HStack justify="space-between" align="center">
-                <HStack gap="2">
-                  <Zap size={24} color="#FF6B35" />
-                  <Text fontSize="sm" fontWeight="bold" color="gray.700" textTransform="uppercase">
-                    Match Status
-                  </Text>
-                </HStack>
-                <Badge
-                  bg={getMatchStatusColor(match.status || 'waiting')}
-                  color="white"
-                  fontSize="sm"
-                  fontWeight="black"
-                  px="3"
-                  py="1"
-                  borderRadius="0"
-                  border="2px solid"
-                  borderColor="gray.900"
-                  shadow="2px 2px 0px rgba(0,0,0,0.8)"
-                  textTransform="uppercase"
-                >
-                  {getMatchStatusText(match.status || 'waiting')}
-                </Badge>
-              </HStack>
-
-              {/* Prize Pool */}
-              <Box
-                bg="yellow.100"
-                border="3px solid"
-                borderColor="yellow.600"
-                p="4"
-                borderRadius="0"
-              >
-                <HStack justify="space-between">
-                  <VStack align="flex-start" padding="0">
-                    <Text fontSize="xs" fontWeight="bold" color="yellow.800">
-                      STAKE AMOUNT
-                    </Text>
-                    <Text fontSize="lg" fontWeight="black" color="yellow.900">
-                      {formatSolAmount(match.stake_amount)} ◎
-                    </Text>
-                  </VStack>
-                  <VStack align="flex-end" padding="0">
-                    <Text fontSize="xs" fontWeight="bold" color="yellow.800">
-                      WINNER TAKES
-                    </Text>
-                    <Text fontSize="lg" fontWeight="black" color="yellow.900">
-                      {formatSolAmount(match.total_prize_pool)} ◎
-                    </Text>
-                  </VStack>
-                </HStack>
-              </Box>
-
-              {/* Winner Display */}
-              {match.status === 'completed' && match.winner_id && (
-                <Box
-                  bg="#06D6A0"
-                  color="white"
-                  p="4"
-                  border="3px solid"
-                  borderColor="gray.900"
-                  borderRadius="0"
-                  shadow="4px 4px 0px rgba(0,0,0,0.8)"
-                  textAlign="center"
-                  transform="rotate(-1deg)"
-                >
-                  <HStack justify="center" gap="2">
-                    <Crown size={20} />
-                    <Text fontSize="lg" fontWeight="black" textTransform="uppercase" letterSpacing="wider">
-                      Winner: {getDisplayName(
-                        participants.find(p => p.user_id === match.winner_id)?.users!
-                      )}
-                    </Text>
-                  </HStack>
-                </Box>
-              )}
-            </VStack>
-          </Card.Body>
-        </Card.Root>
-
-        {/* Game Progress */}
-        <Card.Root
-          borderWidth="4px"
-          borderStyle="solid"
-          borderColor="gray.900"
-          bg="white"
-          shadow="8px 8px 0px rgba(0,0,0,0.8)"
-          borderRadius="0"
-          p="6"
-          transform="rotate(0.5deg)"
-        >
-          <Card.Body p="0">
+          <Card.Body p="6">
             <VStack gap="4" align="stretch">
               <HStack gap="2">
                 <Target size={24} color="#7B2CBF" />
-                <Text fontSize="sm" fontWeight="bold" color="gray.700" textTransform="uppercase">
-                  Game Progress
+                <Text fontSize="lg" fontWeight="black" color="gray.900" textTransform="uppercase">
+                  Round Progress
                 </Text>
               </HStack>
-
-              {/* Rounds Progress */}
-              <Box>
-                <HStack justify="space-between" mb="2">
-                  <Text fontSize="xs" fontWeight="bold" color="gray.600">
-                    ROUNDS PLAYED
+              
+              <VStack gap="2" align="stretch">
+                <HStack justify="space-between">
+                  <Text fontSize="sm" fontWeight="bold" color="gray.700">
+                    COMPLETED ROUNDS
                   </Text>
-                  <Text fontSize="sm" fontWeight="black" color="gray.900">
-                    {gameStats.completedRounds} rounds
+                  <Text fontSize="lg" fontWeight="black" color="gray.900">
+                    {completedRounds} / 5
                   </Text>
                 </HStack>
-                <Box
-                  bg="gray.200"
-                  h="4"
-                  borderRadius="0"
-                  border="2px solid"
-                  borderColor="gray.900"
-                  overflow="hidden"
-                >
-                  <Box
-                    bg="#7B2CBF"
-                    h="100%"
-                    w={`${Math.min((gameStats.completedRounds / 5) * 100, 100)}%`}
-                    transition="width 0.3s ease"
-                  />
-                </Box>
-                <Text fontSize="xs" color="gray.500" mt="1">
-                  Best of 5 format (first to 3 wins)
-                </Text>
-              </Box>
-
-              {/* Recent Rounds */}
-              {gameStats.recentRounds.length > 0 && (
-                <Box>
-                  <Text fontSize="xs" fontWeight="bold" color="gray.600" mb="3" textTransform="uppercase">
-                    Recent Rounds
-                  </Text>
-                  <VStack gap="2" align="stretch">
-                    {gameStats.recentRounds.map((round) => (
-                      <Box
-                        key={round.id}
-                        bg="gray.50"
-                        border="2px solid"
-                        borderColor="gray.300"
-                        p="3"
-                        borderRadius="0"
-                        shadow="2px 2px 0px rgba(0,0,0,0.3)"
-                      >
-                        <HStack justify="space-between" align="center">
-                          <Text fontSize="xs" fontWeight="bold" color="gray.600">
-                            R{round.round_number}
-                          </Text>
-                          <HStack gap="2">
-                            <Text fontSize="sm">
-                              {getMoveEmoji(round.player1_move)}
-                            </Text>
-                            <Text fontSize="xs" color="gray.500">vs</Text>
-                            <Text fontSize="sm">
-                              {getMoveEmoji(round.player2_move)}
-                            </Text>
-                          </HStack>
-                          <Text fontSize="xs" fontWeight="black" color="gray.900">
-                            {getRoundWinnerText(round)}
-                          </Text>
-                        </HStack>
-                      </Box>
-                    ))}
-                  </VStack>
-                </Box>
-              )}
+                
+                <Progress.Root value={(completedRounds / 5) * 100} bg="gray.200" borderRadius="0" h="4">
+                  <Progress.Track bg="gray.200">
+                    <Progress.Range bg="#7B2CBF" />
+                  </Progress.Track>
+                </Progress.Root>
+              </VStack>
             </VStack>
           </Card.Body>
         </Card.Root>
-      </Grid>
 
-      {/* Timer Info (if match is in progress) */}
-      {match.status === 'in_progress' && (
+        {/* Prize Info */}
         <Card.Root
           borderWidth="4px"
           borderStyle="solid"
-          borderColor="#06D6A0"
-          bg="green.50"
+          borderColor="gray.900"
+          bg="yellow.100"
           shadow="8px 8px 0px rgba(0,0,0,0.8)"
           borderRadius="0"
-          p="6"
-          textAlign="center"
-          transform="rotate(-0.2deg)"
+          flex="1"
+          transform="rotate(0.2deg)"
         >
-          <Card.Body p="0">
-            <HStack justify="center" gap="3">
-              <Clock size={24} color="#06D6A0" />
-              <Text fontSize="lg" fontWeight="black" color="green.700" textTransform="uppercase">
-                🔥 Game in Progress - Good Luck! 🔥
-              </Text>
-            </HStack>
+          <Card.Body p="6">
+            <VStack gap="4" align="stretch">
+              <HStack gap="2">
+                <Coins size={24} color="#D69E2E" />
+                <Text fontSize="lg" fontWeight="black" color="yellow.900" textTransform="uppercase">
+                  Prize Pool
+                </Text>
+              </HStack>
+              
+              <VStack gap="1" align="stretch">
+                <HStack justify="space-between">
+                  <Text fontSize="sm" fontWeight="bold" color="yellow.800">
+                    TOTAL PRIZE
+                  </Text>
+                  <Text fontSize="xl" fontWeight="black" color="yellow.900">
+                    {formatSolAmount(match.total_prize_pool)} ◎
+                  </Text>
+                </HStack>
+                <HStack justify="space-between">
+                  <Text fontSize="xs" fontWeight="bold" color="yellow.700">
+                    STAKE PER PLAYER
+                  </Text>
+                  <Text fontSize="md" fontWeight="bold" color="yellow.800">
+                    {formatSolAmount(match.stake_amount)} ◎
+                  </Text>
+                </HStack>
+              </VStack>
+            </VStack>
           </Card.Body>
         </Card.Root>
-      )}
+      </Flex>
     </VStack>
   );
 }

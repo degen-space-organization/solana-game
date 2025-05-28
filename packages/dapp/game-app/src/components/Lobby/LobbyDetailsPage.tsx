@@ -38,9 +38,11 @@ import { toaster } from '@/components/ui/toaster';
 import type { PendingLobby } from '@/types/lobby';
 import { PublicKey, SystemProgram, Transaction } from '@solana/web3.js';
 import { solConnection } from '@/web3';
+import { GAME_VAULT_ADDRESS } from '@/web3/constants';
 
-const GAME_VAULT_ADDRESS = new PublicKey('48wcCEj1hdV5UGwr3PmhqvU3ix1eN5rMqEsBxT4XKRfc'); // Replace with your actual vault address
 
+// const GAME_VAULT_ADDRESS = new PublicKey('48wcCEj1hdV5UGwr3PmhqvU3ix1eN5rMqEsBxT4XKRfc'); // Replace with your actual vault address
+// const GAME_VAULT_ADDRESS = pubkey; // Import from constants
 
 interface LobbyParticipant {
   id: number;
@@ -253,6 +255,12 @@ const LobbyDetailsPage: React.FC = () => {
           lobby_id: lobby.id,
         }),
       });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Withdraw API error:', errorData.error);
+        throw new Error(errorData.error || 'Failed to withdraw');
+      }
 
       toaster.create({
         title: "Withdrawn Successfully! 🔄",

@@ -20,10 +20,11 @@
 import { Connection, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { dbClient } from "../../database/provider";
 import { gSolanaProvider } from "../../utils/provider";
+import { ADMIN_PUBLIC_KEY } from "../../utils/constants";
 
 
-const adminWallet = '48wcCEj1hdV5UGwr3PmhqvU3ix1eN5rMqEsBxT4XKRfc'
-
+// const adminWallet = '48wcCEj1hdV5UGwr3PmhqvU3ix1eN5rMqEsBxT4XKRfc'
+const adminWallet = ADMIN_PUBLIC_KEY.toBase58();
 
 /**
  * @class ### VaultController
@@ -39,8 +40,28 @@ export default class VaultController {
     constructor() { }
 
 
-    static async requestWithdrawal() {
-        //
+    static async processWithdrawal(lobbyId: number, userId: number) {
+        try {
+            // fetch the user first
+            const user = await dbClient.from('users').select('*').eq('id', userId).single();
+            if (!user) {
+                console.error('User not found for ID:', userId);
+                return false;
+            }
+
+            // fetch the lobby
+            const lobby = await dbClient.from('lobbies').select('*').eq('id', lobbyId).single();
+            if (!lobby) {
+                console.error('Lobby not found for ID:', lobbyId);
+                return false;
+            }
+
+            
+
+        } catch (error) {
+            console.error('Error requesting withdrawal:', error);
+            return false;
+        }
     };
 
 
@@ -117,7 +138,6 @@ export default class VaultController {
                 console.error('User not found for ID:', userId);
                 return false;
             }
-            console.log('retard')
 
 
             // fetch the lobby
@@ -126,7 +146,6 @@ export default class VaultController {
                 console.error('Lobby not found for ID:', lobbyId);
                 return false;
             }
-            console.log('retard')
 
 
             // obtain the deposit amount from the transaction hash
@@ -143,7 +162,6 @@ export default class VaultController {
                 console.error(`Deposit amount mismatch: expected ${stakeInLamports / 1e9} SOL, got ${depositAmount} SOL`);
                 return false;
             }
-            console.log('retard')
 
             // insert the deposit record into the database
             const depositRecord = await dbClient.from('stake_transactions').insert([{
@@ -161,7 +179,6 @@ export default class VaultController {
                 console.error('Failed to insert deposit record into database');
                 return false;
             }
-            console.log('retard')
 
 
             // update the players in the lobby participating
@@ -174,7 +191,6 @@ export default class VaultController {
                 .eq('user_id', userId)
                 .eq('lobby_id', lobbyId)
             console.log(updateLobbyParticipant)
-            console.log('retard')
 
 
             if (!updateLobbyParticipant) {
@@ -182,7 +198,6 @@ export default class VaultController {
                 console.log('Update result:', updateLobbyParticipant);
                 return false;
             }
-            console.log('retard')
 
             return true;
 

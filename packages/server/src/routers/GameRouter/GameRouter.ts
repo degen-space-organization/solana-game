@@ -23,9 +23,9 @@ gameRouter.post('/create-tournament', GameController.createTournament as unknown
 gameRouter.post('/join-tournament', GameController.joinTournament as unknown as RequestHandler);
 gameRouter.post('/start-tournament', GameController.startTournament as unknown as RequestHandler);
 
-gameRouter.post('/withdraw-lobby', GameController.withdrawFromLobby as unknown as RequestHandler);
+gameRouter.post('/leave-lobby', GameController.leaveLobby as unknown as RequestHandler);
 
-gameRouter.post('/kick-player', GameController.withdrawFromLobby as unknown as RequestHandler);
+gameRouter.post('/kick-player', GameController.kickPlayer as unknown as RequestHandler);
 
 
 

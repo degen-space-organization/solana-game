@@ -1383,7 +1383,7 @@ export default class GameController {
         }
     }
 
-    static async withdrawFromLobby(req: Request, res: Response) {
+    static async leaveLobby(req: Request, res: Response) {
         try {
             const { user_id, lobby_id } = req.body;
 
@@ -1464,7 +1464,7 @@ export default class GameController {
         }
     }
 
-    async kickPlayer(req: Request, res: Response) {
+    static async kickPlayer(req: Request, res: Response) {
         try {
             const { lobby_id, player_to_kick_id, creator_user_id } = req.body;
 

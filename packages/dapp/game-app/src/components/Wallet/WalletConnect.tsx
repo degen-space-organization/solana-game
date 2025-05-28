@@ -15,7 +15,8 @@ const shortenAddress = (address: string) =>
 // Supabase
 
 
-const connection = new Connection('https://api.devnet.solana.com');
+// const connection = new Connection('https://api.devnet.solana.com');
+const connection = new Connection('https://api.mainnet-beta.solana.com');
 
 export const ConnectWalletButton = () => {
     const { publicKey, disconnect, connected, wallet } = useWallet();

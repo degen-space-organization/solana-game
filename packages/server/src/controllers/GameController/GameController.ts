@@ -1363,7 +1363,9 @@ export default class GameController {
 
     static async withdrawFromLobby(req: Request, res: Response) {
         try {
+            
             const { user_id, lobby_id } = req.body;
+            console.log('Withdraw request received:', { user_id, lobby_id });
 
             if (!user_id || !lobby_id) {
                 return res.status(400).json({ error: "Missing required fields: user_id, lobby_id" });
@@ -1417,6 +1419,7 @@ export default class GameController {
             // format stake amount from lamports to sol number
             const stakeAmountInSol = parseFloat(lobby.stake_amount) / 1e9; // Convert lamports to SOL
             const signature = await AdminWallet.processWithdrawal(user.solana_address, stakeAmountInSol);
+
             if (!signature) {
                 console.error("Withdrawal failed, no signature returned.");
                 const { error: rollbackError } = await dbClient
@@ -1464,7 +1467,7 @@ export default class GameController {
         }
     }
 
-    async kickPlayer(req: Request, res: Response) {
+    static async kickPlayer(req: Request, res: Response) {
         try {
             const { lobby_id, player_to_kick_id, creator_user_id } = req.body;
 

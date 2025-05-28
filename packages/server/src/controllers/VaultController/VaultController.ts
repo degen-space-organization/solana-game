@@ -56,7 +56,7 @@ export default class VaultController {
                 return false;
             }
 
-            
+
 
         } catch (error) {
             console.error('Error requesting withdrawal:', error);
@@ -152,7 +152,7 @@ export default class VaultController {
             const depositAmount = await this._obtainDepositAmount(txHash, user.data?.solana_address!, adminWallet);
             const expectedAmountInLamports: string = lobby.data?.stake_amount!
             const stakeInLamports = parseInt(expectedAmountInLamports, 10);
-            
+
             console.log('calculation results')
             console.log('deposit amount', depositAmount)
             console.log(expectedAmountInLamports)
@@ -212,22 +212,46 @@ export default class VaultController {
 
 
     private static async _obtainDepositAmount(txHash: string, expectedFrom: string, expectedTo: string): Promise<number> {
-        const tx = await gSolanaProvider.getParsedTransaction(txHash, { maxSupportedTransactionVersion: 0 });
+
+        // sleep for 2 seconds
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        const tx = await gSolanaProvider.getParsedTransaction(txHash, {
+            maxSupportedTransactionVersion: 0,
+            commitment: "confirmed",
+        });
 
         if (!tx) {
             console.error('Transaction not found');
             return 0;
         }
 
-        const instructions = tx.transaction.message.instructions;
-
-        for (const ix of instructions) {
+        const checkAndExtractTransfer = (ix: any) => {
             if ('parsed' in ix && ix.program === 'system' && ix.parsed?.type === 'transfer') {
                 const info = ix.parsed.info;
                 if (info.source === expectedFrom && info.destination === expectedTo) {
-                    const lamports = parseInt(info.lamports, 10);
-                    const sol = lamports / 1e9;
-                    return sol;
+                    return parseInt(info.lamports, 10);
+                }
+            }
+            return 0;
+        };
+
+        // Check top-level instructions
+        for (const ix of tx.transaction.message.instructions) {
+            const lamports = checkAndExtractTransfer(ix);
+            if (lamports > 0) {
+                return lamports / LAMPORTS_PER_SOL;
+            }
+        }
+
+        // Check inner instructions
+        if (tx.meta?.innerInstructions) {
+            for (const inner of tx.meta.innerInstructions) {
+                for (const ix of inner.instructions) {
+                    const lamports = checkAndExtractTransfer(ix);
+                    if (lamports > 0) {
+                        return lamports / LAMPORTS_PER_SOL;
+                    }
                 }
             }
         }

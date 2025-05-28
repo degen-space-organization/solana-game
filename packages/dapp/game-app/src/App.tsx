@@ -49,6 +49,8 @@ import type { ActiveLobbyDetails } from './types/lobby';
 
 import LobbyJoined from './components/Lobby/LobbyJoined';
 
+import Leaderboard from './components/Leaderboard/Leaderboard';
+
 
 
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
@@ -662,7 +664,11 @@ function App() {
                     </Card.Root>
                   )}
 
-                  {activeSection === 'leaderboard' && (
+                  {
+                  
+                  activeSection === 'leaderboard' && <Leaderboard />
+                  
+                  /* {activeSection === 'leaderboard' && (
                     <Card.Root
                       borderWidth="4px"
                       borderStyle="solid"
@@ -691,7 +697,8 @@ function App() {
                         </Text>
                       </Card.Body>
                     </Card.Root>
-                  )}
+                  )} */
+                  }
                 </HStack>
               </VStack>
             </>

@@ -300,18 +300,24 @@ const LobbyDetailsPage: React.FC = () => {
         duration: 3000,
       });
 
-      // // Call the backend API to handle kicking a player
-      // const response = await fetch('http://localhost:4000/api/v1/game/kick-player', { // Assuming a new endpoint for kicking
-      //   method: 'POST',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //   },
-      //   body: JSON.stringify({
-      //     lobby_id: lobby!.id,
-      //     player_to_kick_id: playerId,
-      //     creator_user_id: currentUser!.id,
-      //   }),
-      // });
+      // Call the backend API to handle kicking a player
+      const response = await fetch('http://localhost:4000/api/v1/game/kick-player', { // Calling the new kick-player endpoint
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          lobby_id: lobby!.id,
+          user_id: playerId,
+          creator_user_id: currentUser!.id,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Kick API error:', errorData.error);
+        throw new Error(errorData.error || 'Failed to kick player');
+      }
 
       toaster.create({
         title: "Player Kicked! 👋",
@@ -320,14 +326,14 @@ const LobbyDetailsPage: React.FC = () => {
         duration: 4000,
       });
 
-      // Refresh the data
+      // Refresh the data to reflect the kicked player's removal
       window.location.reload();
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Kick player error:', error);
       toaster.create({
         title: "Kick Failed",
-        description: "Failed to kick player. Please try again.",
+        description: error.message || "Failed to kick player. Please try again.",
         type: "error",
         duration: 5000,
       });

@@ -1463,4 +1463,82 @@ export default class GameController {
             return res.status(500).json({ error: "Internal server error during lobby withdrawal" });
         }
     }
+
+    async kickPlayer(req: Request, res: Response) {
+        try {
+            const { lobby_id, player_to_kick_id, creator_user_id } = req.body;
+
+            if (!lobby_id || !player_to_kick_id || !creator_user_id) {
+                return res.status(400).json({ error: "Missing required fields: lobby_id, player_to_kick_id, creator_user_id" });
+            }
+
+            // Verify the caller is the lobby creator
+            const { data: lobby, error: lobbyError } = await dbClient
+                .from('lobbies')
+                .select('created_by, current_players, stake_amount, status')
+                .eq('id', lobby_id)
+                .single();
+
+            if (lobbyError || !lobby) {
+                console.error("Error fetching lobby for kicking player:", lobbyError);
+                return res.status(404).json({ error: "Lobby not found" });
+            }
+
+            if (lobby.created_by !== creator_user_id) {
+                return res.status(403).json({ error: "Only the lobby creator can kick players" });
+            }
+
+            // Ensure the player to be kicked is actually in the lobby
+            const { data: participant, error: participantError } = await dbClient
+                .from('lobby_participants')
+                .select('has_staked')
+                .eq('user_id', player_to_kick_id)
+                .eq('lobby_id', lobby_id)
+                .single();
+
+            if (participantError || !participant) {
+                console.error("Error fetching participant to kick:", participantError);
+                return res.status(404).json({ error: "Player not found in this lobby" });
+            }
+
+            // Prevent kicking if the player has already staked
+            if (participant.has_staked) {
+                return res.status(400).json({ error: "Cannot kick a player who has already staked" });
+            }
+
+            // Delete the participant from the lobby_participants table
+            const { error: deleteParticipantError } = await dbClient
+                .from('lobby_participants')
+                .delete()
+                .eq('user_id', player_to_kick_id)
+                .eq('lobby_id', lobby_id);
+
+            if (deleteParticipantError) {
+                console.error("Error deleting kicked player from lobby_participants:", deleteParticipantError);
+                return res.status(500).json({ error: "Failed to remove player from lobby" });
+            }
+
+            // Decrement current_players in lobbies table and update total_prize_pool (if applicable)
+            const newCurrentPlayers = lobby.current_players! - 1;
+            // No need to adjust total_prize_pool as the kicked player hadn't staked
+            const { error: lobbyUpdateError } = await dbClient
+                .from('lobbies')
+                .update({
+                    current_players: newCurrentPlayers,
+                    status: newCurrentPlayers === 0 ? 'disbanded' : lobby.status // Disband if no players left
+                })
+                .eq('id', lobby_id);
+
+            if (lobbyUpdateError) {
+                console.error("Error updating lobby current players count after kicking:", lobbyUpdateError);
+                return res.status(500).json({ error: "Failed to update lobby details after kicking player" });
+            }
+
+            return res.status(200).json({ message: "Player kicked successfully" });
+
+        } catch (error) {
+            console.error("Error in kickPlayer:", error);
+            return res.status(500).json({ error: "Internal server error during player kick" });
+        }
+    }
 }

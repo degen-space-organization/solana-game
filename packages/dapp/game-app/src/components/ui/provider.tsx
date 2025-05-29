@@ -1,6 +1,8 @@
+// src/components/ui/provider.tsx
 "use client"
 
-import { ChakraProvider, defaultSystem } from "@chakra-ui/react"
+import { ChakraProvider } from "@chakra-ui/react"
+import { neobrutalistSystem } from "@/theme/neobrutalism"
 import {
   ColorModeProvider,
   type ColorModeProviderProps,
@@ -8,7 +10,7 @@ import {
 
 export function Provider(props: ColorModeProviderProps) {
   return (
-    <ChakraProvider value={defaultSystem}>
+    <ChakraProvider value={neobrutalistSystem}>
       <ColorModeProvider {...props} />
     </ChakraProvider>
   )

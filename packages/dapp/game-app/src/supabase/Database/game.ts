@@ -444,28 +444,8 @@ export const games = {
   },
 
   /**
-   * Get game round by ID
-   * This function retrieves a specific game round by its ID.
+   * Get last game round for a user
    */
-  // async getGameRoundById(roundId: number): Promise<Tables<'game_rounds'> | null> {
-  //   try {
-  //     const { data: round, error } = await supabase
-  //       .from('game_rounds')
-  //       .select('*')
-  //       .eq('id', roundId)
-  //       .single();
-  //     if (error || !round) {
-  //       console.error('Error fetching game round:', error);
-  //       return null;
-  //     }
-  //     return round as Tables<'game_rounds'>;
-  //   } catch (error) {
-  //     console.error('Error in getGameRoundById:', error);
-  //     return null;
-  //   }
-  // },
-
-
   async findLatestGameRoundForUser(solanaAddress: string) {
     const { data: user, error: userError } = await supabase
       .from('users')
@@ -480,7 +460,8 @@ export const games = {
     const { data: matchParticipants, error: matchError } = await supabase
       .from('match_participants')
       .select('match_id, position')
-      .eq('user_id', user.id);
+      .eq('user_id', user.id)
+      // .single();
 
     if (matchError || !matchParticipants || matchParticipants.length === 0) {
       throw new Error('User not in any matches');
@@ -495,6 +476,9 @@ export const games = {
       .in('match_id', matchIds)
       .order('created_at', { ascending: false })
       .limit(1);
+
+    console.log('nigger', rounds)
+    
 
     if (roundsError || !rounds || rounds.length === 0) {
       throw new Error('No game rounds found for user');
@@ -574,6 +558,102 @@ export const games = {
       throw error;
     }
   },
+
+
+  /**
+   * Check if there's a newer round for the same match
+   */
+  async checkForNewerRound(currentRoundId: number, matchId: number) {
+    try {
+      const { data, error } = await supabase
+        .from('game_rounds')
+        .select('*')
+        .eq('match_id', matchId)
+        .gt('id', currentRoundId) // Greater than current round ID
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (error) {
+        console.error('Error checking for newer round:', error);
+        return null;
+      }
+
+      return data && data.length > 0 ? data[0] : null;
+    } catch (error) {
+      console.error('Error in checkForNewerRound:', error);
+      return null;
+    }
+  },
+
+  /**
+   * Get active match for user (more efficient than finding rounds)
+   */
+  async getActiveMatchForUser(solanaAddress: string) {
+    try {
+      // Get user ID
+      const { data: user, error: userError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('solana_address', solanaAddress)
+        .single();
+
+      if (userError || !user) {
+        throw new Error('User not found');
+      }
+
+      // Get active match
+      const { data: matchParticipants, error: matchError } = await supabase
+        .from('match_participants')
+        .select(`
+        match_id,
+        matches!inner (
+          id,
+          status,
+          started_at,
+          tournament_id
+        )
+      `)
+        .eq('user_id', user.id)
+        .in('matches.status', ['waiting', 'in_progress'])
+        .single();
+
+      if (matchError || !matchParticipants) {
+        return null;
+      }
+
+      return matchParticipants.matches;
+    } catch (error) {
+      console.error('Error getting active match:', error);
+      return null;
+    }
+  },
+
+  /**
+   * Get latest round for specific match
+   */
+  async getLatestRoundForMatch(matchId: number) {
+    try {
+      const { data, error } = await supabase
+        .from('game_rounds')
+        .select('*')
+        .eq('match_id', matchId)
+        .order('round_number', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (error) {
+        console.error('Error getting latest round for match:', error);
+        return null;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error in getLatestRoundForMatch:', error);
+      return null;
+    }
+  },
+
+
   /**
    * Utility functions
    */

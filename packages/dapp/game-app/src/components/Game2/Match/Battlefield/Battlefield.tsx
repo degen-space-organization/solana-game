@@ -350,6 +350,7 @@ export default function Battlefield({ roundId, userId }: { roundId: number; user
             bg="white"
           />
           
+          
           {/* Result Text */}
           <Text fontWeight="bold" color={resultColor} fontSize="xl">
             {resultText}

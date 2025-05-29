@@ -1,6 +1,5 @@
 
 import { Request, Response } from "express";
-import { determineResult, isValidMove, Move } from '../../types/Game/gameEngine';
 
 import { dbClient } from '../../database/provider';
 import { TablesInsert, Tables, TablesUpdate } from '../../database/types'
@@ -15,301 +14,8 @@ type player_move = 'rock' | 'paper' | 'scissors';
  */
 export default class GameController {
 
-    constructor() { };
 
-    static async submitStakeForLobby(req: Request, res: Response) {
-        try {
-            const { user_id, lobby_id, txHash } = req.body;
-
-            if (!user_id || !lobby_id || !txHash) {
-                return res.status(400).json({ error: "Missing required fields: user_id, lobby_id, txHash" });
-            }
-            await new Promise(resolve => setTimeout(resolve, 1500));
-
-            console.log('Received payload for lobby stake submission:', req.body);
-            // Validate deposit for the lobby creation
-            const isDepositValid = await VaultController.validateDepositLobbyCreation(txHash, user_id, lobby_id);
-
-            if (!isDepositValid) {
-                console.error("Deposit validation failed for lobby creation.");
-                // Optionally, delete the lobby if deposit validation fails
-                return res.status(400).json({ error: "Deposit validation failed. Lobby not created." });
-            }
-
-            res.status(201).json({
-                message: "Deposit created successfully",
-            });
-
-        } catch (error) {
-            console.error("Error submitting stake for lobby:", error);
-            res.status(500).json({ error: "Internal Server Error" });
-        }
-    }
-
-    static async createLobby(req: Request, res: Response) {
-        try {
-            const {
-                name,
-                tournament_id,
-                created_by,
-                stake_amount,
-                max_players,
-                txHash,
-            } = req.body;
-            console.log('Received payload for lobby creation:', req.body);
-            console.log('nigga')
-            if (!created_by || !stake_amount) {
-                return res.status(400).json({ error: "Missing required lobby fields: created_by, stake_amount" });
-            }
-
-            // Validate stake_amount against allowed values (from lobby_migration.sql)
-            const allowedStakes = ['100000000', '250000000', '500000000', '750000000', '1000000000'];
-            if (!allowedStakes.includes(stake_amount.toString())) {
-                return res.status(400).json({ error: `Invalid stake amount. Allowed values: ${allowedStakes.join(', ')}` });
-            }
-
-
-            const lobbyData: TablesInsert<'lobbies'> = {
-                name: name || `Lobby by ${created_by}`,
-                tournament_id: tournament_id || null,
-                created_by: created_by,
-                stake_amount: stake_amount.toString(),
-                max_players: max_players || 2, // Default to 2 players for 1v1
-                current_players: 1, // Initialize with 0 current players
-                status: 'waiting',
-            };
-
-            const { data, error } = await dbClient
-                .from('lobbies')
-                .insert([lobbyData])
-                .select()
-                .single();
-
-            if (error) {
-                console.error("Error creating lobby:", error);
-                return res.status(500).json({ error: "Failed to create lobby" });
-            }
-
-            // Automatically add the creator as a participant to the lobby
-            const lobbyParticipantData: TablesInsert<'lobby_participants'> = {
-                lobby_id: data.id,
-                user_id: created_by,
-                joined_at: new Date().toISOString(),
-                is_ready: false,
-                has_staked: false,
-            };
-
-            const { error: participantError } = await dbClient
-                .from('lobby_participants')
-                .insert([lobbyParticipantData]);
-
-            if (participantError) {
-                console.error("Error adding creator to lobby participants:", participantError);
-                // Optionally, delete the lobby if participant addition failed
-                await dbClient.from('lobbies').delete().eq('id', data.id);
-                res.status(500).json({ error: "Failed to add creator to lobby" });
-            }
-
-            // sleep for 3 second
-            await new Promise(resolve => setTimeout(resolve, 2000));
-
-            // validate the
-            //  deposit for the lobby creation
-            const isDepositValid = await VaultController.validateDepositLobbyCreation(txHash, created_by, data.id);
-
-
-            if (!isDepositValid) {
-                console.error("Deposit validation failed for lobby creation.");
-                // Optionally, delete the lobby if deposit validation fails
-                await dbClient.from('lobbies').delete().eq('id', data.id);
-                await dbClient.from('lobby_participants').delete().eq('lobby_id', data.id).eq('user_id', created_by);
-                return res.status(400).json({ error: "Deposit validation failed. Lobby not created." });
-            }
-
-            res.status(201).json({
-                message: "Lobby created successfully",
-                lobby: data
-            });
-
-        } catch (error) {
-            console.error(error);
-            res.status(500).json({ error: "Internal Server Error" });
-        }
-    }
-
-    static async joinLobby(req: Request, res: Response) {
-        try {
-            console.log('Received payload for joining lobby:', req.body);
-            const { lobby_id, user_id } = req.body;
-
-            if (!lobby_id || !user_id) {
-                return res.status(400).json({ error: "Missing required fields: lobby_id, user_id" });
-            }
-            
-
-            // Check if lobby exists and is not full
-            const { data: lobby, error: lobbyError } = await dbClient
-                .from('lobbies')
-                .select('id, current_players, max_players, status')
-                .eq('id', lobby_id)
-                .single();
-
-            
-
-            if (lobbyError) {
-                console.error("Error fetching lobby:", lobbyError);
-                return res.status(404).json({ error: "Lobby not found" });
-            }
-            
-
-            if (lobby.status !== 'waiting') {
-                return res.status(400).json({ error: "Lobby is not joinable" });
-            }
-            
-
-            if (lobby.current_players! >= lobby.max_players!) {
-                return res.status(400).json({ error: "Lobby is full" });
-            }
-            
-
-            // Check if user is already in this lobby
-            const { data: existingParticipant, error: participantCheckError } = await dbClient
-                .from('lobby_participants')
-                .select('id')
-                .eq('lobby_id', lobby_id)
-                .eq('user_id', user_id)
-                .single();
-            
-
-            if (existingParticipant) {
-                return res.status(400).json({ error: "User already in this lobby" });
-            }
-            
-
-            if (participantCheckError && participantCheckError.code !== 'PGRST116') { // PGRST116 = no rows found
-                console.error("Error checking existing participant:", participantCheckError);
-                return res.status(500).json({ error: "Database error checking participant" });
-            }
-            
-
-            const newParticipant: TablesInsert<'lobby_participants'> = {
-                lobby_id: lobby_id,
-                user_id: user_id,
-                joined_at: new Date().toISOString(),
-                is_ready: false,
-                has_staked: false,
-            };
-            
-
-            const { data, error } = await dbClient
-                .from('lobby_participants')
-                .insert([newParticipant])
-                .select()
-                .single();
-            
-
-            if (error) {
-                console.error("Error joining lobby:", error);
-                // Handle specific Supabase errors, e.g., 'User is already in an active lobby' from trigger
-                if (error.message.includes('User is already in an active lobby')) {
-                    return res.status(409).json({ error: "User is already in another active game or lobby." });
-                }
-                return res.status(500).json({ error: "Failed to join lobby" });
-            }
-            
-
-            // Update current_players count in lobbies table
-            const { error: updateLobbyError } = await dbClient
-                .from('lobbies')
-                .update({ current_players: lobby.current_players! + 1 })
-                .eq('id', lobby_id);
-            
-
-            if (updateLobbyError) {
-                console.error("Error updating lobby player count:", updateLobbyError);
-                // Consider rolling back participant insertion if this fails
-                return res.status(500).json({ error: "Failed to update lobby player count" });
-            }
-            
-
-            res.status(200).json({
-                message: "Joined lobby successfully",
-                participant: data
-            });
-            
-
-        } catch (error) {
-            console.error(error);
-            res.status(500).json({ error: "Internal Server Error" });
-        }
-    }
-
-    private static async createGameRound(matchId: number, roundNumber: number): Promise<{ success: boolean, gameRoundId?: number, errorMessage?: string }> {
-        console.log(`Attempting to create round ${roundNumber} for match ${matchId}`);
-        try {
-
-
-            // Check if the round already exists
-            const { data: existingRound, error: existingRoundError } = await dbClient
-                .from('game_rounds')
-                .select('id')
-                .eq('match_id', matchId)
-                .eq('round_number', roundNumber)
-                .single();
-
-            if (existingRoundError && existingRoundError.code !== 'PGRST116') { // PGRST116 means "No rows found"
-                console.error(`Error checking for existing round ${roundNumber} for match ${matchId}:`, existingRoundError);
-                return { success: false, errorMessage: "Failed to check for existing round." };
-            }
-
-            if (existingRound) {
-                console.log(`Round ${roundNumber} for match ${matchId} already exists (ID: ${existingRound.id}). Skipping creation.`);
-                return { success: true, gameRoundId: existingRound.id };
-            }
-
-            // Get match details to ensure it's active and fetch participants if needed
-            const { data: match, error: matchError } = await dbClient
-                .from('matches')
-                .select('status')
-                .eq('id', matchId)
-                .single();
-
-            if (matchError || !match) {
-                console.error(`Match ${matchId} not found or error fetching details:`, matchError);
-                return { success: false, errorMessage: "Match not found." };
-            }
-
-            if (match.status !== 'in_progress') {
-                console.log(`Cannot create round for match ${matchId} because its status is '${match.status}'.`);
-                return { success: false, errorMessage: "Match is not in 'in_progress' status." };
-            }
-
-            const newRound: TablesInsert<'game_rounds'> = {
-                match_id: matchId,
-                round_number: roundNumber,
-                // player1_move, player2_move, winner_id will be set later
-            };
-
-            const { data, error } = await dbClient
-                .from('game_rounds')
-                .insert(newRound)
-                .select('id')
-                .single();
-
-            if (error || !data) {
-                console.error(`Error creating game round ${roundNumber} for match ${matchId}:`, error);
-                return { success: false, errorMessage: "Failed to create game round." };
-            }
-
-            console.log(`Successfully created round ${roundNumber} for match ${matchId}. Round ID: ${data.id}`);
-            return { success: true, gameRoundId: data.id };
-
-        } catch (error) {
-            console.error(`Error in createGameRound for match ${matchId}, round ${roundNumber}:`, error);
-            return { success: false, errorMessage: "Internal Server Error during round creation." };
-        }
-    }
-
+    // #region Games Management
     static async startMatch(req: Request, res: Response) {
         try {
             const { lobby_id, creator_user_id } = req.body;
@@ -423,6 +129,70 @@ export default class GameController {
         }
     }
 
+    static async startTournament(req: Request, res: Response) {
+        try {
+            const { tournament_id, creator_user_id } = req.body;
+
+            if (!tournament_id || !creator_user_id) {
+                return res.status(400).json({ error: "Missing required fields: tournament_id, creator_user_id." });
+            }
+
+            // Fetch tournament details and participants
+            const { data: tournament, error: tournamentError } = await dbClient
+                .from('tournaments')
+                .select('*, tournament_participants(user_id)')
+                .eq('id', tournament_id)
+                .single();
+
+            if (tournamentError || !tournament) {
+                console.error("Error fetching tournament for start:", tournamentError);
+                return res.status(404).json({ error: "Tournament not found." });
+            }
+
+            if (tournament.created_by !== creator_user_id) {
+                return res.status(403).json({ error: "Only the tournament creator can start the tournament." });
+            }
+
+            if (tournament.status !== 'waiting') {
+                return res.status(400).json({ error: "Tournament is not in 'waiting' status." });
+            }
+
+            const participants = tournament.tournament_participants;
+            if (!participants || participants.length !== tournament.max_players) {
+                return res.status(400).json({ error: `Not enough players to start tournament. Expected ${tournament.max_players}, got ${participants?.length || 0}.` });
+            }
+
+            // Generate initial matches for the tournament
+            const { success: matchesGenerated, errorMessage: generateError } = await GameController.generateTournamentMatches(tournament_id, participants);
+
+            if (!matchesGenerated) {
+                console.error("Error generating tournament matches:", generateError);
+                return res.status(500).json({ error: `Failed to generate initial tournament matches: ${generateError}` });
+            }
+
+            // Update tournament status to 'in_progress'
+            const { error: updateError } = await dbClient
+                .from('tournaments')
+                .update({ status: 'in_progress', started_at: new Date().toISOString() })
+                .eq('id', tournament_id);
+
+            if (updateError) {
+                console.error("Error updating tournament status to in_progress:", updateError);
+                return res.status(500).json({ error: "Failed to start tournament." });
+            }
+
+            res.status(200).json({ message: "Tournament started successfully. Initial matches created." });
+
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ error: "Internal Server Error." });
+        }
+    }
+    // #endregion
+
+
+
+    // #region Game Logic
     static async submitMove(req: Request, res: Response) {
         const { match_id, user_id, round_number, player_move }: { match_id: number, user_id: number, round_number: number, player_move: player_move } = req.body;
 
@@ -603,7 +373,11 @@ export default class GameController {
             // Update the game_rounds table
             const { error: updateError } = await dbClient
                 .from('game_rounds')
-                .update({ winner_id: roundWinnerId, completed_at: new Date().toISOString() })
+                .update({
+                    winner_id: roundWinnerId,
+                    completed_at: new Date().toISOString(),
+                    status: 'evaluating'
+                })
                 .eq('id', gameRound.id);
 
             if (updateError) {
@@ -612,7 +386,12 @@ export default class GameController {
             }
 
             // sleep for 5 seconds
-            // await new Promise(resolve => setTimeout(resolve, 5000));
+            const result = await new Promise(resolve => setTimeout(resolve, 5000));
+
+            const { error: statusUpdateError } = await dbClient
+                .from('game_rounds')
+                .update({ status: 'completed' })
+                .eq('id', gameRound.id);
 
             console.log(`Round ${roundNumber} completed for match ${matchId}. Winner: ${roundWinnerId ? `User ${roundWinnerId}` : 'Tie'}`);
 
@@ -623,23 +402,7 @@ export default class GameController {
                 // Match is still in progress (no winner yet), create the next round
                 const nextRoundNumber = roundNumber + 1;
                 const { success: createNextRoundSuccess, errorMessage: createNextRoundError } = await GameController.createGameRound(matchId, nextRoundNumber);
-                if (!createNextRoundSuccess) {
-                    console.error(`Failed to create next round ${nextRoundNumber} for match ${matchId}: ${createNextRoundError}`);
-                    // Handle this error appropriately, perhaps by marking match as cancelled or error.
-                }
-                // if (nextRoundNumber <= 5) { // "best of 5" means up to 5 rounds
-                //     const { success: createNextRoundSuccess, errorMessage: createNextRoundError } = await GameController.createGameRound(matchId, nextRoundNumber);
-                //     if (!createNextRoundSuccess) {
-                //         console.error(`Failed to create next round ${nextRoundNumber} for match ${matchId}: ${createNextRoundError}`);
-                //         // Handle this error appropriately, perhaps by marking match as cancelled or error.
-                //     }
-                // } else {
-                //     console.log(`Match ${matchId} reached max rounds (5) without a clear winner (shouldn't happen in best of 5 if logic is correct).`);
-                //     // This scenario means 2-2 tie after 4 rounds, and the 5th round was a tie too.
-                //     // You might need a tie-breaker rule or declare it a draw, and mark the match completed.
-                //     // The `processMatch` should handle this, so this else block might not be strictly necessary
-                //     // if processMatch ensures a winner or completion.
-                // }
+                if (!createNextRoundSuccess) console.error(`Failed to create next round ${nextRoundNumber} for match ${matchId}: ${createNextRoundError}`);                
             }
 
             return { success: true, winnerId: roundWinnerId };
@@ -650,11 +413,6 @@ export default class GameController {
         }
     }
 
-    /**
-     * Checks if a match has a winner based on "best of 5" and updates its status.
-     * This method would be called after each round is processed.
-     * @param matchId The ID of the match to process.
-     */
     static async processMatch(matchId: number): Promise<{ success: boolean, matchWinnerId?: number | null, errorMessage?: string }> {
         console.log(`Processing match ${matchId} for overall winner.`);
         try {
@@ -692,7 +450,6 @@ export default class GameController {
                     }
                 }
             }
-            // --- END NEW LOGIC ---
 
             // Fetch all completed rounds for the match
             const { data: gameRounds, error: roundsError } = await dbClient
@@ -844,8 +601,148 @@ export default class GameController {
         }
     }
 
-    //Tourney stuff
+    static async advanceTournament(tournamentId: number): Promise<{ success: boolean, tournamentWinnerId?: number | null, errorMessage?: string }> {
+        console.log(`Advancing tournament ${tournamentId}.`);
+        try {
+            // Get tournament details
+            const { data: tournament, error: tournamentFetchError } = await dbClient
+                .from('tournaments')
+                .select('id, max_players, current_players, status')
+                .eq('id', tournamentId)
+                .single();
 
+            if (tournamentFetchError || !tournament) {
+                console.error(`Tournament ${tournamentId} not found or error fetching details:`, tournamentFetchError);
+                return { success: false, errorMessage: "Tournament not found." };
+            }
+
+            if (tournament.status === 'completed') {
+                console.log(`Tournament ${tournamentId} is already completed.`);
+                return { success: true, tournamentWinnerId: null }; // Tournament is already done
+            }
+
+            // Get all completed matches for this tournament that have a winner
+            const { data: completedMatches, error: matchesError } = await dbClient
+                .from('matches')
+                .select('id, winner_id')
+                .eq('tournament_id', tournamentId)
+                .eq('status', 'completed')
+                .not('winner_id', 'is', null); // Only process matches with a determined winner
+
+            if (matchesError) {
+                console.error(`Error fetching completed matches for tournament ${tournamentId}:`, matchesError);
+                return { success: false, errorMessage: "Failed to fetch completed matches." };
+            }
+
+            // Fetch all tournament participants to track elimination status
+            const { data: allTournamentParticipants, error: allParticipantsError } = await dbClient
+                .from('tournament_participants')
+                .select('user_id, eliminated_at')
+                .eq('tournament_id', tournamentId);
+
+            if (allParticipantsError) {
+                console.error(`Error fetching all tournament participants for tournament ${tournamentId}:`, allParticipantsError);
+                return { success: false, errorMessage: "Failed to fetch all tournament participants." };
+            }
+
+            // 1. Mark losers as eliminated
+            let newEliminationsCount = 0;
+            for (const match of completedMatches) {
+                // Fetch match participants again to be sure (good for isolated updates)
+                const { data: matchParticipants, error: mpError } = await dbClient
+                    .from('match_participants')
+                    .select('user_id')
+                    .eq('match_id', match.id);
+
+                if (!mpError && matchParticipants && match.winner_id !== null) {
+                    const loser = matchParticipants.find(p => p.user_id !== match.winner_id);
+                    if (loser) {
+                        // Check if the loser is already eliminated to avoid redundant updates
+                        const existingLoserEntry = allTournamentParticipants.find(p => p.user_id === loser.user_id);
+                        if (existingLoserEntry && existingLoserEntry.eliminated_at === null) {
+                            const { error: updateError } = await dbClient
+                                .from('tournament_participants')
+                                .update({ eliminated_at: new Date().toISOString() })
+                                .eq('tournament_id', tournamentId)
+                                .eq('user_id', loser.user_id);
+                            if (updateError) {
+                                console.error(`Failed to eliminate user ${loser.user_id} from tournament ${tournamentId}:`, updateError);
+                            } else {
+                                console.log(`User ${loser.user_id} eliminated from tournament ${tournamentId}.`);
+                                newEliminationsCount++;
+                            }
+                        } else if (existingLoserEntry && existingLoserEntry.eliminated_at !== null) {
+                            console.log(`User ${loser.user_id} was already eliminated. Skipping.`);
+                        }
+                    }
+                }
+            }
+
+            // Re-fetch active participants AFTER all potential eliminations are processed
+            const { data: recheckedActiveParticipants, error: recheckedActiveParticipantsError } = await dbClient
+                .from('tournament_participants')
+                .select('user_id')
+                .eq('tournament_id', tournamentId)
+                .is('eliminated_at', null);
+
+            if (recheckedActiveParticipantsError) {
+                console.error(`Error re-fetching active participants for tournament ${tournamentId}:`, recheckedActiveParticipantsError);
+                return { success: false, errorMessage: "Failed to re-fetch active participants after eliminations." };
+            }
+            const numActivePlayers = recheckedActiveParticipants.length;
+            console.log(`Tournament ${tournamentId}: Updated active players (after eliminations): ${numActivePlayers}. Total completed matches: ${completedMatches.length}`);
+
+
+            // 2. Determine tournament winner or create next round matches
+            if (numActivePlayers === 1) { // If only one player remains, they are the tournament winner
+                const finalWinnerId = recheckedActiveParticipants[0].user_id;
+                console.log(`Tournament ${tournamentId} completed. Winner: User ${finalWinnerId}.`);
+                await dbClient.from('tournaments').update({ status: 'completed', completed_at: new Date().toISOString(), winner_id: finalWinnerId }).eq('id', tournamentId);
+                await GameController.updateTournamentFinalPositions(tournamentId, finalWinnerId);
+                return { success: true, tournamentWinnerId: finalWinnerId };
+            } else if (numActivePlayers > 1) {
+                // Check if there are any matches currently in progress for this tournament
+                const { data: inProgressMatches, error: ipMatchesError } = await dbClient
+                    .from('matches')
+                    .select('id')
+                    .eq('tournament_id', tournamentId)
+                    .eq('status', 'in_progress');
+
+                if (ipMatchesError) {
+                    console.error(`Error fetching in-progress matches for tournament ${tournamentId}:`, ipMatchesError);
+                    return { success: false, errorMessage: "Failed to fetch in-progress matches." };
+                }
+
+                // If no matches are in progress AND there's an even number of active players (>= 2)
+                // it means the current round is fully completed, and we can form the next round's matches.
+                if (inProgressMatches.length === 0 && numActivePlayers >= 2 && numActivePlayers % 2 === 0) {
+                    console.log(`Tournament ${tournamentId}: All current round matches completed. Creating next round matches with ${numActivePlayers} active players.`);
+                    const { success: matchesCreated, errorMessage: createMatchesError } = await GameController.generateTournamentMatches(tournamentId, recheckedActiveParticipants);
+
+                    if (!matchesCreated) {
+                        console.error(`Failed to create next round matches for tournament ${tournamentId}:`, createMatchesError);
+                        return { success: false, errorMessage: "Failed to advance tournament to next round." };
+                    }
+                    return { success: true, tournamentWinnerId: null }; // Tournament still in progress
+                } else {
+                    console.log(`Tournament ${tournamentId} is still in progress (or waiting for all current round matches to complete). Active players: ${numActivePlayers}, In-progress matches: ${inProgressMatches.length}.`);
+                    return { success: true, tournamentWinnerId: null };
+                }
+            } else { // numActivePlayers is 0 or negative - unexpected state, possibly all players eliminated without a clear winner
+                console.log(`Tournament ${tournamentId} has no active players left (0 or negative). Should have been completed or indicates an error. Active players: ${numActivePlayers}`);
+                return { success: true, tournamentWinnerId: null };
+            }
+
+        } catch (error) {
+            console.error("processTournament error:", error);
+            return { success: false, errorMessage: "Internal Server Error." };
+        }
+    }
+    // #endregion Game Logic
+
+
+
+    // #region Tournament Management
     static async addTournamentParticipant(tournamentId: number, userId: number): Promise<{ success: boolean, errorMessage?: string }> {
         try {
             // Check if tournament exists and is in 'waiting' status and not full
@@ -1043,362 +940,241 @@ export default class GameController {
             res.status(500).json({ error: "Internal Server Error." });
         }
     }
-
-    // Helper to generate initial tournament matches
-    private static async generateTournamentMatches(tournamentId: number, participants: { user_id: number }[]): Promise<{ success: boolean, errorMessage?: string }> {
-        if (participants.length < 2) {
-            return { success: false, errorMessage: "Not enough participants to generate matches." };
-        }
-
-        const { data: tournament, error: tournamentError } = await dbClient
-            .from('tournaments')
-            .select('prize_pool, max_players')
-            .eq('id', tournamentId)
-            .single()
-
-        if (tournamentError || !tournament) {
-            console.error("Error fetching tournament details:", tournamentError);
-            return { success: false, errorMessage: "Failed to retrieve tournament details for match generation." };
-        }
-
-        const stakeAmount = Number(tournament.prize_pool) / Number(tournament.max_players);
+    // #endregion Tournament Management
 
 
-        // Shuffle participants to randomize pairings
-        const shuffledParticipants = [...participants].sort(() => 0.5 - Math.random());
 
-        const matchesToInsert: TablesInsert<'matches'>[] = [];
+    // #region Lobby Actions
+    static async submitStakeForLobby(req: Request, res: Response) {
+        try {
+            const { user_id, lobby_id, txHash } = req.body;
 
-        // For a simple bracket, pair participants for Round 1
-        for (let i = 0; i < shuffledParticipants.length; i += 2) {
-            if (i + 1 < shuffledParticipants.length) {
-                matchesToInsert.push({
-                    tournament_id: tournamentId,
-                    status: 'in_progress', // Matches start immediately
-                    stake_amount: stakeAmount.toString(), // Could be derived from tournament prize_pool
-                    total_prize_pool: tournament.prize_pool!, // Placeholder, actual prize pool distributed at tournament end
-                    started_at: new Date().toISOString(),
-                    // Link participants directly or via match_participants after match creation
-                });
-            } else {
-                // Handle odd number of players (e.g., byes or waiting for next round)
-                // For a strict power-of-2 tournament, this shouldn't happen for initial round
-                console.warn(`Tournament ${tournamentId} has an odd number of players. Player ${shuffledParticipants[i].user_id} gets a bye.`);
+            if (!user_id || !lobby_id || !txHash) {
+                return res.status(400).json({ error: "Missing required fields: user_id, lobby_id, txHash" });
             }
-        }
+            await new Promise(resolve => setTimeout(resolve, 1500));
 
-        if (matchesToInsert.length === 0) {
-            return { success: false, errorMessage: "No matches generated for the tournament." };
-        }
+            console.log('Received payload for lobby stake submission:', req.body);
+            // Validate deposit for the lobby creation
+            const isDepositValid = await VaultController.validateDepositLobbyCreation(txHash, user_id, lobby_id);
 
-        const { data: newMatches, error: matchInsertError } = await dbClient
-            .from('matches')
-            .insert(matchesToInsert)
-            .select();
-
-        if (matchInsertError) {
-            console.error("Error creating tournament matches:", matchInsertError);
-            return { success: false, errorMessage: "Failed to create tournament matches." };
-        }
-
-        // Now, link participants to their respective matches
-        let matchIndex = 0;
-        const matchParticipantsInserts: TablesInsert<'match_participants'>[] = [];
-        for (let i = 0; i < shuffledParticipants.length; i += 2) {
-            if (i + 1 < shuffledParticipants.length && newMatches && newMatches[matchIndex]) {
-                const matchId = newMatches[matchIndex].id;
-                matchParticipantsInserts.push({
-                    match_id: matchId,
-                    user_id: shuffledParticipants[i].user_id,
-                    position: 1,
-                });
-                matchParticipantsInserts.push({
-                    match_id: matchId,
-                    user_id: shuffledParticipants[i + 1].user_id,
-                    position: 2,
-                });
-                matchIndex++;
+            if (!isDepositValid) {
+                console.error("Deposit validation failed for lobby creation.");
+                // Optionally, delete the lobby if deposit validation fails
+                return res.status(400).json({ error: "Deposit validation failed. Lobby not created." });
             }
+
+            res.status(201).json({
+                message: "Deposit created successfully",
+            });
+
+        } catch (error) {
+            console.error("Error submitting stake for lobby:", error);
+            res.status(500).json({ error: "Internal Server Error" });
         }
-
-        const { error: linkError } = await dbClient
-            .from('match_participants')
-            .insert(matchParticipantsInserts);
-
-        if (linkError) {
-            console.error("Error linking participants to tournament matches:", linkError);
-            return { success: false, errorMessage: "Failed to link participants to tournament matches." };
-        }
-
-        // For each created match, create its first round
-        for (const match of newMatches) {
-            const { success: roundSuccess, errorMessage: roundError } = await GameController.createGameRound(match.id, 1);
-            if (!roundSuccess) {
-                console.error(`Failed to create first round for new tournament match ${match.id}:`, roundError);
-                // Depending on criticality, you might want to rollback the match creation or log an error.
-            }
-        }
-
-
-        return { success: true };
     }
 
-
-    static async startTournament(req: Request, res: Response) {
+    static async createLobby(req: Request, res: Response) {
         try {
-            const { tournament_id, creator_user_id } = req.body;
-
-            if (!tournament_id || !creator_user_id) {
-                return res.status(400).json({ error: "Missing required fields: tournament_id, creator_user_id." });
+            const {
+                name,
+                tournament_id,
+                created_by,
+                stake_amount,
+                max_players,
+                txHash,
+            } = req.body;
+            console.log('Received payload for lobby creation:', req.body);
+            console.log('nigga')
+            if (!created_by || !stake_amount) {
+                return res.status(400).json({ error: "Missing required lobby fields: created_by, stake_amount" });
             }
 
-            // Fetch tournament details and participants
-            const { data: tournament, error: tournamentError } = await dbClient
-                .from('tournaments')
-                .select('*, tournament_participants(user_id)')
-                .eq('id', tournament_id)
+            // Validate stake_amount against allowed values (from lobby_migration.sql)
+            const allowedStakes = ['100000000', '250000000', '500000000', '750000000', '1000000000'];
+            if (!allowedStakes.includes(stake_amount.toString())) {
+                return res.status(400).json({ error: `Invalid stake amount. Allowed values: ${allowedStakes.join(', ')}` });
+            }
+
+
+            const lobbyData: TablesInsert<'lobbies'> = {
+                name: name || `Lobby by ${created_by}`,
+                tournament_id: tournament_id || null,
+                created_by: created_by,
+                stake_amount: stake_amount.toString(),
+                max_players: max_players || 2, // Default to 2 players for 1v1
+                current_players: 1, // Initialize with 0 current players
+                status: 'waiting',
+            };
+
+            const { data, error } = await dbClient
+                .from('lobbies')
+                .insert([lobbyData])
+                .select()
                 .single();
 
-            if (tournamentError || !tournament) {
-                console.error("Error fetching tournament for start:", tournamentError);
-                return res.status(404).json({ error: "Tournament not found." });
+            if (error) {
+                console.error("Error creating lobby:", error);
+                return res.status(500).json({ error: "Failed to create lobby" });
             }
 
-            if (tournament.created_by !== creator_user_id) {
-                return res.status(403).json({ error: "Only the tournament creator can start the tournament." });
+            // Automatically add the creator as a participant to the lobby
+            const lobbyParticipantData: TablesInsert<'lobby_participants'> = {
+                lobby_id: data.id,
+                user_id: created_by,
+                joined_at: new Date().toISOString(),
+                is_ready: false,
+                has_staked: false,
+            };
+
+            const { error: participantError } = await dbClient
+                .from('lobby_participants')
+                .insert([lobbyParticipantData]);
+
+            if (participantError) {
+                console.error("Error adding creator to lobby participants:", participantError);
+                // Optionally, delete the lobby if participant addition failed
+                await dbClient.from('lobbies').delete().eq('id', data.id);
+                res.status(500).json({ error: "Failed to add creator to lobby" });
             }
 
-            if (tournament.status !== 'waiting') {
-                return res.status(400).json({ error: "Tournament is not in 'waiting' status." });
+            // sleep for 3 second
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
+            // validate the
+            //  deposit for the lobby creation
+            const isDepositValid = await VaultController.validateDepositLobbyCreation(txHash, created_by, data.id);
+
+
+            if (!isDepositValid) {
+                console.error("Deposit validation failed for lobby creation.");
+                // Optionally, delete the lobby if deposit validation fails
+                await dbClient.from('lobbies').delete().eq('id', data.id);
+                await dbClient.from('lobby_participants').delete().eq('lobby_id', data.id).eq('user_id', created_by);
+                return res.status(400).json({ error: "Deposit validation failed. Lobby not created." });
             }
 
-            const participants = tournament.tournament_participants;
-            if (!participants || participants.length !== tournament.max_players) {
-                return res.status(400).json({ error: `Not enough players to start tournament. Expected ${tournament.max_players}, got ${participants?.length || 0}.` });
-            }
-
-            // Generate initial matches for the tournament
-            const { success: matchesGenerated, errorMessage: generateError } = await GameController.generateTournamentMatches(tournament_id, participants);
-
-            if (!matchesGenerated) {
-                console.error("Error generating tournament matches:", generateError);
-                return res.status(500).json({ error: `Failed to generate initial tournament matches: ${generateError}` });
-            }
-
-            // Update tournament status to 'in_progress'
-            const { error: updateError } = await dbClient
-                .from('tournaments')
-                .update({ status: 'in_progress', started_at: new Date().toISOString() })
-                .eq('id', tournament_id);
-
-            if (updateError) {
-                console.error("Error updating tournament status to in_progress:", updateError);
-                return res.status(500).json({ error: "Failed to start tournament." });
-            }
-
-            res.status(200).json({ message: "Tournament started successfully. Initial matches created." });
+            res.status(201).json({
+                message: "Lobby created successfully",
+                lobby: data
+            });
 
         } catch (error) {
             console.error(error);
-            res.status(500).json({ error: "Internal Server Error." });
+            res.status(500).json({ error: "Internal Server Error" });
         }
     }
 
-    static async advanceTournament(tournamentId: number): Promise<{ success: boolean, tournamentWinnerId?: number | null, errorMessage?: string }> {
-        console.log(`Advancing tournament ${tournamentId}.`);
+    static async joinLobby(req: Request, res: Response) {
         try {
-            // Get tournament details
-            const { data: tournament, error: tournamentFetchError } = await dbClient
-                .from('tournaments')
-                .select('id, max_players, current_players, status')
-                .eq('id', tournamentId)
+            console.log('Received payload for joining lobby:', req.body);
+            const { lobby_id, user_id } = req.body;
+
+            if (!lobby_id || !user_id) {
+                return res.status(400).json({ error: "Missing required fields: lobby_id, user_id" });
+            }
+
+
+            // Check if lobby exists and is not full
+            const { data: lobby, error: lobbyError } = await dbClient
+                .from('lobbies')
+                .select('id, current_players, max_players, status')
+                .eq('id', lobby_id)
                 .single();
 
-            if (tournamentFetchError || !tournament) {
-                console.error(`Tournament ${tournamentId} not found or error fetching details:`, tournamentFetchError);
-                return { success: false, errorMessage: "Tournament not found." };
+
+
+            if (lobbyError) {
+                console.error("Error fetching lobby:", lobbyError);
+                return res.status(404).json({ error: "Lobby not found" });
             }
 
-            if (tournament.status === 'completed') {
-                console.log(`Tournament ${tournamentId} is already completed.`);
-                return { success: true, tournamentWinnerId: null }; // Tournament is already done
+
+            if (lobby.status !== 'waiting') {
+                return res.status(400).json({ error: "Lobby is not joinable" });
             }
 
-            // Get all completed matches for this tournament that have a winner
-            const { data: completedMatches, error: matchesError } = await dbClient
-                .from('matches')
-                .select('id, winner_id')
-                .eq('tournament_id', tournamentId)
-                .eq('status', 'completed')
-                .not('winner_id', 'is', null); // Only process matches with a determined winner
 
-            if (matchesError) {
-                console.error(`Error fetching completed matches for tournament ${tournamentId}:`, matchesError);
-                return { success: false, errorMessage: "Failed to fetch completed matches." };
+            if (lobby.current_players! >= lobby.max_players!) {
+                return res.status(400).json({ error: "Lobby is full" });
             }
 
-            // Fetch all tournament participants to track elimination status
-            const { data: allTournamentParticipants, error: allParticipantsError } = await dbClient
-                .from('tournament_participants')
-                .select('user_id, eliminated_at')
-                .eq('tournament_id', tournamentId);
 
-            if (allParticipantsError) {
-                console.error(`Error fetching all tournament participants for tournament ${tournamentId}:`, allParticipantsError);
-                return { success: false, errorMessage: "Failed to fetch all tournament participants." };
+            // Check if user is already in this lobby
+            const { data: existingParticipant, error: participantCheckError } = await dbClient
+                .from('lobby_participants')
+                .select('id')
+                .eq('lobby_id', lobby_id)
+                .eq('user_id', user_id)
+                .single();
+
+
+            if (existingParticipant) {
+                return res.status(400).json({ error: "User already in this lobby" });
             }
 
-            // 1. Mark losers as eliminated
-            let newEliminationsCount = 0;
-            for (const match of completedMatches) {
-                // Fetch match participants again to be sure (good for isolated updates)
-                const { data: matchParticipants, error: mpError } = await dbClient
-                    .from('match_participants')
-                    .select('user_id')
-                    .eq('match_id', match.id);
 
-                if (!mpError && matchParticipants && match.winner_id !== null) {
-                    const loser = matchParticipants.find(p => p.user_id !== match.winner_id);
-                    if (loser) {
-                        // Check if the loser is already eliminated to avoid redundant updates
-                        const existingLoserEntry = allTournamentParticipants.find(p => p.user_id === loser.user_id);
-                        if (existingLoserEntry && existingLoserEntry.eliminated_at === null) {
-                            const { error: updateError } = await dbClient
-                                .from('tournament_participants')
-                                .update({ eliminated_at: new Date().toISOString() })
-                                .eq('tournament_id', tournamentId)
-                                .eq('user_id', loser.user_id);
-                            if (updateError) {
-                                console.error(`Failed to eliminate user ${loser.user_id} from tournament ${tournamentId}:`, updateError);
-                            } else {
-                                console.log(`User ${loser.user_id} eliminated from tournament ${tournamentId}.`);
-                                newEliminationsCount++;
-                            }
-                        } else if (existingLoserEntry && existingLoserEntry.eliminated_at !== null) {
-                            console.log(`User ${loser.user_id} was already eliminated. Skipping.`);
-                        }
-                    }
+            if (participantCheckError && participantCheckError.code !== 'PGRST116') { // PGRST116 = no rows found
+                console.error("Error checking existing participant:", participantCheckError);
+                return res.status(500).json({ error: "Database error checking participant" });
+            }
+
+
+            const newParticipant: TablesInsert<'lobby_participants'> = {
+                lobby_id: lobby_id,
+                user_id: user_id,
+                joined_at: new Date().toISOString(),
+                is_ready: false,
+                has_staked: false,
+            };
+
+
+            const { data, error } = await dbClient
+                .from('lobby_participants')
+                .insert([newParticipant])
+                .select()
+                .single();
+
+
+            if (error) {
+                console.error("Error joining lobby:", error);
+                // Handle specific Supabase errors, e.g., 'User is already in an active lobby' from trigger
+                if (error.message.includes('User is already in an active lobby')) {
+                    return res.status(409).json({ error: "User is already in another active game or lobby." });
                 }
+                return res.status(500).json({ error: "Failed to join lobby" });
             }
 
-            // Re-fetch active participants AFTER all potential eliminations are processed
-            const { data: recheckedActiveParticipants, error: recheckedActiveParticipantsError } = await dbClient
-                .from('tournament_participants')
-                .select('user_id')
-                .eq('tournament_id', tournamentId)
-                .is('eliminated_at', null);
 
-            if (recheckedActiveParticipantsError) {
-                console.error(`Error re-fetching active participants for tournament ${tournamentId}:`, recheckedActiveParticipantsError);
-                return { success: false, errorMessage: "Failed to re-fetch active participants after eliminations." };
+            // Update current_players count in lobbies table
+            const { error: updateLobbyError } = await dbClient
+                .from('lobbies')
+                .update({ current_players: lobby.current_players! + 1 })
+                .eq('id', lobby_id);
+
+
+            if (updateLobbyError) {
+                console.error("Error updating lobby player count:", updateLobbyError);
+                // Consider rolling back participant insertion if this fails
+                return res.status(500).json({ error: "Failed to update lobby player count" });
             }
-            const numActivePlayers = recheckedActiveParticipants.length;
-            console.log(`Tournament ${tournamentId}: Updated active players (after eliminations): ${numActivePlayers}. Total completed matches: ${completedMatches.length}`);
 
 
-            // 2. Determine tournament winner or create next round matches
-            if (numActivePlayers === 1) { // If only one player remains, they are the tournament winner
-                const finalWinnerId = recheckedActiveParticipants[0].user_id;
-                console.log(`Tournament ${tournamentId} completed. Winner: User ${finalWinnerId}.`);
-                await dbClient.from('tournaments').update({ status: 'completed', completed_at: new Date().toISOString(), winner_id: finalWinnerId }).eq('id', tournamentId);
-                await GameController.updateTournamentFinalPositions(tournamentId, finalWinnerId);
-                return { success: true, tournamentWinnerId: finalWinnerId };
-            } else if (numActivePlayers > 1) {
-                // Check if there are any matches currently in progress for this tournament
-                const { data: inProgressMatches, error: ipMatchesError } = await dbClient
-                    .from('matches')
-                    .select('id')
-                    .eq('tournament_id', tournamentId)
-                    .eq('status', 'in_progress');
+            res.status(200).json({
+                message: "Joined lobby successfully",
+                participant: data
+            });
 
-                if (ipMatchesError) {
-                    console.error(`Error fetching in-progress matches for tournament ${tournamentId}:`, ipMatchesError);
-                    return { success: false, errorMessage: "Failed to fetch in-progress matches." };
-                }
-
-                // If no matches are in progress AND there's an even number of active players (>= 2)
-                // it means the current round is fully completed, and we can form the next round's matches.
-                if (inProgressMatches.length === 0 && numActivePlayers >= 2 && numActivePlayers % 2 === 0) {
-                    console.log(`Tournament ${tournamentId}: All current round matches completed. Creating next round matches with ${numActivePlayers} active players.`);
-                    const { success: matchesCreated, errorMessage: createMatchesError } = await GameController.generateTournamentMatches(tournamentId, recheckedActiveParticipants);
-
-                    if (!matchesCreated) {
-                        console.error(`Failed to create next round matches for tournament ${tournamentId}:`, createMatchesError);
-                        return { success: false, errorMessage: "Failed to advance tournament to next round." };
-                    }
-                    return { success: true, tournamentWinnerId: null }; // Tournament still in progress
-                } else {
-                    console.log(`Tournament ${tournamentId} is still in progress (or waiting for all current round matches to complete). Active players: ${numActivePlayers}, In-progress matches: ${inProgressMatches.length}.`);
-                    return { success: true, tournamentWinnerId: null };
-                }
-            } else { // numActivePlayers is 0 or negative - unexpected state, possibly all players eliminated without a clear winner
-                console.log(`Tournament ${tournamentId} has no active players left (0 or negative). Should have been completed or indicates an error. Active players: ${numActivePlayers}`);
-                return { success: true, tournamentWinnerId: null };
-            }
 
         } catch (error) {
-            console.error("processTournament error:", error);
-            return { success: false, errorMessage: "Internal Server Error." };
-        }
-    }
-
-    // Helper to update final positions of tournament participants
-    private static async updateTournamentFinalPositions(tournamentId: number, winnerId: number) {
-        try {
-            // Set winner's position to 1
-            await dbClient
-                .from('tournament_participants')
-                .update({ final_position: 1, eliminated_at: new Date().toISOString() })
-                .eq('tournament_id', tournamentId)
-                .eq('user_id', winnerId);
-
-            // Get all other participants who are not yet eliminated
-            const { data: remainingParticipants, error: remError } = await dbClient
-                .from('tournament_participants')
-                .select('user_id')
-                .eq('tournament_id', tournamentId)
-                .is('eliminated_at', null)
-                .not('user_id', 'eq', winnerId);
-
-            if (remError) {
-                console.error("Error fetching remaining participants for final positions:", remError);
-                return;
-            }
-
-            // For simplicity, assign positions in reverse order of elimination.
-            // This is a placeholder; a true bracket system would track positions more precisely.
-            const { data: eliminatedParticipants, error: elimError } = await dbClient
-                .from('tournament_participants')
-                .select('user_id, eliminated_at')
-                .eq('tournament_id', tournamentId)
-                .not('eliminated_at', 'is', null)
-                .order('eliminated_at', { ascending: false }); // Latest eliminated first
-
-            if (elimError) {
-                console.error("Error fetching eliminated participants for final positions:", elimError);
-                return;
-            }
-
-            let position = 2;
-            for (const participant of eliminatedParticipants || []) {
-                if (participant.user_id !== winnerId) {
-                    await dbClient
-                        .from('tournament_participants')
-                        .update({ final_position: position })
-                        .eq('tournament_id', tournamentId)
-                        .eq('user_id', participant.user_id);
-                    position++;
-                }
-            }
-
-        } catch (error) {
-            console.error("Error in updateTournamentFinalPositions:", error);
+            console.error(error);
+            res.status(500).json({ error: "Internal Server Error" });
         }
     }
 
     static async withdrawFromLobby(req: Request, res: Response) {
         try {
-            
+
             const { user_id, lobby_id } = req.body;
             console.log('Withdraw request received:', { user_id, lobby_id });
 
@@ -1661,4 +1437,228 @@ export default class GameController {
             return res.status(500).json({ error: "Internal server error during lobby deletion" });
         }
     }
+    // #endregion Lobby Actions
+
+
+
+    // #region helpers
+    // Helper to generate initial tournament matches
+    private static async generateTournamentMatches(tournamentId: number, participants: { user_id: number }[]): Promise<{ success: boolean, errorMessage?: string }> {
+        if (participants.length < 2) {
+            return { success: false, errorMessage: "Not enough participants to generate matches." };
+        }
+
+        const { data: tournament, error: tournamentError } = await dbClient
+            .from('tournaments')
+            .select('prize_pool, max_players')
+            .eq('id', tournamentId)
+            .single()
+
+        if (tournamentError || !tournament) {
+            console.error("Error fetching tournament details:", tournamentError);
+            return { success: false, errorMessage: "Failed to retrieve tournament details for match generation." };
+        }
+
+        const stakeAmount = Number(tournament.prize_pool) / Number(tournament.max_players);
+
+
+        // Shuffle participants to randomize pairings
+        const shuffledParticipants = [...participants].sort(() => 0.5 - Math.random());
+
+        const matchesToInsert: TablesInsert<'matches'>[] = [];
+
+        // For a simple bracket, pair participants for Round 1
+        for (let i = 0; i < shuffledParticipants.length; i += 2) {
+            if (i + 1 < shuffledParticipants.length) {
+                matchesToInsert.push({
+                    tournament_id: tournamentId,
+                    status: 'in_progress', // Matches start immediately
+                    stake_amount: stakeAmount.toString(), // Could be derived from tournament prize_pool
+                    total_prize_pool: tournament.prize_pool!, // Placeholder, actual prize pool distributed at tournament end
+                    started_at: new Date().toISOString(),
+                    // Link participants directly or via match_participants after match creation
+                });
+            } else {
+                // Handle odd number of players (e.g., byes or waiting for next round)
+                // For a strict power-of-2 tournament, this shouldn't happen for initial round
+                console.warn(`Tournament ${tournamentId} has an odd number of players. Player ${shuffledParticipants[i].user_id} gets a bye.`);
+            }
+        }
+
+        if (matchesToInsert.length === 0) {
+            return { success: false, errorMessage: "No matches generated for the tournament." };
+        }
+
+        const { data: newMatches, error: matchInsertError } = await dbClient
+            .from('matches')
+            .insert(matchesToInsert)
+            .select();
+
+        if (matchInsertError) {
+            console.error("Error creating tournament matches:", matchInsertError);
+            return { success: false, errorMessage: "Failed to create tournament matches." };
+        }
+
+        // Now, link participants to their respective matches
+        let matchIndex = 0;
+        const matchParticipantsInserts: TablesInsert<'match_participants'>[] = [];
+        for (let i = 0; i < shuffledParticipants.length; i += 2) {
+            if (i + 1 < shuffledParticipants.length && newMatches && newMatches[matchIndex]) {
+                const matchId = newMatches[matchIndex].id;
+                matchParticipantsInserts.push({
+                    match_id: matchId,
+                    user_id: shuffledParticipants[i].user_id,
+                    position: 1,
+                });
+                matchParticipantsInserts.push({
+                    match_id: matchId,
+                    user_id: shuffledParticipants[i + 1].user_id,
+                    position: 2,
+                });
+                matchIndex++;
+            }
+        }
+
+        const { error: linkError } = await dbClient
+            .from('match_participants')
+            .insert(matchParticipantsInserts);
+
+        if (linkError) {
+            console.error("Error linking participants to tournament matches:", linkError);
+            return { success: false, errorMessage: "Failed to link participants to tournament matches." };
+        }
+
+        // For each created match, create its first round
+        for (const match of newMatches) {
+            const { success: roundSuccess, errorMessage: roundError } = await GameController.createGameRound(match.id, 1);
+            if (!roundSuccess) {
+                console.error(`Failed to create first round for new tournament match ${match.id}:`, roundError);
+                // Depending on criticality, you might want to rollback the match creation or log an error.
+            }
+        }
+
+
+        return { success: true };
+    }
+
+    // Helper to update final positions of tournament participants
+    private static async updateTournamentFinalPositions(tournamentId: number, winnerId: number) {
+        try {
+            // Set winner's position to 1
+            await dbClient
+                .from('tournament_participants')
+                .update({ final_position: 1, eliminated_at: new Date().toISOString() })
+                .eq('tournament_id', tournamentId)
+                .eq('user_id', winnerId);
+
+            // Get all other participants who are not yet eliminated
+            const { data: remainingParticipants, error: remError } = await dbClient
+                .from('tournament_participants')
+                .select('user_id')
+                .eq('tournament_id', tournamentId)
+                .is('eliminated_at', null)
+                .not('user_id', 'eq', winnerId);
+
+            if (remError) {
+                console.error("Error fetching remaining participants for final positions:", remError);
+                return;
+            }
+
+            // For simplicity, assign positions in reverse order of elimination.
+            // This is a placeholder; a true bracket system would track positions more precisely.
+            const { data: eliminatedParticipants, error: elimError } = await dbClient
+                .from('tournament_participants')
+                .select('user_id, eliminated_at')
+                .eq('tournament_id', tournamentId)
+                .not('eliminated_at', 'is', null)
+                .order('eliminated_at', { ascending: false }); // Latest eliminated first
+
+            if (elimError) {
+                console.error("Error fetching eliminated participants for final positions:", elimError);
+                return;
+            }
+
+            let position = 2;
+            for (const participant of eliminatedParticipants || []) {
+                if (participant.user_id !== winnerId) {
+                    await dbClient
+                        .from('tournament_participants')
+                        .update({ final_position: position })
+                        .eq('tournament_id', tournamentId)
+                        .eq('user_id', participant.user_id);
+                    position++;
+                }
+            }
+
+        } catch (error) {
+            console.error("Error in updateTournamentFinalPositions:", error);
+        }
+    }
+
+    private static async createGameRound(matchId: number, roundNumber: number): Promise<{ success: boolean, gameRoundId?: number, errorMessage?: string }> {
+        console.log(`Attempting to create round ${roundNumber} for match ${matchId}`);
+        try {
+
+
+            // Check if the round already exists
+            const { data: existingRound, error: existingRoundError } = await dbClient
+                .from('game_rounds')
+                .select('id')
+                .eq('match_id', matchId)
+                .eq('round_number', roundNumber)
+                .single();
+
+            if (existingRoundError && existingRoundError.code !== 'PGRST116') { // PGRST116 means "No rows found"
+                console.error(`Error checking for existing round ${roundNumber} for match ${matchId}:`, existingRoundError);
+                return { success: false, errorMessage: "Failed to check for existing round." };
+            }
+
+            if (existingRound) {
+                console.log(`Round ${roundNumber} for match ${matchId} already exists (ID: ${existingRound.id}). Skipping creation.`);
+                return { success: true, gameRoundId: existingRound.id };
+            }
+
+            // Get match details to ensure it's active and fetch participants if needed
+            const { data: match, error: matchError } = await dbClient
+                .from('matches')
+                .select('status')
+                .eq('id', matchId)
+                .single();
+
+            if (matchError || !match) {
+                console.error(`Match ${matchId} not found or error fetching details:`, matchError);
+                return { success: false, errorMessage: "Match not found." };
+            }
+
+            if (match.status !== 'in_progress') {
+                console.log(`Cannot create round for match ${matchId} because its status is '${match.status}'.`);
+                return { success: false, errorMessage: "Match is not in 'in_progress' status." };
+            }
+
+            const newRound: TablesInsert<'game_rounds'> = {
+                match_id: matchId,
+                round_number: roundNumber,
+                // player1_move, player2_move, winner_id will be set later
+            };
+
+            const { data, error } = await dbClient
+                .from('game_rounds')
+                .insert(newRound)
+                .select('id')
+                .single();
+
+            if (error || !data) {
+                console.error(`Error creating game round ${roundNumber} for match ${matchId}:`, error);
+                return { success: false, errorMessage: "Failed to create game round." };
+            }
+
+            console.log(`Successfully created round ${roundNumber} for match ${matchId}. Round ID: ${data.id}`);
+            return { success: true, gameRoundId: data.id };
+
+        } catch (error) {
+            console.error(`Error in createGameRound for match ${matchId}, round ${roundNumber}:`, error);
+            return { success: false, errorMessage: "Internal Server Error during round creation." };
+        }
+    }
+    // #endregion
 }

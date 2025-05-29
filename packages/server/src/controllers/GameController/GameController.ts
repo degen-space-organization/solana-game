@@ -139,11 +139,13 @@ export default class GameController {
 
     static async joinLobby(req: Request, res: Response) {
         try {
+            console.log('Received payload for joining lobby:', req.body);
             const { lobby_id, user_id } = req.body;
 
             if (!lobby_id || !user_id) {
                 return res.status(400).json({ error: "Missing required fields: lobby_id, user_id" });
             }
+            
 
             // Check if lobby exists and is not full
             const { data: lobby, error: lobbyError } = await dbClient
@@ -152,18 +154,23 @@ export default class GameController {
                 .eq('id', lobby_id)
                 .single();
 
+            
+
             if (lobbyError) {
                 console.error("Error fetching lobby:", lobbyError);
                 return res.status(404).json({ error: "Lobby not found" });
             }
+            
 
             if (lobby.status !== 'waiting') {
                 return res.status(400).json({ error: "Lobby is not joinable" });
             }
+            
 
             if (lobby.current_players! >= lobby.max_players!) {
                 return res.status(400).json({ error: "Lobby is full" });
             }
+            
 
             // Check if user is already in this lobby
             const { data: existingParticipant, error: participantCheckError } = await dbClient
@@ -172,14 +179,18 @@ export default class GameController {
                 .eq('lobby_id', lobby_id)
                 .eq('user_id', user_id)
                 .single();
+            
 
             if (existingParticipant) {
                 return res.status(400).json({ error: "User already in this lobby" });
             }
+            
+
             if (participantCheckError && participantCheckError.code !== 'PGRST116') { // PGRST116 = no rows found
                 console.error("Error checking existing participant:", participantCheckError);
                 return res.status(500).json({ error: "Database error checking participant" });
             }
+            
 
             const newParticipant: TablesInsert<'lobby_participants'> = {
                 lobby_id: lobby_id,
@@ -188,12 +199,14 @@ export default class GameController {
                 is_ready: false,
                 has_staked: false,
             };
+            
 
             const { data, error } = await dbClient
                 .from('lobby_participants')
                 .insert([newParticipant])
                 .select()
                 .single();
+            
 
             if (error) {
                 console.error("Error joining lobby:", error);
@@ -203,23 +216,27 @@ export default class GameController {
                 }
                 return res.status(500).json({ error: "Failed to join lobby" });
             }
+            
 
             // Update current_players count in lobbies table
             const { error: updateLobbyError } = await dbClient
                 .from('lobbies')
                 .update({ current_players: lobby.current_players! + 1 })
                 .eq('id', lobby_id);
+            
 
             if (updateLobbyError) {
                 console.error("Error updating lobby player count:", updateLobbyError);
                 // Consider rolling back participant insertion if this fails
                 return res.status(500).json({ error: "Failed to update lobby player count" });
             }
+            
 
             res.status(200).json({
                 message: "Joined lobby successfully",
                 participant: data
             });
+            
 
         } catch (error) {
             console.error(error);

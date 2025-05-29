@@ -39,6 +39,7 @@ import type { PendingLobby } from '@/types/lobby';
 import { PublicKey, SystemProgram, Transaction } from '@solana/web3.js';
 import { solConnection } from '@/web3';
 import { GAME_VAULT_ADDRESS } from '@/web3/constants';
+import { tournaments } from '@/supabase/Database/tournaments';
 
 
 // const GAME_VAULT_ADDRESS = new PublicKey('48wcCEj1hdV5UGwr3PmhqvU3ix1eN5rMqEsBxT4XKRfc'); // Replace with your actual vault address
@@ -88,7 +89,7 @@ const LobbyDetailsPage: React.FC = () => {
       try {
         setLoading(true);
         const id = parseInt(lobbyId, 10);
-        if (isNaN(id)) {
+        if (isNaN(id)) { 
           setError('Invalid Lobby ID.');
           setLoading(false);
           return;
@@ -145,10 +146,24 @@ const LobbyDetailsPage: React.FC = () => {
     return userParticipation?.has_staked || false;
   };
 
+  const areAllPlayersStaked = () => {
+    return participants.every(p => p.has_staked);
+  };
+
+  const isLobbyFull = () => {
+    return lobby && lobby.current_players === lobby.max_players;
+  }
+
   const canStartMatch = () => {
-    if (!lobby || !isCreator()) return false;
-    return lobby.current_players === lobby.max_players &&
-      participants.every(p => p.has_staked);
+    // This is for 1v1 matches
+    if (!lobby || !isCreator() || lobby.tournament_id) return false;
+    return isLobbyFull() && areAllPlayersStaked();
+  };
+
+  const canStartTournament = () => {
+    // This is for tournament matches
+    if (!lobby || !isCreator() || !lobby.tournament_id) return false;
+    return lobby.status === 'waiting' && isLobbyFull() && areAllPlayersStaked();
   };
 
   const handleStake = async () => {
@@ -156,7 +171,6 @@ const LobbyDetailsPage: React.FC = () => {
 
     setActionLoading(true);
     try {
-      // TODO: Implement actual staking logic with your Solana contract
       toaster.create({
         title: "Staking...",
         description: `Staking ${lobby.stake_amount_sol} SOL for this lobby`,
@@ -192,7 +206,7 @@ const LobbyDetailsPage: React.FC = () => {
       // Send and get signature
       const txSignature = await solConnection.sendRawTransaction(signedTransaction.serialize());
       if (!txSignature) throw new Error('Transaction signature is null');
-      console.log('Transaction signature:', txSignature);      
+      console.log('Transaction signature:', txSignature);
 
       toaster.create({
         title: "Staked Successfully! 💰",
@@ -232,7 +246,7 @@ const LobbyDetailsPage: React.FC = () => {
   };
 
   const handleLeave = async () => {
-    if (!walletAddress || !lobby) 
+    if (!walletAddress || !lobby)
       return;
 
     setActionLoading(true);
@@ -243,7 +257,7 @@ const LobbyDetailsPage: React.FC = () => {
         type: "loading",
         duration: 3000,
       });
-        
+
       // Call the backend API to handle withdrawal logic including Solana refund
       const response = await fetch('http://localhost:4000/api/v1/game/withdraw-lobby', {
         method: 'POST',
@@ -311,7 +325,7 @@ const LobbyDetailsPage: React.FC = () => {
       });
 
       // Call the backend API to handle kicking a player
-      const response = await fetch('http://localhost:4000/api/v1/game/kick-player', { // Calling the new kick-player endpoint
+      const response = await fetch('http://localhost:4000/api/v1/game/kick-player', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -402,6 +416,64 @@ const LobbyDetailsPage: React.FC = () => {
     }
   };
 
+  const handleStartTournament = async () => {
+    if (!canStartTournament()) return;
+
+    setActionLoading(true);
+    try {
+      toaster.create({
+        title: "Starting Tournament...",
+        description: "Initializing the tournament for all players",
+        type: "loading",
+        duration: 3000,
+      });
+
+      // Call the backend API to start the tournament
+      const response = await fetch('http://localhost:4000/api/v1/game/start-tournament', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tournament_id: lobby!.tournament_id, 
+          creator_user_id: lobby!.created_by,
+        }),
+      });
+      console.log(lobby?.tournament_id, lobby?.created_by)
+
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Failed to start tournament:', errorData.error);
+        throw new Error(errorData.error || 'Failed to start tournament');
+      }
+
+      toaster.create({
+        title: "Tournament Started! 🏆",
+        description: "The tournament has begun! Prepare for battle!",
+        type: "success",
+        duration: 4000,
+      });
+
+      // Optionally, navigate to a dedicated tournament page or refresh data
+      // For now, let's refresh the lobby data, which should show status change.
+      window.location.reload(); // Or refetch specific data to avoid full reload
+      // navigate('/tournament-game-page/' + lobby!.id); // Example: navigate to a tournament game page
+
+    } catch (error) {
+      console.error('Start tournament error:', error);
+      toaster.create({
+        title: "Failed to Start Tournament",
+        description: "Could not start the tournament. Please try again.",
+        type: "error",
+        duration: 5000,
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+
   const handleCloseLobby = async () => {
     if (!isCreator()) return;
 
@@ -473,6 +545,19 @@ const LobbyDetailsPage: React.FC = () => {
         type: "loading",
         duration: 3000,
       });
+
+      if(lobby?.tournament_id){
+        const response = await fetch('http://localhost:4000/api/v1/game/join-tournament', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: currentUser.id,
+          tournament_id: lobby!.tournament_id,
+        }),
+      });
+      }
 
       // Call the backend API to handle joining the lobby
       const response = await fetch('http://localhost:4000/api/v1/game/join-lobby', {
@@ -659,7 +744,7 @@ const LobbyDetailsPage: React.FC = () => {
             <Flex justify="space-between" align="flex-start" mb="2">
               <VStack align="flex-start" padding="0">
                 <HStack>
-                  {lobby.is_tournament ? (
+                  {lobby.tournament_id ? (
                     <Trophy size={28} color="#FFD700" />
                   ) : (
                     <Target size={28} color="#FF6B35" />
@@ -681,7 +766,7 @@ const LobbyDetailsPage: React.FC = () => {
 
               <VStack align="flex-end" padding="0">
                 <Badge
-                  bg={lobby.is_tournament ? "#7B2CBF" : "#118AB2"}
+                  bg={lobby.tournament_id ? "#7B2CBF" : "#118AB2"}
                   color="white"
                   fontSize="sm"
                   fontWeight="black"
@@ -1039,40 +1124,78 @@ const LobbyDetailsPage: React.FC = () => {
                   ) : isCreator() ? (
                     // Creator Actions
                     <VStack align="stretch" padding="2">
-                      <Button
-                        onClick={handleStartMatch}
-                        disabled={!canStartMatch() || actionLoading}
-                        bg={canStartMatch() ? "#06D6A0" : "gray.400"}
-                        color="white"
-                        fontWeight="black"
-                        fontSize="lg"
-                        py="6"
-                        borderRadius="0"
-                        border="3px solid"
-                        borderColor="gray.900"
-                        shadow="4px 4px 0px rgba(0,0,0,0.8)"
-                        textTransform="uppercase"
-                        _hover={canStartMatch() && !actionLoading ? {
-                          bg: "#04C28D",
-                          transform: "translate(-2px, -2px)",
-                          shadow: "6px 6px 0px rgba(0,0,0,0.8)",
-                        } : {}}
-                        _active={canStartMatch() && !actionLoading ? {
-                          transform: "translate(0px, 0px)",
-                          shadow: "2px 2px 0px rgba(0,0,0,0.8)",
-                        } : {}}
-                      >
-                        {actionLoading ? (
-                          <Spinner size="sm" />
-                        ) : (
-                          <HStack>
-                            <Play size={20} />
-                            <Text>Start Match</Text>
-                          </HStack>
-                        )}
-                      </Button>
+                      {(participants.length == 4 || participants.length == 8) ? (
+                        // Tournament Start Button
+                        <Button
+                          onClick={handleStartTournament}
+                          disabled={!canStartTournament() || actionLoading}
+                          bg={canStartTournament() ? "#7B2CBF" : "gray.400"} // Purple for tournament start
+                          color="white"
+                          fontWeight="black"
+                          fontSize="lg"
+                          py="6"
+                          borderRadius="0"
+                          border="3px solid"
+                          borderColor="gray.900"
+                          shadow="4px 4px 0px rgba(0,0,0,0.8)"
+                          textTransform="uppercase"
+                          _hover={canStartTournament() && !actionLoading ? {
+                            bg: "#6A1B9A", // Darker purple
+                            transform: "translate(-2px, -2px)",
+                            shadow: "6px 6px 0px rgba(0,0,0,0.8)",
+                          } : {}}
+                          _active={canStartTournament() && !actionLoading ? {
+                            transform: "translate(0px, 0px)",
+                            shadow: "2px 2px 0px rgba(0,0,0,0.8)",
+                          } : {}}
+                        >
+                          {actionLoading ? (
+                            <Spinner size="sm" />
+                          ) : (
+                            <HStack>
+                              <Trophy size={20} />
+                              <Text>Start Tournament</Text>
+                            </HStack>
+                          )}
+                        </Button>
+                      ) : (
+                        // 1v1 Start Match Button
+                        <Button
+                          onClick={handleStartMatch}
+                          disabled={!canStartMatch() || actionLoading}
+                          bg={canStartMatch() ? "#06D6A0" : "gray.400"}
+                          color="white"
+                          fontWeight="black"
+                          fontSize="lg"
+                          py="6"
+                          borderRadius="0"
+                          border="3px solid"
+                          borderColor="gray.900"
+                          shadow="4px 4px 0px rgba(0,0,0,0.8)"
+                          textTransform="uppercase"
+                          _hover={canStartMatch() && !actionLoading ? {
+                            bg: "#04C28D",
+                            transform: "translate(-2px, -2px)",
+                            shadow: "6px 6px 0px rgba(0,0,0,0.8)",
+                          } : {}}
+                          _active={canStartMatch() && !actionLoading ? {
+                            transform: "translate(0px, 0px)",
+                            shadow: "2px 2px 0px rgba(0,0,0,0.8)",
+                          } : {}}
+                        >
+                          {actionLoading ? (
+                            <Spinner size="sm" />
+                          ) : (
+                            <HStack>
+                              <Play size={20} />
+                              <Text>Start Match</Text>
+                            </HStack>
+                          )}
+                        </Button>
+                      )}
 
-                      {!canStartMatch() && (
+
+                      {!canStartMatch() && !canStartTournament() && (
                         <Text fontSize="xs" color="gray.600" textAlign="center" fontWeight="bold">
                           All players must join and stake before starting
                         </Text>
@@ -1139,9 +1262,9 @@ const LobbyDetailsPage: React.FC = () => {
                                 <Text>Withdraw from Lobby</Text>
                               </HStack>
                             )}
-                          </Button>  
+                          </Button>
                       ) : (
-                        <VStack> 
+                        <VStack>
                           <Button
                             onClick={handleStake}
                             disabled={actionLoading}

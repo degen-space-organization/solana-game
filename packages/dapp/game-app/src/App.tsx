@@ -33,7 +33,7 @@ import type { ActiveLobbyDetails, User } from './types/lobby';
 
 
 // Components
-import Game from './components/Game/Game';
+import GamePage from './components/Game2/GamePage';
 import Spectate from './components/Spectate/Spectate';
 import LobbyJoined from './components/Lobby/LobbyJoined';
 import LobbyPending from './components/Lobby/LobbyPending';
@@ -589,7 +589,7 @@ function App() {
                         {/* <Heading size="xl" fontWeight="black" color="gray.900" mb="6" textTransform="uppercase">
                           🎮 MY GAME
                         </Heading> */}
-                        <Game />
+                        <GamePage />
                       </Card.Body>
                     </Card.Root>
                   )}

@@ -38,6 +38,40 @@ export const games = {
     }
   },
 
+
+  async isInTournamentOrMatch(walletAddress: string): Promise<boolean> {
+    try {
+      // First, get the user's database ID from their wallet address
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('solana_address', walletAddress)
+        .single();
+      if (userError || !userData) {
+        console.error('User not found:', userError);
+        return false;
+      }
+
+      // Check if user is in any active match
+      const { data: matchParticipant, error: participantError } = await supabase
+        .from('match_participants')
+        .select('match_id')
+        .eq('user_id', userData.id)
+        // .in('matches.status', ['waiting', 'in_progress'])
+        .single();
+
+      if (participantError || !matchParticipant) {
+        console.log('User not in any active match');
+        return false;
+      }
+      // If we reach here, user is in an active match
+      return true;
+    } catch (error) {
+      console.error('Error checking if user is in tournament or match:', error);
+      return false;
+    }
+  },
+
   /**
    * Get current active game for a user by their user ID
    */
@@ -318,6 +352,228 @@ export const games = {
     }
   },
 
+  /**
+   * Get users current tournament or game, if any
+   * This will return the match details, participants, and user position
+   * otherwise it will return null
+   */
+  async getUserTournamentOrGame(userId: number) {
+    try {
+      // Check if user is in any active match
+      const { data: matchParticipant, error: participantError } = await supabase
+        .from('match_participants')
+        .select(`
+          match_id,
+          position,
+          matches!inner (
+            id,
+            tournament_id,
+            status,
+            stake_amount,
+            total_prize_pool,
+            winner_id,
+            started_at,
+            completed_at
+          )
+        `)
+        .eq('user_id', userId)
+        .in('matches.status', ['waiting', 'in_progress'])
+        .single();
+
+      if (participantError || !matchParticipant) {
+        console.log('User not in any active match');
+        return null;
+      }
+
+      const match = matchParticipant.matches as Tables<'matches'>;
+      const userPosition = matchParticipant.position;
+
+      // Get all match participants
+      const { data: allParticipants, error: allParticipantsError } = await supabase
+        .from('match_participants')
+        .select(`
+          user_id,
+          position,
+          users (
+            id,
+            nickname,
+            solana_address,
+            matches_won,
+            matches_lost
+          )
+        `)
+        .eq('match_id', match.id);
+
+      if (allParticipantsError) {
+        console.error('Error fetching match participants:', allParticipantsError);
+        throw new Error('Failed to load match participants');
+      }
+
+      let tournament: Tables<'tournaments'> | null = null;
+
+      // If it's a tournament match, get tournament details
+      if (match.tournament_id) {
+        const { data: tournamentData, error: tournamentError } = await supabase
+          .from('tournaments')
+          .select('*')
+          .eq('id', match.tournament_id)
+          .single();
+
+        if (tournamentError) {
+          console.error('Error fetching tournament:', tournamentError);
+        } else {
+          tournament = tournamentData;
+        }
+      }
+
+      return {
+        match,
+        tournament,
+        participants: allParticipants as Array<{
+          user_id: number;
+          position: number;
+          users: Tables<'users'>;
+        }>,
+        userPosition,
+      };
+
+    } catch (error) {
+      console.error('Error fetching user tournament or game:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get game round by ID
+   * This function retrieves a specific game round by its ID.
+   */
+  // async getGameRoundById(roundId: number): Promise<Tables<'game_rounds'> | null> {
+  //   try {
+  //     const { data: round, error } = await supabase
+  //       .from('game_rounds')
+  //       .select('*')
+  //       .eq('id', roundId)
+  //       .single();
+  //     if (error || !round) {
+  //       console.error('Error fetching game round:', error);
+  //       return null;
+  //     }
+  //     return round as Tables<'game_rounds'>;
+  //   } catch (error) {
+  //     console.error('Error in getGameRoundById:', error);
+  //     return null;
+  //   }
+  // },
+
+
+  async findLatestGameRoundForUser(solanaAddress: string) {
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('solana_address', solanaAddress)
+      .single();
+    if (userError || !user) {
+      throw new Error('User not found');
+    }
+
+    // 2. Get all match_ids where user is a participant
+    const { data: matchParticipants, error: matchError } = await supabase
+      .from('match_participants')
+      .select('match_id, position')
+      .eq('user_id', user.id);
+
+    if (matchError || !matchParticipants || matchParticipants.length === 0) {
+      throw new Error('User not in any matches');
+    }
+
+    const matchIds = matchParticipants.map(mp => mp.match_id);
+
+    // 3. Get the latest game round for those matches
+    const { data: rounds, error: roundsError } = await supabase
+      .from('game_rounds')
+      .select('*')
+      .in('match_id', matchIds)
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (roundsError || !rounds || rounds.length === 0) {
+      throw new Error('No game rounds found for user');
+    }
+    console.log('niggerino')
+
+    return rounds[0];
+  },
+
+  /**
+ * Get game round by ID
+ */
+  async getGameRoundById(roundId: number) {
+    try {
+      const { data, error } = await supabase
+        .from('game_rounds')
+        .select('*')
+        .eq('id', roundId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching game round:', error);
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error in getGameRoundById:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get current active round for a match
+   */
+  async getCurrentRoundForMatch(matchId: number) {
+    try {
+      const { data, error } = await supabase
+        .from('game_rounds')
+        .select('*')
+        .eq('match_id', matchId)
+        .order('round_number', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (error) {
+        console.error('Error fetching current round:', error);
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error in getCurrentRoundForMatch:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get all rounds for a match
+   */
+  async getRoundsForMatch(matchId: number) {
+    try {
+      const { data, error } = await supabase
+        .from('game_rounds')
+        .select('*')
+        .eq('match_id', matchId)
+        .order('round_number', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching match rounds:', error);
+        throw error;
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Error in getRoundsForMatch:', error);
+      throw error;
+    }
+  },
   /**
    * Utility functions
    */

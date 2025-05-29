@@ -1,4 +1,5 @@
-// types/lobby.ts
+import type { Tournament } from "./tournament";
+
 export interface User {
   id: number;
   solana_address: string;
@@ -9,17 +10,6 @@ export interface User {
   updated_at: string;
 }
 
-export interface Tournament {
-  id: number;
-  name: string;
-  status: 'waiting' | 'in_progress' | 'completed' | 'cancelled';
-  max_players: number;
-  current_players: number;
-  prize_pool: string; // in lamports
-  created_at: string;
-  started_at: string | null;
-  completed_at: string | null;
-}
 
 export interface Lobby {
   id: number;

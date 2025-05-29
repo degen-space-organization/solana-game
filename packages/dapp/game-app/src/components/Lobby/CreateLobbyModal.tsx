@@ -104,6 +104,28 @@ export const CreateLobbyModal: React.FC<CreateLobbyModalProps> = ({
         throw new Error('Transaction signature is null');
       }
       console.log('Transaction sent with signature:', txSignature);
+    
+      let tournament_id;
+      if(maxPlayers == 4 || maxPlayers == 8){
+        const response = await fetch('http://localhost:4000/api/v1/game/create-tournament', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: lobbyName || null,
+            created_by: currentUserId,
+            max_players: maxPlayers,
+            stake_amount: (Number(stakeAmount)).toString(),
+            // txHash: txSignature,
+          }),
+        });
+        const data = await response.json()
+        console.log(data)
+        tournament_id = data.tournament.id
+      }
+
+      console.log(tournament_id)
       const response = await fetch('http://localhost:4000/api/v1/game/create-lobby', {
         method: 'POST',
         headers: {
@@ -111,12 +133,15 @@ export const CreateLobbyModal: React.FC<CreateLobbyModalProps> = ({
         },
         body: JSON.stringify({
           name: lobbyName || null,
+          tournament_id: tournament_id,
           created_by: currentUserId,
           stake_amount: (Number(stakeAmount)).toString(),
           max_players: maxPlayers,
           txHash: txSignature,
         }),
       });
+
+
       console.log((Number(stakeAmount)).toString())
       const data = await response.json();
 

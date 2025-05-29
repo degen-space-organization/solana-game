@@ -50,6 +50,7 @@ export default class GameController {
         try {
             const {
                 name,
+                tournament_id,
                 created_by,
                 stake_amount,
                 max_players,
@@ -70,6 +71,7 @@ export default class GameController {
 
             const lobbyData: TablesInsert<'lobbies'> = {
                 name: name || `Lobby by ${created_by}`,
+                tournament_id: tournament_id || null,
                 created_by: created_by,
                 stake_amount: stake_amount.toString(),
                 max_players: max_players || 2, // Default to 2 players for 1v1
@@ -934,7 +936,7 @@ export default class GameController {
             }
 
             // Validate stake_amount against allowed values (from lobby_migration.sql or similar standard)
-            const allowedStakes = ['250000000', '500000000', '750000000', '1000000000'];
+            const allowedStakes = ['100000000', '250000000', '500000000', '750000000', '1000000000'];
             if (!allowedStakes.includes(stake_amount.toString())) {
                 return res.status(400).json({ error: `Invalid stake amount. Allowed values: ${allowedStakes.join(', ')}` });
             }
@@ -1048,11 +1050,24 @@ export default class GameController {
             return { success: false, errorMessage: "Not enough participants to generate matches." };
         }
 
+        const { data: tournament, error: tournamentError } = await dbClient
+            .from('tournaments')
+            .select('prize_pool, max_players')
+            .eq('id', tournamentId)
+            .single()
+
+        if (tournamentError || !tournament) {
+            console.error("Error fetching tournament details:", tournamentError);
+            return { success: false, errorMessage: "Failed to retrieve tournament details for match generation." };
+        }
+
+        const stakeAmount = Number(tournament.prize_pool) / Number(tournament.max_players);
+
+
         // Shuffle participants to randomize pairings
         const shuffledParticipants = [...participants].sort(() => 0.5 - Math.random());
 
         const matchesToInsert: TablesInsert<'matches'>[] = [];
-        const stakeAmount = "0"; // Tournaments might have a different staking model, or this can be fetched from tournament details
 
         // For a simple bracket, pair participants for Round 1
         for (let i = 0; i < shuffledParticipants.length; i += 2) {
@@ -1060,8 +1075,8 @@ export default class GameController {
                 matchesToInsert.push({
                     tournament_id: tournamentId,
                     status: 'in_progress', // Matches start immediately
-                    stake_amount: stakeAmount, // Could be derived from tournament prize_pool
-                    total_prize_pool: stakeAmount, // Placeholder, actual prize pool distributed at tournament end
+                    stake_amount: stakeAmount.toString(), // Could be derived from tournament prize_pool
+                    total_prize_pool: tournament.prize_pool!, // Placeholder, actual prize pool distributed at tournament end
                     started_at: new Date().toISOString(),
                     // Link participants directly or via match_participants after match creation
                 });

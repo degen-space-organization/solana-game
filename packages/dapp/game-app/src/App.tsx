@@ -31,9 +31,12 @@ import { database } from '@/supabase/Database';
 import type { ActiveLobbyDetails, User } from './types/lobby';
 
 
-
 // Components
-import GamePage from './components/Game2/GamePage';
+
+// import GamePage from './components/Game2/GamePage';
+
+import Game from './components/Game2/Game';
+
 import Spectate from './components/Spectate/Spectate';
 import LobbyJoined from './components/Lobby/LobbyJoined';
 import LobbyPending from './components/Lobby/LobbyPending';
@@ -44,12 +47,6 @@ import GlobalChatWrapper from './components/Chat/GlobalChat';
 import { toaster } from './components/ui/toaster';
 import { CreateLobbyModal } from './components/Lobby/CreateLobbyModal';
 import { ConnectWalletButton } from './components/Wallet/WalletConnect';
-
-
-
-
-
-
 
 interface RankedPlayer extends User {
   net_wins: number;

@@ -1,4 +1,4 @@
-// src/theme/neobrutalism.ts
+
 import { 
   createSystem, 
   defaultConfig,
@@ -34,23 +34,29 @@ const tokens = defineTokens({
     black: { value: "900" },
   },
   colors: {
-    // Neobrutalism color palette with violet as primary
+    // Muted violet palette for better readability with black text
     violet: {
-      50: { value: "#f5f3ff" },
-      100: { value: "#ede9fe" },
-      200: { value: "#ddd6fe" },
-      300: { value: "#c4b5fd" },
-      400: { value: "#a78bfa" },
-      500: { value: "#8b5cf6" }, // Primary violet
-      600: { value: "#7c3aed" },
-      700: { value: "#6d28d9" },
-      800: { value: "#5b21b6" },
-      900: { value: "#4c1d95" },
+      50: { value: "#faf8ff" },
+      100: { value: "#f3f0ff" },
+      200: { value: "#e9e5ff" },
+      300: { value: "#d4c7ff" }, // Lighter/muted primary
+      400: { value: "#b794f6" },
+      500: { value: "#9f7aea" }, // Muted primary violet
+      600: { value: "#805ad5" },
+      700: { value: "#6b46c1" },
+      800: { value: "#553c9a" },
+      900: { value: "#44337a" },
     },
-    // Brutalist supporting colors
+    // Neobrutalism accent colors
     brutalist: {
       black: { value: "#000000" },
       white: { value: "#ffffff" },
+      orange: { value: "#FF8A5B" }, // Slightly muted
+      green: { value: "#2DD4BF" }, // Slightly muted  
+      blue: { value: "#3B82F6" }, // Slightly muted
+      purple: { value: "#A855F7" }, // Slightly muted
+      red: { value: "#EF4444" },
+      yellow: { value: "#F59E0B" },
       gray: {
         50: { value: "#f9fafb" },
         100: { value: "#f3f4f6" },
@@ -63,47 +69,36 @@ const tokens = defineTokens({
         800: { value: "#1f2937" },
         900: { value: "#111827" },
       },
-      // Accent colors for variety
-      orange: { value: "#ff6b35" },
-      green: { value: "#06d6a0" },
-      blue: { value: "#118ab2" },
-      red: { value: "#ef4444" },
-      yellow: { value: "#fbbf24" },
     },
   },
   shadows: {
-    // Neobrutalism signatures: bold, offset shadows
     brutalist: {
-      sm: { value: "2px 2px 0px #000000" },
-      md: { value: "4px 4px 0px #000000" },
-      lg: { value: "6px 6px 0px #000000" },
-      xl: { value: "8px 8px 0px #000000" },
-      "2xl": { value: "12px 12px 0px #000000" },
-      "3xl": { value: "16px 16px 0px #000000" },
+      sm: { value: "1px 1px 0px #000000" },
+      md: { value: "2px 2px 0px #000000" },
+      lg: { value: "3px 3px 0px #000000" },
+      xl: { value: "4px 4px 0px #000000" },
+      "2xl": { value: "6px 6px 0px #000000" },
     },
-    // Colored shadows for special elements
-    violet: { value: "4px 4px 0px #8b5cf6" },
-    orange: { value: "4px 4px 0px #ff6b35" },
-    green: { value: "4px 4px 0px #06d6a0" },
-    blue: { value: "4px 4px 0px #118ab2" },
+    // Colored shadows (muted)
+    violet: { value: "2px 2px 0px #9f7aea" },
+    orange: { value: "2px 2px 0px #FF8A5B" },
+    green: { value: "2px 2px 0px #2DD4BF" },
+    blue: { value: "2px 2px 0px #3B82F6" },
   },
   borders: {
-    // All borders should be bold and black
-    brutalist: { value: "3px solid #000000" },
-    thick: { value: "4px solid #000000" },
-    thicker: { value: "5px solid #000000" },
+    brutalist: { value: "2px solid #000000" },
+    thick: { value: "3px solid #000000" },
+    thicker: { value: "4px solid #000000" },
   },
   radii: {
-    // Neobrutalism = no rounded corners, but we need to override defaults
     none: { value: "0px" },
-    sm: { value: "0px" },
-    md: { value: "0px" },
-    lg: { value: "0px" },
-    xl: { value: "0px" },
-    full: { value: "0px" },
+    sm: { value: "2px" }, // Slightly rounded
+    md: { value: "4px" },
+    lg: { value: "6px" },
+    xl: { value: "8px" },
+    full: { value: "9999px" },
   },
   spacing: {
-    // Additional spacing tokens
     xs: { value: "0.5rem" },
     sm: { value: "0.75rem" },
     md: { value: "1rem" },
@@ -115,15 +110,15 @@ const tokens = defineTokens({
   },
 })
 
-// Define semantic tokens for consistent theming
+// Semantic tokens for easy component usage
 const semanticTokens = defineSemanticTokens({
   colors: {
-    // Primary brand colors
+    // Primary system - muted violet with black text
     primary: {
-      solid: { value: "{colors.violet.500}" },
-      contrast: { value: "{colors.brutalist.white}" },
+      solid: { value: "{colors.violet.300}" }, // Lighter for black text
+      muted: { value: "{colors.violet.200}" },
       subtle: { value: "{colors.violet.100}" },
-      muted: { value: "{colors.violet.300}" },
+      emphasis: { value: "{colors.violet.500}" },
     },
     // Background system
     bg: {
@@ -133,7 +128,7 @@ const semanticTokens = defineSemanticTokens({
       muted: { value: "{colors.brutalist.gray.100}" },
       emphasized: { value: "{colors.brutalist.black}" },
     },
-    // Foreground/text system
+    // Foreground/text system - black text throughout
     fg: {
       default: { value: "{colors.brutalist.black}" },
       muted: { value: "{colors.brutalist.gray.600}" },
@@ -146,7 +141,7 @@ const semanticTokens = defineSemanticTokens({
       subtle: { value: "{colors.brutalist.gray.300}" },
       muted: { value: "{colors.brutalist.gray.200}" },
     },
-    // Status colors
+    // Status colors (muted)
     success: { value: "{colors.brutalist.green}" },
     warning: { value: "{colors.brutalist.yellow}" },
     error: { value: "{colors.brutalist.red}" },
@@ -154,7 +149,7 @@ const semanticTokens = defineSemanticTokens({
   },
 })
 
-// Define button recipe with correct syntax
+// Button recipe with neobrutalism style
 const buttonRecipe = defineRecipe({
   base: {
     fontFamily: "body",
@@ -162,14 +157,14 @@ const buttonRecipe = defineRecipe({
     textTransform: "uppercase",
     letterSpacing: "0.05em",
     border: "{borders.brutalist}",
-    borderRadius: "none",
+    borderRadius: "md", // Slightly rounded
     transition: "all 0.1s ease",
     cursor: "pointer",
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
     _hover: {
-      transform: "translate(-2px, -2px)",
+      transform: "translate(-1px, -1px)",
     },
     _active: {
       transform: "translate(0px, 0px)",
@@ -178,10 +173,11 @@ const buttonRecipe = defineRecipe({
   variants: {
     variant: {
       primary: {
-        bg: "{colors.violet.500}",
-        color: "{colors.brutalist.white}",
+        bg: "primary.solid",
+        color: "fg.default", // Black text
         boxShadow: "{shadows.brutalist.md}",
         _hover: {
+          bg: "primary.muted",
           boxShadow: "{shadows.brutalist.lg}",
         },
         _active: {
@@ -189,11 +185,11 @@ const buttonRecipe = defineRecipe({
         },
       },
       secondary: {
-        bg: "{colors.brutalist.white}",
-        color: "{colors.brutalist.black}",
+        bg: "bg.default",
+        color: "fg.default",
         boxShadow: "{shadows.brutalist.md}",
         _hover: {
-          bg: "{colors.brutalist.gray.50}",
+          bg: "bg.subtle",
           boxShadow: "{shadows.brutalist.lg}",
         },
         _active: {
@@ -201,8 +197,8 @@ const buttonRecipe = defineRecipe({
         },
       },
       accent: {
-        bg: "{colors.brutalist.orange}",
-        color: "{colors.brutalist.white}",
+        bg: "brutalist.orange",
+        color: "fg.default", // Black text
         boxShadow: "{shadows.orange}",
         _hover: {
           boxShadow: "{shadows.brutalist.lg}",
@@ -212,8 +208,8 @@ const buttonRecipe = defineRecipe({
         },
       },
       destructive: {
-        bg: "{colors.brutalist.red}",
-        color: "{colors.brutalist.white}",
+        bg: "error",
+        color: "fg.inverted", // White text for red background
         boxShadow: "{shadows.brutalist.md}",
         _hover: {
           boxShadow: "{shadows.brutalist.lg}",
@@ -224,18 +220,23 @@ const buttonRecipe = defineRecipe({
       },
     },
     size: {
+      xs: {
+        px: "2",
+        py: "1",
+        fontSize: "xs",
+      },
       sm: {
-        px: "4",
+        px: "3",
         py: "2",
         fontSize: "sm",
       },
       md: {
-        px: "6",
+        px: "4",
         py: "3",
         fontSize: "md",
       },
       lg: {
-        px: "8",
+        px: "6",
         py: "4",
         fontSize: "lg",
       },
@@ -247,21 +248,20 @@ const buttonRecipe = defineRecipe({
   },
 })
 
-// Define input recipe
 const inputRecipe = defineRecipe({
   base: {
     fontFamily: "body",
     border: "{borders.brutalist}",
-    borderRadius: "none",
-    bg: "{colors.brutalist.white}",
-    color: "{colors.brutalist.black}",
+    borderRadius: "sm",
+    bg: "bg.default",
+    color: "fg.default",
     _focus: {
       outline: "none",
-      borderColor: "{colors.violet.500}",
+      borderColor: "primary.emphasis",
       boxShadow: "{shadows.violet}",
     },
     _placeholder: {
-      color: "{colors.brutalist.gray.500}",
+      color: "fg.subtle",
     },
   },
   variants: {
@@ -288,23 +288,24 @@ const inputRecipe = defineRecipe({
   },
 })
 
-// Define the main theme configuration with correct structure
+
+// Configuration
 const config = defineConfig({
-  // Global CSS at root level
   globalCss: {
     "*": {
       boxSizing: "border-box",
     },
     body: {
       fontFamily: "{fonts.body}",
-      color: "{colors.brutalist.black}",
-      bg: "{colors.brutalist.white}",
+      color: "fg.default",
+      // bg: "bg.canvas",
       lineHeight: "1.6",
-      // Custom cursor
-      cursor: `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20"><rect width="16" height="16" x="2" y="2" fill="none" stroke="%23000" stroke-width="2"/><rect width="6" height="6" x="7" y="7" fill="%23000"/></svg>'), auto`,
+      margin: 0,
+      padding: 0,
     },
-    // Grid background pattern
+    // Subtle grid background
     "body::before": {
+      bg: 'violet.100',
       content: '""',
       position: "fixed",
       top: 0,
@@ -312,28 +313,18 @@ const config = defineConfig({
       right: 0,
       bottom: 0,
       backgroundImage: `
-        linear-gradient(rgba(0,0,0,0.05) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0,0,0,0.05) 1px, transparent 1px)
+        linear-gradient(rgba(0,0,0,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,0,0,0.03) 1px, transparent 1px)
       `,
-      backgroundSize: "24px 24px",
+      backgroundSize: "32px 32px",
       pointerEvents: "none",
       zIndex: -1,
-      opacity: 0.8,
-    },
-    // Interactive elements get pointer cursor
-    "button, [role='button'], input[type='submit'], input[type='button']": {
-      cursor: `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20"><rect width="16" height="16" x="2" y="2" fill="none" stroke="%238b5cf6" stroke-width="2"/><rect width="6" height="6" x="7" y="7" fill="%238b5cf6"/></svg>'), pointer`,
-    },
-    // Links
-    "a, [role='link']": {
-      cursor: `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20"><rect width="16" height="16" x="2" y="2" fill="none" stroke="%23118ab2" stroke-width="2"/><rect width="6" height="6" x="7" y="7" fill="%23118ab2"/></svg>'), pointer`,
+      opacity: 0.6,
     },
   },
-  // Theme configuration
   theme: {
     tokens,
     semanticTokens,
-    // Component recipes
     recipes: {
       button: buttonRecipe,
       input: inputRecipe,
@@ -341,8 +332,5 @@ const config = defineConfig({
   },
 })
 
-// Create and export the system
 export const neobrutalistSystem = createSystem(defaultConfig, config)
-
-// Export individual theme parts for customization
-export { tokens, semanticTokens, config, buttonRecipe, inputRecipe }
+// #endregion

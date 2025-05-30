@@ -1,4 +1,4 @@
-// components/Chat/RealtimeChat.tsx - FIXED VERSION
+// src/components/Chat/BaseRealtimeChat.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
@@ -52,6 +52,7 @@ const RealtimeChat: React.FC<ChatProps> = ({
   currentUser,
   title
 }) => {
+  // All hooks must be declared at the top level, always in the same order
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
@@ -60,33 +61,11 @@ const RealtimeChat: React.FC<ChatProps> = ({
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Validation
-  if (chatType !== 'global' && !contextId) {
-    throw new Error(`contextId is required for ${chatType} chat`);
-  }
-
-  if (!currentUser) {
-    return (
-      <Card.Root
-        borderWidth="4px"
-        borderStyle="solid"
-        borderColor="gray.900"
-        bg="red.50"
-        shadow="8px 8px 0px rgba(0,0,0,0.8)"
-        borderRadius="0"
-        p="6"
-        textAlign="center"
-      >
-        <Card.Body>
-          <Text fontSize="lg" fontWeight="black" color="red.600" mb="2">
-            🔒 AUTHENTICATION REQUIRED
-          </Text>
-          <Text color="red.500">
-            Connect your wallet to access chat
-          </Text>
-        </Card.Body>
-      </Card.Root>
-    );
+  // Validation - moved after hooks
+  const isValidContext = chatType === 'global' || contextId !== undefined;
+  
+  if (!isValidContext) {
+    console.error(`contextId is required for ${chatType} chat`);
   }
 
   // Utility functions
@@ -120,7 +99,7 @@ const RealtimeChat: React.FC<ChatProps> = ({
   const getChatTitle = (): string => {
     if (title) return title;
     switch (chatType) {
-      case 'global': return 'Global Chat';
+      case 'global': return 'Chat';
       case 'lobby': return `Lobby #${contextId} Chat`;
       case 'match': return `Match #${contextId} Chat`;
       case 'tournament': return `Tournament #${contextId} Chat`;
@@ -148,6 +127,8 @@ const RealtimeChat: React.FC<ChatProps> = ({
 
   // Load messages
   useEffect(() => {
+    if (!isValidContext) return;
+
     const loadMessages = async () => {
       setLoading(true);
       setError(null);
@@ -163,7 +144,8 @@ const RealtimeChat: React.FC<ChatProps> = ({
               solana_address
             )
           `)
-          .order('created_at', { ascending: true });
+          .order('created_at', { ascending: false }) // Get newest first
+          .limit(100); // Limit to 100 messages
 
         // Apply filters based on chat type
         if (chatType === 'global') {
@@ -185,8 +167,11 @@ const RealtimeChat: React.FC<ChatProps> = ({
           throw fetchError;
         }
 
+        // Reverse to show oldest first, but limited to 100
         setMessages(
-          (data || []).filter((msg: any) => !!msg.created_at)
+          (data || [])
+            .filter((msg: any) => !!msg.created_at)
+            .reverse() // Show oldest first for proper chat order
             .map((msg: any) => ({
               ...msg,
               created_at: msg.created_at ?? new Date().toISOString()
@@ -201,38 +186,33 @@ const RealtimeChat: React.FC<ChatProps> = ({
     };
 
     loadMessages();
-  }, [chatType, contextId]);
+  }, [chatType, contextId, isValidContext]);
 
-  // 🔥 FIXED: Realtime subscription
+  // Realtime subscription
   useEffect(() => {
-    if (loading) return;
+    if (loading || !isValidContext) return;
 
     console.log(`Setting up realtime for ${chatType} chat`, { contextId });
     setConnectionStatus('connecting');
 
-    // 🔥 KEY FIX: Subscribe to ALL chat messages and filter client-side
-    // This avoids issues with complex server-side filters
     const channel = supabase
-      .channel(`chat-${chatType}-${contextId || 'global'}-${Date.now()}`) // Add timestamp to ensure unique channel
+      .channel(`chat-${chatType}-${contextId || 'global'}-${Date.now()}`)
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
           table: 'chat_messages'
-          // 🔥 REMOVED: filter - we'll filter client-side instead
         },
         async (payload) => {
           console.log('Received realtime message:', payload.new);
           
-          // 🔥 KEY FIX: Filter client-side
           if (!isMessageForCurrentChat(payload.new)) {
             console.log('Message not for current chat, ignoring');
             return;
           }
 
           try {
-            // Fetch user data for the new message
             const { data: userData, error: userError } = await supabase
               .from('users')
               .select('id, nickname, solana_address')
@@ -251,7 +231,6 @@ const RealtimeChat: React.FC<ChatProps> = ({
 
             console.log('Adding new message to chat:', newMessage);
 
-            // 🔥 FIXED: Prevent duplicate messages
             setMessages(prev => {
               const messageExists = prev.some(msg => msg.id === newMessage.id);
               if (messageExists) {
@@ -270,19 +249,18 @@ const RealtimeChat: React.FC<ChatProps> = ({
         setConnectionStatus(status === 'SUBSCRIBED' ? 'connected' : 'connecting');
       });
 
-    // 🔥 ADDED: Better cleanup
     return () => {
       console.log('Cleaning up realtime subscription');
       channel.unsubscribe();
     };
-  }, [chatType, contextId, loading]);
+  }, [chatType, contextId, loading, isValidContext]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
-  // 🔥 ENHANCED: Send message with better error handling
+  // Send message
   const sendMessage = async () => {
     if (!newMessage.trim() || !currentUser || sending) return;
 
@@ -294,7 +272,7 @@ const RealtimeChat: React.FC<ChatProps> = ({
     });
 
     setSending(true);
-    setError(null); // Clear any previous errors
+    setError(null);
 
     try {
       const messageData: any = {
@@ -305,7 +283,6 @@ const RealtimeChat: React.FC<ChatProps> = ({
         tournament_id: null
       };
 
-      // Set the appropriate context
       if (chatType === 'lobby') {
         messageData.lobby_id = contextId;
       } else if (chatType === 'match') {
@@ -319,7 +296,7 @@ const RealtimeChat: React.FC<ChatProps> = ({
       const { data, error } = await supabase
         .from('chat_messages')
         .insert([messageData])
-        .select(); // 🔥 ADDED: Select to get the inserted message
+        .select();
 
       if (error) {
         throw error;
@@ -327,18 +304,6 @@ const RealtimeChat: React.FC<ChatProps> = ({
 
       console.log('Message sent successfully:', data);
       setNewMessage('');
-      
-      // 🔥 OPTIONAL: Optimistically add message (realtime should handle this, but good fallback)
-      // Note: Comment this out if you see duplicate messages, realtime should handle it
-      /*
-      if (data && data[0]) {
-        const optimisticMessage: ChatMessage = {
-          ...data[0],
-          users: currentUser
-        };
-        setMessages(prev => [...prev, optimisticMessage]);
-      }
-      */
 
     } catch (err) {
       console.error('Error sending message:', err);
@@ -355,53 +320,107 @@ const RealtimeChat: React.FC<ChatProps> = ({
     }
   };
 
+  // Conditional rendering after all hooks
+  if (!currentUser) {
+    return (
+      <Card.Root
+        borderWidth="4px"
+        borderStyle="solid"
+        borderColor="border.default"
+        bg="brutalist.red"
+        shadow="brutalist.xl"
+        borderRadius="none"
+        p={6}
+        textAlign="center"
+      >
+        <Card.Body>
+          <Text fontSize="lg" fontWeight="black" color="primary.contrast" mb={2}>
+            🔒 AUTHENTICATION REQUIRED
+          </Text>
+          <Text color="primary.contrast">
+            Connect your wallet to access chat
+          </Text>
+        </Card.Body>
+      </Card.Root>
+    );
+  }
+
+  if (!isValidContext) {
+    return (
+      <Card.Root
+        borderWidth="4px"
+        borderStyle="solid"
+        borderColor="border.default"
+        bg="brutalist.red"
+        shadow="brutalist.xl"
+        borderRadius="none"
+        p={6}
+        textAlign="center"
+      >
+        <Card.Body>
+          <Text fontSize="lg" fontWeight="black" color="primary.contrast" mb={2}>
+            ⚠️ INVALID CONTEXT
+          </Text>
+          <Text color="primary.contrast">
+            {`contextId is required for ${chatType} chat`}
+          </Text>
+        </Card.Body>
+      </Card.Root>
+    );
+  }
+
   return (
     <Card.Root
-      borderWidth="4px"
+      // borderWidth="2px"
       borderStyle="solid"
-      borderColor="gray.900"
-      bg="white"
-      shadow="8px 8px 0px rgba(0,0,0,0.8)"
-      borderRadius="0"
-      h="100%"
+      borderColor="border.default"
+      bg="bg.default"
+      shadow="brutalist.xl"
+      borderRadius="none"
+      height={"100%"}
+      // h="100%"
       display="flex"
       flexDirection="column"
+      alignItems={'space-between'}
+      overflow="hidden"
     >
       {/* Header */}
       <Card.Header
-        p="4"
+        p={4}
         borderBottom="4px solid"
-        borderColor="gray.900"
-        bg="gray.100"
+        borderColor="border.default"
+        bg="bg.subtle"
       >
         <HStack justify="space-between">
           <HStack>
             {getChatIcon()}
-            <Text fontSize="lg" fontWeight="black" color="gray.900" textTransform="uppercase">
+            <Text fontSize="lg" fontWeight="black" color="fg.default" textTransform="uppercase">
               {getChatTitle()}
             </Text>
           </HStack>
           <HStack>
-            {/* 🔥 ADDED: Connection status indicator */}
-            <HStack padding="1">
+            <HStack padding={1}>
               {connectionStatus === 'connected' ? (
                 <Wifi size={16} color="#06D6A0" />
               ) : (
                 <WifiOff size={16} color="#DC143C" />
               )}
-              <Text fontSize="xs" color={connectionStatus === 'connected' ? 'green.600' : 'red.600'}>
+              <Text fontSize="xs" color={connectionStatus === 'connected' ? 'success' : 'error'}>
                 {connectionStatus.toUpperCase()}
               </Text>
             </HStack>
             <Badge
-              bg={chatType === 'global' ? '#06D6A0' : '#118AB2'}
-              color="white"
+              bg={chatType === 'global' ? 'brutalist.green' : 'brutalist.blue'}
+              color="primary.contrast"
               fontSize="xs"
               fontWeight="black"
-              px="2"
-              py="1"
-              borderRadius="0"
+              px={2}
+              py={1}
+              borderRadius="none"
+              border="2px solid"
+              borderColor="border.default"
               textTransform="uppercase"
+              shadow="brutalist.sm"
             >
               Live
             </Badge>
@@ -410,36 +429,54 @@ const RealtimeChat: React.FC<ChatProps> = ({
       </Card.Header>
 
       {/* Messages Area */}
-      <Card.Body p="0" flex="1" display="flex" flexDirection="column" overflow="hidden">
+      <Card.Body p={0} 
+        flex="1"
+        display="flex"
+        flexDirection="column"
+        overflow="hidden"
+        // height={"80%"}
+      >
         {loading ? (
-          <VStack justify="center" flex="1" p="8">
-            <Spinner size="lg" color="blue.500" />
-            <Text fontSize="sm" color="gray.600">Loading messages...</Text>
+          <VStack justify="center" flex="1" p={8}>
+            <Spinner size="lg" color="primary.solid" />
+            <Text fontSize="sm" color="fg.muted">Loading messages...</Text>
           </VStack>
         ) : error ? (
-          <VStack justify="center" flex="1" p="8">
-            <Text fontSize="sm" color="red.500" textAlign="center">{error}</Text>
+          <VStack justify="center" flex="1" p={8}>
+            <Text fontSize="sm" color="error" textAlign="center">{error}</Text>
             <Button
               size="sm"
               onClick={() => {
                 setError(null);
                 window.location.reload();
               }}
-              bg="red.500"
-              color="white"
+              bg="brutalist.red"
+              color="primary.contrast"
               fontWeight="bold"
-              borderRadius="0"
+              borderRadius="none"
               border="2px solid"
-              borderColor="gray.900"
+              borderColor="border.default"
+              shadow="brutalist.sm"
+              _hover={{
+                transform: "translate(-1px, -1px)",
+                shadow: "brutalist.md",
+              }}
             >
               Retry
             </Button>
           </VStack>
         ) : (
-          <Box flex="1" overflowY="auto" p="4">
+          <Box 
+            flex="1"
+            overflowY="auto"
+            p={4}
+            minH="0"
+            maxH="500px"
+            // maxH={'50%'}
+          >
             {messages.length === 0 ? (
-              <VStack justify="center" align="center" h="200px" color="gray.500">
-                <MessageCircle size={32} color="#9CA3AF" />
+              <VStack justify="center" align="center" h="200px" color="fg.subtle">
+                <MessageCircle size={32} />
                 <Text fontSize="sm" textAlign="center">
                   {chatType === 'global' 
                     ? 'Welcome! Start the global conversation!' 
@@ -448,7 +485,7 @@ const RealtimeChat: React.FC<ChatProps> = ({
                 </Text>
               </VStack>
             ) : (
-              <VStack align="stretch" padding="3">
+              <VStack align="stretch" padding={3}>
                 {messages.map((message) => {
                   const isOwnMessage = message.user_id === currentUser.id;
                   const displayName = getDisplayName(message.users);
@@ -460,21 +497,21 @@ const RealtimeChat: React.FC<ChatProps> = ({
                     >
                       <Box
                         maxW="70%"
-                        px="3"
-                        py="2"
-                        borderRadius="0"
-                        border="2px solid"
-                        borderColor="gray.900"
-                        bg={isOwnMessage ? '#118AB2' : 'gray.100'}
-                        color={isOwnMessage ? 'white' : 'gray.900'}
-                        shadow="3px 3px 0px rgba(0,0,0,0.8)"
+                        px={3}
+                        py={2}
+                        borderRadius="none"
+                        border="3px solid"
+                        borderColor="border.default"
+                        bg={isOwnMessage ? 'primary.solid' : 'bg.subtle'}
+                        color={isOwnMessage ? 'primary.contrast' : 'fg.default'}
+                        shadow="brutalist.md"
                       >
                         {!isOwnMessage && (
                           <Text
                             fontSize="xs"
                             fontWeight="black"
-                            color={isOwnMessage ? 'blue.100' : 'gray.600'}
-                            mb="1"
+                            color={isOwnMessage ? 'primary.contrast' : 'fg.muted'}
+                            mb={1}
                             textTransform="uppercase"
                           >
                             {displayName}
@@ -485,8 +522,8 @@ const RealtimeChat: React.FC<ChatProps> = ({
                         </Text>
                         <Text
                           fontSize="xs"
-                          mt="1"
-                          color={isOwnMessage ? 'blue.100' : 'gray.500'}
+                          mt={1}
+                          color={isOwnMessage ? 'primary.contrast' : 'fg.subtle'}
                           textAlign={isOwnMessage ? 'right' : 'left'}
                         >
                           {formatTime(message.created_at)}
@@ -503,47 +540,46 @@ const RealtimeChat: React.FC<ChatProps> = ({
       </Card.Body>
 
       {/* Message Input */}
-      <Card.Footer p="4" borderTop="4px solid" borderColor="gray.900" bg="gray.100">
-        <HStack width="100%" padding="2">
+      <Card.Footer p={4} borderTop="4px solid" borderColor="border.default" bg="bg.subtle" minHeight={'10%'}>
+        <HStack width="100%" padding={2}>
           <Input
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder={`Message ${getChatTitle().toLowerCase()}...`}
             borderWidth="3px"
-            borderColor="gray.900"
-            borderRadius="0"
-            bg="white"
-            color="gray.900"
+            borderColor="border.default"
+            borderRadius="none"
+            bg="bg.default"
+            color="fg.default"
             _focus={{
-              borderColor: "#118AB2",
-              boxShadow: "none"
+              borderColor: "primary.solid",
+              shadow: "brutalist.sm"
             }}
-            _placeholder={{ color: "gray.500" }}
+            _placeholder={{ color: "fg.subtle" }}
             maxLength={500}
             disabled={sending}
           />
           <Button
             onClick={sendMessage}
             disabled={!newMessage.trim() || sending}
-            bg="#FF6B35"
-            color="white"
+            bg="violet.500"
+            color="primary.contrast"
             fontWeight="black"
             fontSize="lg"
-            px="4"
-            py="2"
-            borderRadius="0"
+            px={4}
+            py={2}
+            borderRadius="none"
             border="3px solid"
-            borderColor="gray.900"
-            shadow="4px 4px 0px rgba(0,0,0,0.8)"
+            borderColor="border.default"
+            shadow="brutalist.md"
             _hover={!newMessage.trim() || sending ? {} : {
-              bg: "#E55A2B",
               transform: "translate(-2px, -2px)",
-              shadow: "6px 6px 0px rgba(0,0,0,0.8)",
+              shadow: "brutalist.lg",
             }}
             _active={!newMessage.trim() || sending ? {} : {
               transform: "translate(0px, 0px)",
-              shadow: "2px 2px 0px rgba(0,0,0,0.8)",
+              shadow: "brutalist.sm",
             }}
             transition="all 0.1s ease"
             minW="60px"

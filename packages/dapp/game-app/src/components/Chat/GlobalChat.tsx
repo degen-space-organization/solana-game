@@ -1,9 +1,9 @@
-// components/Chat/GlobalChatWrapper.tsx
+// src/components/Chat/GlobalChat.tsx
 import React, { useEffect, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { supabase } from '@/supabase';
 import RealtimeChat from './BaseRealtimeChat';
-import { Spinner, VStack, Text } from '@chakra-ui/react';
+import { Spinner, VStack, Text, Box } from '@chakra-ui/react';
 
 // Match your database schema
 interface User {
@@ -25,17 +25,12 @@ const GlobalChatWrapper: React.FC = () => {
         return;
       }
 
-   
-
       const address = publicKey.toBase58();
 
       const { data, error } = await supabase
         .from('users')
         .select('id, nickname, solana_address')
-        .eq('solana_address', address)
-        // .single();
-
-
+        .eq('solana_address', address);
 
       if (error) {
         console.error('Error fetching user:', error);
@@ -52,10 +47,32 @@ const GlobalChatWrapper: React.FC = () => {
 
   if (loading) {
     return (
-      <VStack padding={4} p={6}>
-        <Spinner color="purple.500" />
-        <Text fontWeight="bold" color="gray.600">Checking user identity...</Text>
-      </VStack>
+      <Box
+        h="100%"
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
+        bg="bg.subtle"
+        border="4px solid"
+        borderColor="border.default"
+        borderRadius="none"
+      >
+        <VStack padding={4} p={6}>
+          <Spinner 
+            size="lg" 
+            color="primary.solid" 
+            // thickness="4px"
+          />
+          <Text 
+            fontWeight="bold" 
+            color="fg.muted"
+            textAlign="center"
+            fontSize="sm"
+          >
+            Checking user identity...
+          </Text>
+        </VStack>
+      </Box>
     );
   }
 

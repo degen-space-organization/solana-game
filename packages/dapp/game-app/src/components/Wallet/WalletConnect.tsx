@@ -1,181 +1,270 @@
+// src/components/Wallet/WalletConnect.tsx
+import React, { useEffect, useState } from 'react';
 import {
-    Box, Button, HStack, Text, Input, Avatar, VStack
+  Box,
+  Button,
+  HStack,
+  VStack,
+  Text,
+  Input,
+  Avatar,
+  IconButton,
 } from '@chakra-ui/react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useWalletModal } from '@solana/wallet-adapter-react-ui';
-import { useEffect, useState } from 'react';
 import { LAMPORTS_PER_SOL } from '@solana/web3.js';
+import { Edit2, Power } from 'lucide-react';
+
 import { toaster } from '../ui/toaster';
 import { supabase } from '@/supabase';
 import { solConnection as connection } from '@/web3';
 
 const shortenAddress = (address: string) =>
-    `${address.slice(0, 4)}...${address.slice(-4)}`;
-
-// Supabase
-
-
-// const connection = new Connection('https://api.devnet.solana.com');
-// const connection = new Connection('https://api.mainnet-beta.solana.com');
+  `${address.slice(0, 4)}...${address.slice(-4)}`;
 
 export const ConnectWalletButton = () => {
-    const { publicKey, disconnect, connected, wallet } = useWallet();
-    const { setVisible } = useWalletModal();
-    const [balance, setBalance] = useState<number | null>(null);
-    const [nickname, setNickname] = useState('');
-    const [editing, setEditing] = useState(false);
-    // const toaster.create = Toaster();
+  const { publicKey, disconnect, connected, wallet } = useWallet();
+  const { setVisible } = useWalletModal();
+  const [balance, setBalance] = useState<number | null>(null);
+  const [nickname, setNickname] = useState('');
+  const [editing, setEditing] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-    useEffect(() => {
-        const fetchUserData = async () => {
-            if (publicKey) {
-                const address = publicKey.toBase58();
-
-                // Fetch balance
-                try {
-                    const bal = await connection.getBalance(publicKey);
-                    setBalance(bal / LAMPORTS_PER_SOL);
-                } catch (e) {
-                    console.error("Balance fetch error", e);
-                }
-
-                // Fetch or create user
-                const { data: user, error } = await supabase
-                    .from('users')
-                    .select('*')
-                    .eq('solana_address', address)
-
-                console.log("User data:", user, "Error:", error);
-
-                if (user && user.length > 0) {
-                    let nickname = user[0].nickname;
-                    if (!nickname) {
-                        // If nickname is empty, set to 'anon'
-                        nickname = 'anon';
-                    } else {
-                        // If nickname is not empty, ensure it is trimmed
-                        nickname = nickname.trim();
-                    }
-                    setNickname(nickname);
-                } else if (!error) {
-                    const { data, error: insertError } = await supabase
-                        .from('users')
-                        .insert([{ solana_address: address, nickname: 'anon' }])
-                        .select()
-                        .single();
-
-                    if (!insertError) {
-                        setNickname(data.nickname || 'anon');
-                        toaster.create({ title: "User created", type: "success" });
-                    } else {
-                        toaster.create({ title: "User creation failed", type: "error" });
-                    }
-                }
-            }
-        };
-
-        fetchUserData();
-    }, [publicKey]);
-
-    const handleClick = () => {
-        if (connected) disconnect();
-        else setVisible(true);
-    };
-
-    const handleNicknameSave = async () => {
-        if (!publicKey) return;
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (publicKey) {
+        setLoading(true);
         const address = publicKey.toBase58();
 
-        const { error } = await supabase
-            .from('users')
-            .update({ nickname })
-            .eq('solana_address', address);
-
-        if (error) {
-            toaster.create({ title: "Failed to update nickname", type: "error" });
-        } else {
-            toaster.create({ title: "Nickname updated 🎉", type: "success" });
-            setEditing(false);
+        // Fetch balance
+        try {
+          const bal = await connection.getBalance(publicKey);
+          setBalance(bal / LAMPORTS_PER_SOL);
+        } catch (e) {
+          console.error("Balance fetch error", e);
         }
+
+        // Fetch or create user
+        const { data: user, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('solana_address', address);
+
+        if (user && user.length > 0) {
+          setNickname(user[0].nickname || '');
+        } else if (!error) {
+          const { data, error: insertError } = await supabase
+            .from('users')
+            .insert([{ solana_address: address, nickname: null }])
+            .select()
+            .single();
+
+          if (!insertError) {
+            setNickname(data.nickname || '');
+            toaster.create({
+              title: "Welcome!",
+              type: "success",
+              duration: 2000
+            });
+          }
+        }
+        setLoading(false);
+      } else {
+        setBalance(null);
+        setNickname('');
+        setLoading(false);
+      }
     };
 
+    fetchUserData();
+  }, [publicKey]);
+
+  const handleConnect = () => {
+    setVisible(true);
+  };
+
+  const handleDisconnect = () => {
+    disconnect();
+    setNickname('');
+    setBalance(null);
+    setEditing(false);
+  };
+
+  const handleNicknameSave = async () => {
+    if (!publicKey) return;
+    const address = publicKey.toBase58();
+
+    const { error } = await supabase
+      .from('users')
+      .update({ nickname: nickname || null })
+      .eq('solana_address', address);
+
+    if (error) {
+      toaster.create({
+        title: "Failed to update nickname",
+        type: "error",
+        duration: 3000
+      });
+    } else {
+      toaster.create({
+        title: "Nickname updated!",
+        type: "success",
+        duration: 2000
+      });
+      setEditing(false);
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleNicknameSave();
+    } else if (e.key === 'Escape') {
+      setEditing(false);
+    }
+  };
+
+  // Not connected state - simple button
+  if (!connected) {
     return (
-        <Box
-            p={4}
-            border="4px solid black"
-            // rounded="2xl"
-            bg="purple.200"
-            shadow="lg"
-            boxShadow={"0 4px 6px rgba(0, 0, 0, 0.1)"}
-            fontFamily="monospace"
-            maxW="300px"
-        >
-            <VStack padding={3}>
-                <Button
-                    onClick={handleClick}
-                    w="full"
-                    bg="black"
-                    color="white"
-                    _hover={{ bg: "purple.500" }}
-                    fontSize="sm"
-                >
-                    {connected ? '❌ Disconnect' : '🔑 Connect Wallet'}
-                </Button>
-
-                {connected && publicKey && (
-                    <HStack padding={2} align="center">
-
-                        <Avatar.Root size={'xs'} key={'xs'} border="2px solid black">
-                            <Avatar.Fallback name={wallet?.adapter.name || "Segun Adebayo"} />
-                            <Avatar.Image src={wallet?.adapter.icon || "https://bit.ly/sage-adebayo"} />
-                        </Avatar.Root>
-
-                        <Box textAlign="left">
-                            <Text fontSize="sm">
-                                📫 {shortenAddress(publicKey.toBase58())}
-                            </Text>
-                            <Text fontSize="sm">
-                                💰 {balance !== null ? `${balance.toFixed(2)} ◎` : '...'}
-                            </Text>
-                        </Box>
-                    </HStack>
-                )}
-
-                {connected && (
-                    <Box w="full" textAlign="center">
-                        {editing ? (
-                            <HStack>
-                                <Input
-                                    value={nickname}
-                                    onChange={(e) => setNickname(e.target.value)}
-                                    size="sm"
-                                    border="2px solid black"
-                                    bg="white"
-                                />
-                                <Button
-                                    onClick={handleNicknameSave}
-                                    size="sm"
-                                    bg="black"
-                                    color="white"
-                                    _hover={{ bg: "purple.600" }}
-                                >
-                                    💾
-                                </Button>
-                            </HStack>
-                        ) : (
-                            <Button
-                                size="sm"
-                                onClick={() => setEditing(true)}
-                                bg="purple.300"
-                                border="2px solid black"
-                                _hover={{ bg: "purple.400" }}
-                            >
-                                ✏️ Nickname: {nickname || "anon"}
-                            </Button>
-                        )}
-                    </Box>
-                )}
-            </VStack>
-        </Box>
+      <Button
+        onClick={handleConnect}
+        bg="violet.500"
+        color="fg.default"
+        fontWeight="bold"
+        fontSize="sm"
+        px={6}
+        py={3}
+        borderRadius="sm"
+        border="2px solid"
+        borderColor="border.default"
+        shadow="brutalist.md"
+        _hover={{
+          bg: "primary.muted",
+          transform: "translate(-1px, -1px)",
+          shadow: "brutalist.lg",
+        }}
+        _active={{
+          transform: "translate(0px, 0px)",
+          shadow: "brutalist.sm",
+        }}
+        transition="all 0.1s ease"
+      >
+        Connect Wallet
+      </Button>
     );
+  }
+
+  // Connected state - compact layout
+  return (
+    <Box
+      bg="primary.solid"
+      border="2px solid"
+      borderColor="border.default"
+      borderRadius="sm"
+      shadow="brutalist.md"
+      p={2}
+      minW="280px"
+      maxW="320px"
+    >
+      {/* Top row: Avatar + Address + Balance + Disconnect */}
+      <HStack justify="space-between" align="center" alignContent="stretch">
+        <HStack padding={0} flex="1">
+          <Avatar.Root size="sm" borderRadius="sm">
+            <Avatar.Fallback
+              bg="primary.muted"
+              color="fg.default"
+              fontWeight="bold"
+              fontSize="xs"
+            >
+              {wallet?.adapter.name?.slice(0, 2) || "W"}
+            </Avatar.Fallback>
+            <Avatar.Image src={wallet?.adapter.icon || ""} />
+          </Avatar.Root>
+
+          <VStack align="start" flex="1">
+            <Text fontSize="sm" fontWeight="bold" color="fg.default">
+              {publicKey ? shortenAddress(publicKey.toBase58()) : ''}
+            </Text>
+            <Text fontSize="xs" color="fg.muted">
+              {balance !== null ? `${balance.toFixed(3)} SOL` : 'Loading...'}
+            </Text>
+          </VStack>
+
+          {editing ? (
+            <Input
+              value={nickname}
+              onChange={(e) => setNickname(e.target.value)}
+              onKeyPress={handleKeyPress}
+              onBlur={handleNicknameSave}
+              placeholder="Enter nickname"
+              size="sm"
+              fontSize="xs"
+              bg="bg.default"
+              border="1px solid"
+              borderColor="border.subtle"
+              borderRadius="sm"
+              flex="1"
+              mr={2}
+              autoFocus
+            />
+          ) : (
+            <Text
+              fontSize="xs"
+              color="fg.muted"
+              flex="1"
+            // noOfLines={1}
+            >
+              {nickname || 'No nick set'}
+            </Text>
+          )}
+        </HStack>
+
+        <HStack>
+
+          <IconButton
+            onClick={() => setEditing(!editing)}
+            size="sm"
+            bg={editing ? "success" : "bg.subtle"}
+            color="fg.default"
+            borderRadius="sm"
+            border="1px solid"
+            borderColor="border.subtle"
+            shadow="brutalist.sm"
+            _hover={{
+              bg: editing ? "success" : "bg.muted",
+              transform: "translate(-1px, -1px)",
+              shadow: "brutalist.md",
+            }}
+            _active={{
+              transform: "translate(0px, 0px)",
+              shadow: "brutalist.sm",
+            }}
+          >
+            <Edit2 size={12} />
+          </IconButton>
+
+          <IconButton
+            onClick={handleDisconnect}
+            size="sm"
+            bg="error"
+            color="fg.inverted"
+            borderRadius="sm"
+            border="2px solid"
+            borderColor="border.default"
+            shadow="brutalist.sm"
+            _hover={{
+              transform: "translate(-1px, -1px)",
+              shadow: "brutalist.md",
+            }}
+            _active={{
+              transform: "translate(0px, 0px)",
+              shadow: "brutalist.sm",
+            }}
+          >
+            <Power size={14} />
+          </IconButton>
+        </HStack>
+      </HStack>
+    </Box>
+  );
 };

@@ -20,13 +20,13 @@ import { neobrutalistSystem } from './theme/neobrutalism.ts'
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
-      {/* <Provider defaultTheme='light' attribute='class'> */}
-      <ChakraProvider value={neobrutalistSystem}> 
+      <Provider defaultTheme='light' attribute='class'>
+      {/* <ChakraProvider value={neobrutalistSystem}>  */}
         <WalletContextProvider>
           <App />
         </WalletContextProvider>
-      </ChakraProvider>
-      {/* </Provider> */}
+      {/* </ChakraProvider> */}
+      </Provider>
     </BrowserRouter>
   </StrictMode>,
 )

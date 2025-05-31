@@ -27,13 +27,11 @@ const navigationItems: Array<{
   label: string;
   emoji: string;
 }> = [
-  { key: 'mygame', label: 'My Game', emoji: '🎮' },
-  { key: 'lobbies', label: 'Lobbies', emoji: '🎯' },
-  { key: 'joined_lobbies', label: 'Joined', emoji: '🤝' },
-  { key: 'tournaments', label: 'Tournaments', emoji: '🏆' },
+  { key: 'mygame', label: 'Current Game', emoji: '🎮' },
+  { key: 'lobbies', label: 'Search games', emoji: '🎯' },
+  { key: 'joined_lobbies', label: 'My Lobby', emoji: '🤝' },
+  { key: 'spectate', label: 'Spectate Game', emoji: '👁️' },
   { key: 'leaderboard', label: 'Leaderboard', emoji: '👑' },
-  { key: 'spectate', label: 'Spectate', emoji: '👁️' },
-  { key: 'demo', label: 'Theme Demo', emoji: '🎨' },
 ];
 
 const NavigationButton: React.FC<{

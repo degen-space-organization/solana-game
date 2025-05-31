@@ -137,7 +137,6 @@ function App() {
   return (
     <Box 
       minH="100vh"
-      // bg="bg.canvas"
     >
         {/* Desktop Layout */}
         {!isMobile ? (

@@ -4,13 +4,12 @@ import {
   Box,
   Container,
   VStack,
-  HStack,
-  Button,
   Card,
   Heading,
   Text,
 } from "@chakra-ui/react";
 import { useNavigate } from 'react-router-dom';
+import { Gamepad2 } from 'lucide-react';
 
 // Components
 import Game from '../Game/Game';
@@ -78,7 +77,7 @@ const MainContent: React.FC<MainContentProps> = ({
               borderColor="border.default"
               bg="bg.default"
               shadow="brutalist.xl"
-              borderRadius="none"
+              borderRadius="0"
               overflow="hidden"
             >
               <Card.Body p={0}>
@@ -90,80 +89,13 @@ const MainContent: React.FC<MainContentProps> = ({
 
       case 'lobbies':
         return (
-          <VStack padding={6} align="stretch">
-            {/* Action Buttons */}
-            <HStack padding={4} justify="center" wrap="wrap">
-              <Button
-                onClick={handleCreateLobby}
-                bg="brutalist.green"
-                color="primary.contrast"
-                fontWeight="black"
-                fontSize="xl"
-                textTransform="uppercase"
-                letterSpacing="wider"
-                borderRadius="none"
-                border="4px solid"
-                borderColor="border.default"
-                shadow="brutalist.lg"
-                _hover={{
-                  transform: "translate(-3px, -3px)",
-                  shadow: "brutalist.xl",
-                }}
-                _active={{
-                  transform: "translate(0px, 0px)",
-                  shadow: "brutalist.md",
-                }}
-                size="lg"
-                px={12}
-                py={6}
-              >
-                🚀 Create New Game
-              </Button>
-
-              <Button
-                onClick={() => window.location.reload()}
-                bg="primary.solid"
-                color="primary.contrast"
-                fontWeight="black"
-                fontSize="xl"
-                textTransform="uppercase"
-                letterSpacing="wider"
-                borderRadius="none"
-                border="4px solid"
-                borderColor="border.default"
-                shadow="brutalist.lg"
-                _hover={{
-                  transform: "translate(-3px, -3px)",
-                  shadow: "brutalist.xl",
-                }}
-                _active={{
-                  transform: "translate(0px, 0px)",
-                  shadow: "brutalist.md",
-                }}
-                size="lg"
-                px={12}
-                py={6}
-              >
-                🔄 Refresh Games
-              </Button>
-            </HStack>
-
-            {/* Lobbies List */}
-            <Box>
-              {isCreateLobbyModalOpen ? (
-                <CreateLobbyModal
-                  isOpen={isCreateLobbyModalOpen}
-                  onClose={() => setIsCreateLobbyModalOpen(false)}
-                  onLobbyCreated={handleLobbyCreated}
-                />
-              ) : (
-                <LobbyPending 
-                  onJoinLobby={onJoinLobby}
-                  useMockData={false}
-                />
-              )}
-            </Box>
-          </VStack>
+          <LobbyPending 
+            onJoinLobby={onJoinLobby}
+            useMockData={false}
+            refreshTrigger={lobbiesRefreshTrigger}
+            onCreateLobby={handleCreateLobby}
+            onRefresh={() => setLobbiesRefreshTrigger(prev => prev + 1)}
+          />
         );
 
       case 'joined_lobbies':
@@ -172,46 +104,6 @@ const MainContent: React.FC<MainContentProps> = ({
             onViewLobbyDetails={handleViewLobbyDetails}
             currentUser={currentUser}
           />
-        );
-
-      case 'tournaments':
-        return (
-          <Container maxW="4xl">
-            <Card.Root
-              borderWidth="4px"
-              borderStyle="solid"
-              borderColor="border.default"
-              bg="bg.default"
-              shadow="brutalist.xl"
-              borderRadius="none"
-              p={12}
-              textAlign="center"
-              transform="rotate(-0.5deg)"
-              _hover={{
-                transform: "rotate(0deg) scale(1.02)",
-                shadow: "brutalist.2xl",
-              }}
-              transition="all 0.2s ease"
-            >
-              <Card.Body>
-                <Heading 
-                  size="xl" 
-                  fontWeight="black" 
-                  color="fg.default" 
-                  mb={6} 
-                  textTransform="uppercase"
-                >
-                  🏆 TOURNAMENTS
-                </Heading>
-                <Text fontSize="xl" color="fg.muted" mb={4}>
-                  Tournament brackets coming soon!
-                </Text>
-                <Text fontSize="md" color="fg.subtle">
-                  Get ready for epic multi-player competitions with prize pools!
-                </Text>
-              </Card.Body>
-            </Card.Root>
-          </Container>
         );
 
       case 'leaderboard':
@@ -229,17 +121,27 @@ const MainContent: React.FC<MainContentProps> = ({
               borderColor="border.default"
               bg="bg.default"
               shadow="brutalist.xl"
-              borderRadius="none"
+              borderRadius="0"
               p={12}
               textAlign="center"
             >
               <Card.Body>
-                <Heading size="xl" fontWeight="black" color="fg.default" mb={4}>
-                  🎮 Welcome to Solana Game
-                </Heading>
-                <Text fontSize="lg" color="fg.muted">
-                  Select a section from the navigation above to get started!
-                </Text>
+                <VStack padding={6}>
+                  <Box
+                    bg="primary.solid"
+                    p={6}
+                    border="4px solid"
+                    borderColor="border.default"
+                  >
+                    <Gamepad2 size={64} color="black" />
+                  </Box>
+                  <Heading size="xl" fontWeight="black" color="fg.default">
+                    🎮 Welcome to Solana Game
+                  </Heading>
+                  <Text fontSize="lg" color="fg.muted" textAlign="center" maxW="400px">
+                    Select a section from the navigation to get started with your gaming adventure!
+                  </Text>
+                </VStack>
               </Card.Body>
             </Card.Root>
           </Container>
@@ -248,13 +150,24 @@ const MainContent: React.FC<MainContentProps> = ({
   };
 
   return (
-    <Box
-      p={6}
-      minH="100%"
-      overflow="auto"
-    >
-      {renderContent()}
-    </Box>
+    <>
+      <Box
+        p={{ base: 4, md: 6 }}
+        minH="100%"
+        overflow="auto"
+      >
+        {renderContent()}
+      </Box>
+      
+      {/* Create Lobby Modal */}
+      {isCreateLobbyModalOpen && (
+        <CreateLobbyModal
+          isOpen={isCreateLobbyModalOpen}
+          onClose={() => setIsCreateLobbyModalOpen(false)}
+          onLobbyCreated={handleLobbyCreated}
+        />
+      )}
+    </>
   );
 };
 

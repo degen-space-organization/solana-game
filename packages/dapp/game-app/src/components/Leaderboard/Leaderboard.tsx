@@ -16,11 +16,11 @@ import {
   GridItem,
   useBreakpointValue,
 } from '@chakra-ui/react';
-import { 
-  Crown, 
-  RefreshCw, 
-  Search, 
-  Copy, 
+import {
+  Crown,
+  RefreshCw,
+  Search,
+  Copy,
   ExternalLink,
   ChevronLeft,
   ChevronRight,
@@ -69,10 +69,10 @@ const Leaderboard: React.FC = () => {
   // Filter and paginate players
   const filteredPlayers = useMemo(() => {
     return players.filter(player => {
-      const matchesSearch = searchTerm === '' || 
+      const matchesSearch = searchTerm === '' ||
         player.solana_address.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (player.nickname && player.nickname.toLowerCase().includes(searchTerm.toLowerCase()));
-      
+
       return matchesSearch;
     });
   }, [players, searchTerm]);
@@ -155,17 +155,17 @@ const Leaderboard: React.FC = () => {
     return (
       <Container maxW="6xl" py={8}>
         <VStack padding={6}>
-          <Spinner 
-            size="xl" 
+          <Spinner
+            size="xl"
             color="primary.emphasis"
-            // thickness="4px"
+          // thickness="4px"
           />
-          <Text 
-            fontSize="lg" 
-            fontWeight="bold" 
+          <Text
+            fontSize="lg"
+            fontWeight="bold"
             color="fg.muted"
             textTransform="uppercase"
-            // letterpadding="wider"
+          // letterpadding="wider"
           >
             Loading Champions...
           </Text>
@@ -204,7 +204,7 @@ const Leaderboard: React.FC = () => {
                 transform: "translate(0px, 0px)",
                 shadow: "brutalist.sm",
               }}
-              // leftIcon={<RefreshCw size={20} />}
+            // leftIcon={<RefreshCw size={20} />}
             >
               RETRY
             </Button>
@@ -219,9 +219,10 @@ const Leaderboard: React.FC = () => {
       {/* One Big Table Container */}
       <Card.Root
         bg="bg.default"
-        border="border.default"
+        // border="border.default"
+        border="1px solid"
         borderRadius="sm"
-        shadow="brutalist.xl"
+        shadow="brutalist.2xl"
         overflow="hidden"
       >
         {/* Search Header */}
@@ -252,8 +253,8 @@ const Leaderboard: React.FC = () => {
                     borderColor: "primary.emphasis",
                   }}
                 />
-                <Search 
-                  size={18} 
+                <Search
+                  size={18}
                   style={{
                     position: 'absolute',
                     left: '12px',
@@ -269,7 +270,7 @@ const Leaderboard: React.FC = () => {
                 color="fg.inverted"
                 border="border.default"
                 borderRadius="sm"
-                shadow="brutalist.sm"
+                shadow="brutalist.md"
                 _hover={{
                   transform: "translate(-1px, -1px)",
                   shadow: "brutalist.md",
@@ -282,9 +283,9 @@ const Leaderboard: React.FC = () => {
             </HStack>
 
             {/* Results Info */}
-            <Text 
-              fontSize="sm" 
-              color="fg.muted" 
+            <Text
+              fontSize="sm"
+              color="fg.muted"
               textAlign="center"
               fontWeight="medium"
             >
@@ -299,17 +300,17 @@ const Leaderboard: React.FC = () => {
           {filteredPlayers.length === 0 ? (
             <Box p={12} textAlign="center">
               <Text fontSize="6xl" mb={4}>🏆</Text>
-              <Text 
-                fontSize="lg" 
-                fontWeight="bold" 
-                color="fg.muted" 
+              <Text
+                fontSize="lg"
+                fontWeight="bold"
+                color="fg.muted"
                 mb={4}
                 textTransform="uppercase"
               >
                 {searchTerm ? 'NO MATCHES FOUND' : 'NO PLAYERS YET'}
               </Text>
               <Text fontSize="md" color="fg.subtle">
-                {searchTerm 
+                {searchTerm
                   ? `No players found matching "${searchTerm}"`
                   : 'Play some matches to appear on the leaderboard!'
                 }
@@ -333,14 +334,17 @@ const Leaderboard: React.FC = () => {
                 fontSize="sm"
                 color="fg.muted"
                 textTransform="uppercase"
-                // letterpadding="wider"
+                display={'flex'}
+                justifyContent="space-between"
+              // letterpadding="wider"
               >
-                <GridItem>RANK</GridItem>
-                <GridItem>PLAYER</GridItem>
-                <GridItem display={{ base: "none", md: "block" }}>STATS</GridItem>
-                <GridItem>TIER</GridItem>
-                <GridItem display={{ base: "none", md: "block" }}>NET</GridItem>
-                <GridItem>ACTIONS</GridItem>
+                <HStack>
+                  <GridItem>PLAYER</GridItem>
+                </HStack>
+                <HStack>
+                  <GridItem display={{ base: "none", md: "block" }}>STATS /</GridItem>
+                  <GridItem display={{ base: "none", md: "block" }}>NET</GridItem>
+                </HStack>
               </Grid>
 
               {/* Table Body */}
@@ -349,7 +353,7 @@ const Leaderboard: React.FC = () => {
                   const position = getPositionDisplay(index);
                   const rankColors = getRankColors(player.rank);
                   const isTopThree = position <= 3;
-                  
+
                   return (
                     <Grid
                       key={player.id}
@@ -371,9 +375,9 @@ const Leaderboard: React.FC = () => {
                       {/* Position & Crown */}
                       <GridItem>
                         <HStack padding={2}>
-                          <Text 
+                          <Text
                             fontSize={{ base: "md", md: "lg" }}
-                            fontWeight="black" 
+                            fontWeight="black"
                             color={isTopThree ? "primary.emphasis" : "fg.default"}
                             minW="3ch"
                           >
@@ -388,15 +392,15 @@ const Leaderboard: React.FC = () => {
                       {/* Player Info */}
                       <GridItem>
                         <VStack align="start" padding={0}>
-                          <Text 
+                          <Text
                             fontSize={{ base: "sm", md: "md" }}
-                            fontWeight="bold" 
+                            fontWeight="bold"
                             color="fg.default"
                           >
                             {getDisplayName(player)}
                           </Text>
                           <HStack padding={0} align="center">
-                            <Text 
+                            <Text
                               fontSize={{ base: "xs", md: "sm" }}
                               color="fg.muted"
                               fontFamily="mono"
@@ -608,7 +612,7 @@ const Leaderboard: React.FC = () => {
 
                     <IconButton
                       onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                      isDisabled={currentPage === totalPages}
+                      disabled={currentPage === totalPages}
                       bg="bg.default"
                       color="fg.default"
                       border="border.default"
@@ -628,10 +632,10 @@ const Leaderboard: React.FC = () => {
                     </IconButton>
                   </HStack>
 
-                  <Text 
-                    fontSize="sm" 
-                    color="fg.muted" 
-                    textAlign="center" 
+                  <Text
+                    fontSize="sm"
+                    color="fg.muted"
+                    textAlign="center"
                     mt={2}
                     fontWeight="medium"
                   >

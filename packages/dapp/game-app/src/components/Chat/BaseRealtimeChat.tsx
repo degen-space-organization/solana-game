@@ -324,18 +324,19 @@ const RealtimeChat: React.FC<ChatProps> = ({
   if (!currentUser) {
     return (
       <Card.Root
-        borderWidth="4px"
-        borderStyle="solid"
-        borderColor="border.default"
-        bg="brutalist.red"
-        shadow="brutalist.xl"
+
         borderRadius="none"
         p={6}
         textAlign="center"
       >
+        <Card.Header>
+          <Text fontSize="lg" fontWeight="black" color="primary.contrast" mb={2}>
+            CHAT
+          </Text>
+        </Card.Header>
         <Card.Body>
           <Text fontSize="lg" fontWeight="black" color="primary.contrast" mb={2}>
-            🔒 AUTHENTICATION REQUIRED
+            🔒 CONNECT WALLET
           </Text>
           <Text color="primary.contrast">
             Connect your wallet to access chat

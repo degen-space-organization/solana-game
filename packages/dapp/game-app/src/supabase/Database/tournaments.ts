@@ -48,6 +48,46 @@ export const tournaments = {
     },
 
     /**
+     * Fetches all participants of a specific tournament
+     * @param tournamentId The ID of the tournament to fetch participants for
+     * 
+     * @returns {Promise<User[]>} - Returns a list of users who participated in the tournament
+     */
+    async getAllTournamentParticipants(tournamentId: number | null): Promise<User[]> {
+        if (!tournamentId) {
+            console.warn("No tournament ID provided.");
+            return [];
+        }
+        const { data, error } = await supabase
+            .from('tournament_participants')
+            .select(`
+                *,
+                users (
+                    id,
+                    nickname,
+                    solana_address,
+                    matches_won,
+                    matches_lost
+                )
+            `)
+            .eq('tournament_id', tournamentId)
+            .order('joined_at', { ascending: true });
+        if (error) {
+            console.error("Error fetching tournament participants:", error);
+            return [];
+        }
+        if (data && data.length > 0) {
+            return data.map((participant: any) => ({
+                ...participant.users, // Extract user details
+                joined_at: participant.joined_at, // Include joined_at timestamp
+            })) as User[];
+        } else {
+            console.warn(`No participants found for tournament ID ${tournamentId}.`);
+            return [];
+        }
+    },
+
+    /**
      * Fetches tournaments that a specific user has joined.
      * @param userId The ID of the user whose joined tournaments are to be fetched.
      * @returns {Promise<PendingTournament[]>} - Returns a list of tournaments the user has joined.
@@ -275,8 +315,8 @@ export const tournaments = {
                     )
                 `)
                 .eq('tournament_id', tournamentId)
-                .order('final_position', { ascending: true, nullsLast: true })
-                .order('eliminated_at', { ascending: false, nullsLast: true });
+                .order('final_position', { ascending: true  })
+                .order('eliminated_at', { ascending: false });
 
             if (error) {
                 console.error("Error fetching tournament standings:", error);

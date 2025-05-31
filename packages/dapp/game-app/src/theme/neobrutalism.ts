@@ -35,6 +35,10 @@ const tokens = defineTokens({
   },
   colors: {
     // Muted violet palette for better readability with black text
+    lobbies: {
+      tournament: { value: "#f2a6ff" }, // Muted primary violet
+      duel: { value: "#b5dfff" }, // Slightly darker violet
+    },
     violet: {
       50: { value: "#faf8ff" },
       100: { value: "#f3f0ff" },

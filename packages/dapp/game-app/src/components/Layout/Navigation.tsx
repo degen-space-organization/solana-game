@@ -9,7 +9,6 @@ import {
   Drawer,
   IconButton,
   Heading,
-  useBreakpointValue,
 } from "@chakra-ui/react";
 import { X } from 'lucide-react';
 import type { SectionType } from '../../App';

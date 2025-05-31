@@ -26,11 +26,20 @@ export default class AdminWallet {
         return this._sendSolToUser(walletAddress, netAmount);
     }
 
-    static async processPayout(walletAddress: string, amount: number): Promise<string | null> {
+    static async processPayoutDuel(walletAddress: string, amount: number): Promise<string | null> {
         const netAmount = AdminWallet._calculateNetAmount(amount);
         await this._collectFeesToAdminWallet(amount);
         return this._sendSolToUser(walletAddress, netAmount);
     }
+
+    /**
+     * Processes a payout for a tournament where we have only one winner.
+     */
+    static async processPayoutTournamentSingle(walletAddress: string, amount: number): Promise<string | null> {
+        const netAmount = AdminWallet._calculateNetAmount(amount);
+        await this._collectFeesToAdminWallet(amount);
+        return this._sendSolToUser(walletAddress, netAmount);
+    };
 
     static async processPayoutTournament(wallets: string[], totalAmount: number): Promise<string | null> {
         const results: string[] = [];
@@ -46,7 +55,7 @@ export default class AdminWallet {
         }
 
         return results.length > 0 ? results.join(',') : null;
-    }
+    };
 
     static async processLobbyDeletion(wallets: string[], amount: number): Promise<string | null> {
         // const perPlayer = amount / wallets.length;

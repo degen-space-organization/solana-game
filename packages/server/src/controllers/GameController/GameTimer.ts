@@ -18,7 +18,7 @@ export default class GameTimer {
 
     /**
      * This function will execute a piece 
-     * of code 20 seconds after the round start
+     * of code 30 seconds after the round start
      * 
      * Handle all the logic for the round processing in here 
      */
@@ -49,7 +49,7 @@ export default class GameTimer {
                 console.log(`Round ${this.roundId} marked as finished.`);
             }
 
-        }, 20000); // 20 seconds
+        }, 30_000); // 30 seconds
     }
 
     cancel() {

@@ -1,10 +1,17 @@
 // src/supabase/Database/games.ts
+import type { IGameDataWithTournament } from '@/components/Game/GameInfo/GameInfo';
 import { supabase } from '../index';
 import type { Tables } from '../types';
 
 export interface GameData {
   match: Tables<'matches'>;
   tournament?: Tables<'tournaments'> | null;
+  tournamentParticipants?: Array<{
+    user_id: number;
+    final_position: number | null;
+    eliminated_at: string | null;
+    users: Tables<'users'>;
+  }>;
   participants: Array<{
     user_id: number;
     position: number;
@@ -34,6 +41,69 @@ export const games = {
       return await this.getCurrentGameByUserId(userData.id);
     } catch (error) {
       console.error('Error fetching current game by wallet:', error);
+      return null;
+    }
+  },
+
+  /**
+   * Get complete game data including tournament participants by wallet address
+   */
+  async getCompleteGameDataByWallet(walletAddress: string): Promise<GameData | null> {
+    try {
+      // First, get the user's database ID from their wallet address
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('solana_address', walletAddress)
+        .single();
+
+      if (userError || !userData) {
+        console.error('User not found:', userError);
+        return null;
+      }
+
+      // Get current game data
+      const gameData = await this.getCurrentGameByUserId(userData.id);
+      if (!gameData) {
+        return null;
+      }
+
+      // Get tournament participants if it's a tournament match
+      if (gameData.tournament) {
+        const { data: tournamentParticipants, error: tournamentError } = await supabase
+          .from('tournament_participants')
+          .select(`
+            user_id,
+            final_position,
+            eliminated_at,
+            users (
+              id,
+              nickname,
+              solana_address,
+              matches_won,
+              matches_lost
+            )
+          `)
+          .eq('tournament_id', gameData.match.tournament_id!)
+          .order('final_position', { ascending: true });
+
+        if (tournamentError) {
+          console.error('Error fetching tournament participants:', tournamentError);
+          return null;
+        }
+
+        gameData.tournamentParticipants = tournamentParticipants as Array<{
+          user_id: number;
+          final_position: number | null;
+          eliminated_at: string | null;
+          users: Tables<'users'>;
+        }>;
+      }
+
+      return gameData;
+
+    } catch (error) {
+      console.error('Error fetching complete game data by wallet:', error);
       return null;
     }
   },
@@ -72,6 +142,81 @@ export const games = {
     }
   },
 
+  async isInLobby(walletAddress: string): Promise<boolean> {
+    try {
+      // First, get the user's database ID from their wallet address
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('solana_address', walletAddress)
+        .single();
+      if (userError || !userData) {
+        console.error('User not found:', userError);
+        return false;
+      }
+
+      // check if user is in any active lobby
+      const { data: lobbyParticipant, error: lobbyError } = await supabase
+        .from('lobby_participants')
+        .select('lobby_id')
+        .eq('user_id', userData.id)
+        .single();
+      if (lobbyError || !lobbyParticipant) {
+        console.log('User not in any active lobby');
+        return false;
+      }
+      // If we reach here, user is in an active lobby
+      return true;
+
+      
+    } catch (error) {
+      console.error('Error checking if user is in lobby:', error);
+      return false;
+    }
+  },
+
+  async getCurrentLobbyByWallet(walletAddress: string) {
+    try {
+      // First, get the user's database ID from their wallet address
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('solana_address', walletAddress)
+        .single();
+      if (userError || !userData) {
+        console.error('User not found:', userError);
+        return null;
+      }
+      // Check if user is in any active lobby
+      const { data: lobbyParticipant, error: lobbyError } = await supabase
+        .from('lobby_participants')
+        .select(`
+          lobby_id,
+          lobbies!inner (
+            id,
+            name,
+            status,
+            max_players,
+            current_players,
+            created_at,
+            updated_at
+          )
+        `)
+        .eq('user_id', userData.id)
+        .in('lobbies.status', ['waiting', 'in_progress'])
+        .single();
+      if (lobbyError || !lobbyParticipant) {
+        console.log('User not in any active lobby');
+        return null;
+      }
+      // If we reach here, user is in an active lobby
+      return lobbyParticipant.lobbies;
+    } catch (error) {
+      console.error('Error fetching current lobby by wallet:', error);
+      return null;
+    }
+  },
+
   /**
    * Get current active game for a user by their user ID
    */
@@ -95,7 +240,7 @@ export const games = {
           )
         `)
         .eq('user_id', userId)
-        .in('matches.status', ['waiting', 'in_progress'])
+        // .in('matches.status', ['waiting', 'in_progress', 'completed', 'showing_results'])
         .single();
 
       if (participantError || !matchParticipant) {

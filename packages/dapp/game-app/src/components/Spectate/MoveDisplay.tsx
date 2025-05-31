@@ -138,11 +138,11 @@ const MoveDisplay: React.FC<MoveDisplayProps> = ({
           w="full"
           h="full"
           objectFit="cover"
-          fallback={
-            <Text fontSize="3xl" lineHeight="1">
-              {getMoveEmoji(move)}
-            </Text>
-          }
+          // fallback={
+          //   <Text fontSize="3xl" lineHeight="1">
+          //     {getMoveEmoji(move)}
+          //   </Text>
+          // }
         />
       </Box>
       

@@ -467,6 +467,7 @@ export type Database = {
           prize_pool: string | null
           started_at: string | null
           status: string | null
+          winner_id: number | null
         }
         Insert: {
           completed_at?: string | null
@@ -479,6 +480,7 @@ export type Database = {
           prize_pool?: string | null
           started_at?: string | null
           status?: string | null
+          winner_id?: number | null
         }
         Update: {
           completed_at?: string | null
@@ -491,11 +493,19 @@ export type Database = {
           prize_pool?: string | null
           started_at?: string | null
           status?: string | null
+          winner_id?: number | null
         }
         Relationships: [
           {
             foreignKeyName: "tournaments_created_by_fkey"
             columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tournaments_winner_id_fkey"
+            columns: ["winner_id"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]

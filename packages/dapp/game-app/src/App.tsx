@@ -1,6 +1,6 @@
 // src/App.tsx
 import React, { useState, useEffect } from 'react';
-import { Box, Grid, GridItem, useBreakpointValue } from "@chakra-ui/react";
+import { Box, Grid, GridItem, useBreakpointValue, Toaster } from "@chakra-ui/react";
 import { Routes, Route } from 'react-router-dom';
 import { useWallet } from '@solana/wallet-adapter-react';
 

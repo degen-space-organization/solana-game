@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box,
+  Container,
   VStack,
   HStack,
   Text,
   Heading,
   Card,
   Badge,
-  Avatar,
   Progress,
   Spinner,
   useBreakpointValue,
@@ -79,374 +79,384 @@ export default function WaitingTournament({ tournament, match }: WaitingTourname
     const spotsRemaining = tournament.max_players - tournament.current_players;
 
     return (
-      <Box p={8}>
-        <VStack padding={8} align="stretch">
+      <Container maxW="4xl" py={6}>
+        <VStack padding={6} align="stretch">
           {/* Main Status Card */}
           <Card.Root
             bg="bg.default"
-            border="4px solid"
-            borderColor="border.default"
-            borderRadius="sm"
-            shadow="brutalist.xl"
-            transform="rotate(-0.5deg)"
-            _hover={{
-              transform: "rotate(0deg) scale(1.01)",
-              shadow: "brutalist.2xl",
-            }}
-            transition="all 0.3s ease"
-          >
-            <Card.Body p={8} textAlign="center">
-              <VStack padding={6}>
-                {/* Waiting Icon */}
-                <Box
-                  bg="brutalist.orange"
-                  color="fg.inverted"
-                  p={6}
-                  border="4px solid"
-                  borderColor="border.default"
-                  borderRadius="sm"
-                  shadow="brutalist.lg"
-                  transform="rotate(3deg)"
-                >
-                  <Clock size={64} />
-                </Box>
-
-                {/* Title and Status */}
-                <VStack padding={3}>
-                  <Heading 
-                    size="2xl" 
-                    fontWeight="black" 
-                    color="fg.default" 
-                    textTransform="uppercase"
-                    letterSpacing="wider"
-                  >
-                    ⏳ Tournament Starting Soon
-                  </Heading>
-                  <Badge
-                    bg="brutalist.orange"
-                    color="fg.inverted"
-                    fontSize="lg"
-                    fontWeight="black"
-                    px={4}
-                    py={2}
-                    borderRadius="sm"
-                    border="2px solid"
-                    borderColor="border.default"
-                    shadow="brutalist.md"
-                    textTransform="uppercase"
-                  >
-                    Waiting for Players
-                  </Badge>
-                </VStack>
-
-                {/* Timer */}
-                <Box
-                  bg="primary.subtle"
-                  border="3px solid"
-                  borderColor="border.default"
-                  p={4}
-                  borderRadius="sm"
-                  shadow="brutalist.md"
-                >
-                  <VStack padding={2}>
-                    <Text fontSize="sm" fontWeight="bold" color="fg.muted" textTransform="uppercase">
-                      Waiting Time
-                    </Text>
-                    <Text fontSize="3xl" fontWeight="black" color="primary.emphasis" fontFamily="mono">
-                      {formatTime(timeElapsed)}
-                    </Text>
-                  </VStack>
-                </Box>
-              </VStack>
-            </Card.Body>
-          </Card.Root>
-
-          {/* Tournament Details */}
-          <Card.Root
-            bg="bg.default"
-            border="4px solid"
+            border="1px solid"
             borderColor="border.default"
             borderRadius="sm"
             shadow="brutalist.lg"
-            transform="rotate(0.3deg)"
+            overflow="hidden"
           >
-            <Card.Body p={6}>
-              <VStack padding={6} align="stretch">
-                {/* Tournament Info */}
-                <HStack padding={3} justify="center">
-                  <Trophy size={24} color="var(--chakra-colors-primary-emphasis)" />
+            {/* Header */}
+            <Box
+              bg="brutalist.orange"
+              borderBottom="2px solid"
+              borderColor="border.default"
+              p={4}
+            >
+              <VStack spacing={2}>
+                <HStack spacing={3}>
+                  <Clock size={24} color="var(--chakra-colors-fg-inverted)" />
                   <Heading 
                     size="lg" 
                     fontWeight="black" 
-                    color="fg.default" 
+                    color="fg.inverted" 
                     textTransform="uppercase"
                   >
-                    {tournament.name}
+                    Tournament Starting Soon
                   </Heading>
                 </HStack>
+                <Badge
+                  bg="fg.inverted"
+                  color="brutalist.orange"
+                  fontSize="sm"
+                  fontWeight="bold"
+                  px={3}
+                  py={1}
+                  borderRadius="sm"
+                  textTransform="uppercase"
+                >
+                  Waiting for Players
+                </Badge>
+              </VStack>
+            </Box>
 
-                {/* Progress Section */}
+            {/* Content */}
+            <Box bg="bg.default" p={6}>
+              <VStack spacing={6}>
+                {/* Tournament Name */}
+                <Box textAlign="center">
+                  <HStack justify="center" spacing={2} mb={2}>
+                    <Trophy size={20} color="var(--chakra-colors-primary-emphasis)" />
+                    <Text 
+                      fontSize="xl" 
+                      fontWeight="bold" 
+                      color="fg.default"
+                    >
+                      {tournament.name}
+                    </Text>
+                  </HStack>
+                  <Text fontSize="sm" color="fg.muted" fontWeight="medium">
+                    Tournament #{tournament.id}
+                  </Text>
+                </Box>
+
+                {/* Timer */}
                 <Box
-                  bg="primary.subtle"
-                  border="2px solid"
+                  bg="bg.subtle"
+                  border="1px solid"
                   borderColor="border.default"
                   p={4}
                   borderRadius="sm"
+                  textAlign="center"
+                  w="100%"
                 >
-                  <VStack padding={4}>
-                    <HStack justify="space-between" w="100%">
-                      <Text fontSize="sm" fontWeight="bold" color="fg.default">
-                        PLAYER PROGRESS
-                      </Text>
-                      <Text fontSize="lg" fontWeight="black" color="primary.emphasis">
-                        {tournament.current_players} / {tournament.max_players}
-                      </Text>
-                    </HStack>
-                    
-                    <Progress.Root 
-                      value={progressPercentage} 
-                      bg="bg.muted" 
-                      borderRadius="0" 
-                      h="6"
-                      w="100%"
-                      border="2px solid"
-                      borderColor="border.default"
-                    >
-                      <Progress.Track bg="bg.muted">
-                        <Progress.Range bg="primary.emphasis" />
-                      </Progress.Track>
-                    </Progress.Root>
+                  <Text fontSize="sm" fontWeight="bold" color="fg.muted" textTransform="uppercase" mb={2}>
+                    Waiting Time
+                  </Text>
+                  <Text fontSize="2xl" fontWeight="black" color="primary.emphasis" fontFamily="mono">
+                    {formatTime(timeElapsed)}
+                  </Text>
+                </Box>
 
-                    <HStack justify="space-between" w="100%">
-                      <Text fontSize="xs" color="fg.muted" fontWeight="bold">
-                        {Math.round(progressPercentage)}% FULL
-                      </Text>
-                      <Text fontSize="xs" color="fg.muted" fontWeight="bold">
-                        {spotsRemaining} SPOTS LEFT
-                      </Text>
-                    </HStack>
-                  </VStack>
+                {/* Progress Section */}
+                <Box w="100%">
+                  <HStack justify="space-between" mb={3}>
+                    <Text fontSize="sm" fontWeight="bold" color="fg.default" textTransform="uppercase">
+                      Player Progress
+                    </Text>
+                    <Text fontSize="lg" fontWeight="bold" color="primary.emphasis">
+                      {tournament.current_players} / {tournament.max_players}
+                    </Text>
+                  </HStack>
+                  
+                  <Progress.Root 
+                    value={progressPercentage} 
+                    bg="bg.muted" 
+                    borderRadius="sm" 
+                    h="4"
+                    w="100%"
+                    border="1px solid"
+                    borderColor="border.default"
+                    mb={2}
+                  >
+                    <Progress.Track bg="bg.muted">
+                      <Progress.Range bg="primary.emphasis" />
+                    </Progress.Track>
+                  </Progress.Root>
+
+                  <HStack justify="space-between">
+                    <Text fontSize="xs" color="fg.muted" fontWeight="medium">
+                      {Math.round(progressPercentage)}% Full
+                    </Text>
+                    <Text fontSize="xs" color="fg.muted" fontWeight="medium">
+                      {spotsRemaining} spots remaining
+                    </Text>
+                  </HStack>
                 </Box>
 
                 {/* Tournament Stats */}
-                <Grid templateColumns={{ base: "repeat(2, 1fr)", md: "repeat(3, 1fr)" }} gap={4}>
-                  <Box
-                    bg="brutalist.green"
-                    color="fg.inverted"
-                    p={4}
-                    border="2px solid"
-                    borderColor="border.default"
-                    borderRadius="sm"
-                    textAlign="center"
-                    transform="rotate(-1deg)"
-                  >
-                    <Text fontSize="2xl" mb={1}>💰</Text>
-                    <Text fontSize="md" fontWeight="black">
-                      {formatSolAmount(tournament.prize_pool)} ◎
-                    </Text>
-                    <Text fontSize="xs" textTransform="uppercase" fontWeight="bold">
-                      Prize Pool
-                    </Text>
-                  </Box>
+                <Grid templateColumns={{ base: "repeat(2, 1fr)", md: "repeat(3, 1fr)" }} gap={4} w="100%">
+                  <GridItem>
+                    <Box
+                      bg="brutalist.green"
+                      color="fg.inverted"
+                      p={4}
+                      border="1px solid"
+                      borderColor="border.default"
+                      borderRadius="sm"
+                      textAlign="center"
+                    >
+                      <Text fontSize="lg" fontWeight="bold" mb={1}>
+                        {formatSolAmount(tournament.prize_pool)} ◎
+                      </Text>
+                      <Text fontSize="xs" textTransform="uppercase" fontWeight="bold">
+                        Prize Pool
+                      </Text>
+                    </Box>
+                  </GridItem>
 
-                  <Box
-                    bg="brutalist.blue"
-                    color="fg.inverted"
-                    p={4}
-                    border="2px solid"
-                    borderColor="border.default"
-                    borderRadius="sm"
-                    textAlign="center"
-                    transform="rotate(1deg)"
-                  >
-                    <Text fontSize="2xl" mb={1}>👥</Text>
-                    <Text fontSize="md" fontWeight="black">
-                      {tournament.max_players}
-                    </Text>
-                    <Text fontSize="xs" textTransform="uppercase" fontWeight="bold">
-                      Max Players
-                    </Text>
-                  </Box>
+                  <GridItem>
+                    <Box
+                      bg="brutalist.blue"
+                      color="fg.inverted"
+                      p={4}
+                      border="1px solid"
+                      borderColor="border.default"
+                      borderRadius="sm"
+                      textAlign="center"
+                    >
+                      <Text fontSize="lg" fontWeight="bold" mb={1}>
+                        {tournament.max_players}
+                      </Text>
+                      <Text fontSize="xs" textTransform="uppercase" fontWeight="bold">
+                        Max Players
+                      </Text>
+                    </Box>
+                  </GridItem>
 
-                  <Box
-                    bg="brutalist.purple"
-                    color="fg.inverted"
-                    p={4}
-                    border="2px solid"
-                    borderColor="border.default"
-                    borderRadius="sm"
-                    textAlign="center"
-                    transform="rotate(-0.5deg)"
-                    gridColumn={{ base: "span 2", md: "span 1" }}
-                  >
-                    <Text fontSize="2xl" mb={1}>🏆</Text>
-                    <Text fontSize="md" fontWeight="black">
-                      #{tournament.id}
-                    </Text>
-                    <Text fontSize="xs" textTransform="uppercase" fontWeight="bold">
-                      Tournament ID
-                    </Text>
-                  </Box>
+                  <GridItem gridColumn={{ base: "span 2", md: "span 1" }}>
+                    <Box
+                      bg="primary.emphasis"
+                      color="fg.inverted"
+                      p={4}
+                      border="1px solid"
+                      borderColor="border.default"
+                      borderRadius="sm"
+                      textAlign="center"
+                    >
+                      <Text fontSize="lg" fontWeight="bold" mb={1}>
+                        {tournament.status?.toUpperCase()}
+                      </Text>
+                      <Text fontSize="xs" textTransform="uppercase" fontWeight="bold">
+                        Status
+                      </Text>
+                    </Box>
+                  </GridItem>
                 </Grid>
               </VStack>
-            </Card.Body>
+            </Box>
           </Card.Root>
 
-          {/* Status Messages */}
+          {/* Info Banner */}
           <Card.Root
             bg="brutalist.yellow"
             color="fg.default"
-            border="4px solid"
+            border="1px solid"
             borderColor="border.default"
             borderRadius="sm"
-            shadow="brutalist.md"
-            transform="rotate(-0.2deg)"
           >
             <Card.Body p={4}>
-              <HStack justify="center" padding={3}>
+              <HStack justify="center" spacing={3}>
                 <AlertCircle size={20} />
-                <Text fontSize="sm" fontWeight="bold" textAlign="center">
-                  💡 Tournament will start automatically when all spots are filled!
+                <Text fontSize="sm" fontWeight="medium" textAlign="center">
+                  Tournament will start automatically when all spots are filled
                 </Text>
               </HStack>
             </Card.Body>
           </Card.Root>
         </VStack>
-      </Box>
+      </Container>
     );
   }
 
   // Match waiting state
   if (match) {
     return (
-      <Box p={8}>
-        <VStack padding={8} align="stretch">
+      <Container maxW="4xl" py={6}>
+        <VStack spacing={6} align="stretch">
           {/* Match Starting Soon */}
           <Card.Root
             bg="bg.default"
-            border="4px solid"
-            borderColor="border.default"
-            borderRadius="sm"
-            shadow="brutalist.xl"
-            transform="rotate(-0.3deg)"
-          >
-            <Card.Body p={8} textAlign="center">
-              <VStack padding={6}>
-                <Box
-                  bg="brutalist.green"
-                  color="fg.inverted"
-                  p={6}
-                  border="4px solid"
-                  borderColor="border.default"
-                  borderRadius="sm"
-                  shadow="brutalist.lg"
-                  transform="rotate(-2deg)"
-                >
-                  <Zap size={64} />
-                </Box>
-
-                <VStack padding={3}>
-                  <Heading 
-                    size="2xl" 
-                    fontWeight="black" 
-                    color="fg.default" 
-                    textTransform="uppercase"
-                    letterSpacing="wider"
-                  >
-                    ⚡ Match Starting Soon
-                  </Heading>
-                  <Text fontSize="lg" color="fg.muted" fontWeight="medium">
-                    Get ready for battle! Your match is about to begin.
-                  </Text>
-                </VStack>
-
-                <Box
-                  bg="primary.subtle"
-                  border="3px solid"
-                  borderColor="border.default"
-                  p={4}
-                  borderRadius="sm"
-                  shadow="brutalist.md"
-                >
-                  <VStack padding={2}>
-                    <Text fontSize="sm" fontWeight="bold" color="fg.muted" textTransform="uppercase">
-                      Preparing Match
-                    </Text>
-                    <HStack padding={3}>
-                      <Spinner size="md" color="primary.emphasis" />
-                      <Text fontSize="xl" fontWeight="black" color="primary.emphasis">
-                        {formatTime(timeElapsed)}
-                      </Text>
-                    </HStack>
-                  </VStack>
-                </Box>
-              </VStack>
-            </Card.Body>
-          </Card.Root>
-
-          {/* Quick Tips */}
-          <Card.Root
-            bg="primary.subtle"
-            border="4px solid"
+            border="1px solid"
             borderColor="border.default"
             borderRadius="sm"
             shadow="brutalist.lg"
-            transform="rotate(0.2deg)"
+            overflow="hidden"
           >
-            <Card.Body p={6}>
-              <VStack padding={4}>
-                <HStack padding={3}>
-                  <Target size={24} color="var(--chakra-colors-primary-emphasis)" />
+            {/* Header */}
+            <Box
+              bg="brutalist.green"
+              borderBottom="2px solid"
+              borderColor="border.default"
+              p={4}
+            >
+              <VStack spacing={2}>
+                <HStack spacing={3}>
+                  <Zap size={24} color="var(--chakra-colors-fg-inverted)" />
                   <Heading 
-                    size="md" 
+                    size="lg" 
                     fontWeight="black" 
-                    color="fg.default" 
+                    color="fg.inverted" 
                     textTransform="uppercase"
                   >
-                    🎯 Quick Tips
+                    Match Starting Soon
                   </Heading>
                 </HStack>
-
-                <VStack padding={3} align="stretch">
-                  {[
-                    "🗿 Rock beats Scissors",
-                    "📄 Paper beats Rock", 
-                    "✂️ Scissors beats Paper",
-                    "⏰ You have 20 seconds per round",
-                    "🏆 Best of 5 rounds wins!"
-                  ].map((tip, index) => (
-                    <Box
-                      key={index}
-                      bg="bg.default"
-                      border="2px solid"
-                      borderColor="border.default"
-                      p={3}
-                      borderRadius="sm"
-                      transform={`rotate(${index % 2 === 0 ? '-' : ''}0.5deg)`}
-                    >
-                      <Text fontSize="sm" fontWeight="bold" color="fg.default">
-                        {tip}
-                      </Text>
-                    </Box>
-                  ))}
-                </VStack>
+                <Text fontSize="sm" color="fg.inverted" fontWeight="medium" textAlign="center">
+                  Get ready for battle! Your match is about to begin.
+                </Text>
               </VStack>
-            </Card.Body>
+            </Box>
+
+            {/* Content */}
+            <Box bg="bg.default" p={6}>
+              <VStack spacing={6}>
+                {/* Timer */}
+                <Box
+                  bg="bg.subtle"
+                  border="1px solid"
+                  borderColor="border.default"
+                  p={6}
+                  borderRadius="sm"
+                  textAlign="center"
+                  w="100%"
+                >
+                  <HStack justify="center" spacing={3} mb={3}>
+                    <Spinner size="md" color="primary.emphasis" />
+                    <Text fontSize="sm" fontWeight="bold" color="fg.muted" textTransform="uppercase">
+                      Preparing Match
+                    </Text>
+                  </HStack>
+                  <Text fontSize="2xl" fontWeight="black" color="primary.emphasis" fontFamily="mono">
+                    {formatTime(timeElapsed)}
+                  </Text>
+                </Box>
+
+                {/* Match Info */}
+                <Box
+                  bg="primary.subtle"
+                  border="1px solid"
+                  borderColor="border.default"
+                  p={4}
+                  borderRadius="sm"
+                  w="100%"
+                  textAlign="center"
+                >
+                  <Text fontSize="lg" fontWeight="bold" color="fg.default" mb={2}>
+                    Match #{match.id}
+                  </Text>
+                  <Badge
+                    bg="primary.emphasis"
+                    color="fg.inverted"
+                    fontSize="sm"
+                    fontWeight="bold"
+                    px={3}
+                    py={1}
+                    borderRadius="sm"
+                    textTransform="uppercase"
+                  >
+                    {match.status}
+                  </Badge>
+                </Box>
+              </VStack>
+            </Box>
+          </Card.Root>
+
+          {/* Game Rules */}
+          <Card.Root
+            bg="bg.default"
+            border="1px solid"
+            borderColor="border.default"
+            borderRadius="sm"
+            shadow="brutalist.md"
+          >
+            <Box
+              bg="primary.solid"
+              borderBottom="2px solid"
+              borderColor="border.default"
+              p={3}
+            >
+              <HStack justify="center" spacing={2}>
+                <Target size={20} color="var(--chakra-colors-fg-inverted)" />
+                <Text 
+                  fontSize="md" 
+                  fontWeight="bold" 
+                  color="fg.inverted" 
+                  textTransform="uppercase"
+                >
+                  Game Rules
+                </Text>
+              </HStack>
+            </Box>
+            
+            <Box bg="bg.default" p={4}>
+              <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={3}>
+                {[
+                  { icon: "⏰", text: "30 seconds per round" },
+                  { icon: "🏆", text: "First to score 3 rounds wins" },
+                  { icon: "⚡", text: "Missing a move = auto-loss" },
+                  { icon: "🗿", text: "Both miss a move - player 1 wins" },
+                ].map((rule, index) => (
+                  <Box
+                    key={index}
+                    bg="bg.subtle"
+                    border="1px solid"
+                    borderColor="border.subtle"
+                    p={3}
+                    borderRadius="sm"
+                  >
+                    <HStack spacing={2}>
+                      <Text fontSize="md">{rule.icon}</Text>
+                      <Text fontSize="sm" fontWeight="medium" color="fg.default">
+                        {rule.text}
+                      </Text>
+                    </HStack>
+                  </Box>
+                ))}
+              </Grid>
+            </Box>
           </Card.Root>
         </VStack>
-      </Box>
+      </Container>
     );
   }
 
-  // Default state
+  // Default loading state
   return (
-    <Box p={8} textAlign="center">
-      <VStack padding={6}>
-        <Spinner size="xl" color="primary.emphasis" />
-        <Text fontSize="lg" fontWeight="bold" color="fg.muted">
-          Loading game information...
-        </Text>
-      </VStack>
-    </Box>
+    <Container maxW="4xl" py={6}>
+      <Card.Root
+        bg="bg.default"
+        border="1px solid"
+        borderColor="border.default"
+        borderRadius="sm"
+        shadow="brutalist.lg"
+      >
+        <Card.Body p={8} textAlign="center">
+          <VStack spaceX={4}>
+            <Spinner size="xl" color="primary.emphasis" />
+            <Text fontSize="lg" fontWeight="bold" color="fg.muted">
+              Loading game information...
+            </Text>
+            <Text fontSize="sm" color="fg.muted">
+              Please wait while we prepare your match...
+            </Text>
+          </VStack>
+        </Card.Body>
+      </Card.Root>
+    </Container>
   );
 }

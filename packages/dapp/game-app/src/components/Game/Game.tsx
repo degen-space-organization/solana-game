@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
   VStack,
@@ -35,9 +35,7 @@ import GameResult from './GameResult/GameResult';
  * 
  * @description Represents the Game itself.
  * Handles the game logic and fetches information about the relevant game
- * 
- * Its rendering is handled one layer above
- * It decides whether to render the game UI or the winner etc.
+ * with improved tournament advancement handling
  * 
  * @returns JSX.Element representing the Game Component
  */
@@ -46,37 +44,108 @@ export default function Game() {
   const [gameData, setGameData] = useState<GameData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const isMobile = useBreakpointValue({ base: true, md: false });
 
-  // Fetch current game data
-  const fetchGameData = async () => {
+  // Fetch current game data with retry logic
+  const fetchGameData = async (isRetry = false) => {
     if (!publicKey) {
       setLoading(false);
       return;
     }
 
     try {
-      setLoading(true);
-      setError(null);
+      if (!isRetry) {
+        setLoading(true);
+        setError(null);
+      }
 
       const data = await database.games.getCurrentGameByWallet(publicKey.toBase58());
-      setGameData(data);
+      
+      if (data) {
+        setGameData(data);
+        setRetryCount(0);
+        setIsTransitioning(false);
+        setError(null);
+      } else {
+        // No game data - could be transitioning between matches in tournament
+        if (retryCount < 5 && (gameData?.tournament || isTransitioning)) {
+          // During tournament transitions, retry more aggressively
+          setIsTransitioning(true);
+          setRetryCount(prev => prev + 1);
+          
+          // Retry after a short delay
+          retryTimeoutRef.current = setTimeout(() => {
+            fetchGameData(true);
+          }, 1000); // Retry every 1 second during transitions
+          
+          return; // Don't clear gameData yet
+        } else {
+          // Truly no game or max retries reached
+          setGameData(null);
+          setIsTransitioning(false);
+          setRetryCount(0);
+        }
+      }
     } catch (err) {
       console.error('Error fetching game data:', err);
-      setError('Failed to load game information');
+      
+      // During tournament transitions, be more forgiving of errors
+      if (retryCount < 3 && (gameData?.tournament || isTransitioning)) {
+        setIsTransitioning(true);
+        setRetryCount(prev => prev + 1);
+        
+        retryTimeoutRef.current = setTimeout(() => {
+          fetchGameData(true);
+        }, 2000); // Retry after 2 seconds on error
+      } else {
+        setError('Failed to load game information');
+        setIsTransitioning(false);
+      }
     } finally {
-      setLoading(false);
+      if (!isRetry) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
     fetchGameData();
+    
+    // Cleanup retry timeout on unmount
+    return () => {
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+      }
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+      }
+    };
   }, [publicKey]);
+
+  // Enhanced polling during tournament transitions
+  useEffect(() => {
+    if (isTransitioning || (gameData?.tournament && gameData.tournament.status === 'in_progress')) {
+      // Poll more frequently during tournament progression
+      pollIntervalRef.current = setInterval(() => {
+        fetchGameData(true);
+      }, 3000); // Every 3 seconds during tournaments
+
+      return () => {
+        if (pollIntervalRef.current) {
+          clearInterval(pollIntervalRef.current);
+        }
+      };
+    }
+  }, [isTransitioning, gameData?.tournament?.status]);
 
   // Subscribe to real-time game updates
   useEffect(() => {
-    if (!gameData) return;
+    if (!gameData?.match?.id) return;
 
     const channel = supabase
       .channel(`game-updates-${gameData.match.id}`)
@@ -88,7 +157,8 @@ export default function Game() {
           table: 'matches',
           filter: `id=eq.${gameData.match.id}`,
         },
-        () => {
+        (payload) => {
+          console.log('Match update received:', payload);
           fetchGameData(); // Re-fetch when match data changes
         }
       )
@@ -100,7 +170,8 @@ export default function Game() {
           table: 'game_rounds',
           filter: `match_id=eq.${gameData.match.id}`,
         },
-        () => {
+        (payload) => {
+          console.log('Round update received:', payload);
           fetchGameData(); // Re-fetch when round data changes
         }
       )
@@ -121,22 +192,40 @@ export default function Game() {
     if (tournament && tournament.status === 'waiting') {
       return {
         status: 'waiting_tournament',
-        component: <WaitingTournament />
+        // @ts-ignore
+        component: <WaitingTournament match={match} tournament={tournament} />
+      };
+    }
+
+    // Match waiting to start (tournament advancement)
+    if (match.status === 'waiting') {
+      return {
+        status: 'waiting_match',
+        // @ts-ignore
+        component: <WaitingTournament match={match} tournament={tournament} />
       };
     }
 
     // Match completed - show payout
     if (match.status === 'completed') {
       if (match.winner_id && !match.tournament_id) {
+        // 1v1 match completed
         return {
           status: 'completed',
+          component: <GameResult matchId={match.id} />
+        };
+      } else if (match.tournament_id) {
+        // Tournament match completed - show payout for finals or waiting for next round
+        return {
+          status: 'tournament_completed',
           component: <GameResult matchId={match.id} />
         };
       } else {
         return {
           status: 'completed',
-          component: <WaitingTournament />
-        }
+          // @ts-ignore
+          component: <WaitingTournament match={match} tournament={tournament} />
+        };
       }
     }
 
@@ -145,14 +234,6 @@ export default function Game() {
       return {
         status: 'in_progress',
         component: <Match />
-      };
-    }
-
-    // Match waiting to start
-    if (match.status === 'waiting') {
-      return {
-        status: 'waiting_match',
-        component: <WaitingTournament />
       };
     }
 
@@ -171,7 +252,7 @@ export default function Game() {
       case 'waiting_match':
         return {
           icon: <Clock size={20} />,
-          text: 'MATCH STARTING SOON',
+          text: 'ADVANCING TO NEXT ROUND',
           color: '#FF6B35',
           bgColor: 'brutalist.orange'
         };
@@ -183,6 +264,7 @@ export default function Game() {
           bgColor: 'brutalist.green'
         };
       case 'completed':
+      case 'tournament_completed':
         return {
           icon: <Trophy size={20} />,
           text: 'MATCH COMPLETED',
@@ -200,7 +282,7 @@ export default function Game() {
   };
 
   // Loading state
-  if (loading) {
+  if (loading && !gameData) {
     return (
       <Box p={8} textAlign="center">
         <VStack padding={6}>
@@ -219,8 +301,31 @@ export default function Game() {
     );
   }
 
-  // Error state
-  if (error) {
+  // Tournament transition state
+  if (isTransitioning) {
+    return (
+      <Box p={8} textAlign="center">
+        <VStack padding={6}>
+          <Spinner size="xl" color="primary.emphasis" />
+          <Text
+            fontSize="lg"
+            fontWeight="bold"
+            color="fg.muted"
+            textTransform="uppercase"
+            letterSpacing="wider"
+          >
+            Tournament Advancing...
+          </Text>
+          <Text fontSize="sm" color="fg.muted">
+            Moving to next round • Attempt {retryCount}/5
+          </Text>
+        </VStack>
+      </Box>
+    );
+  }
+
+  // Error state (only show if not transitioning and no game data)
+  if (error && !gameData && !isTransitioning) {
     return (
       <Box p={8} textAlign="center">
         <Card.Root
@@ -246,8 +351,8 @@ export default function Game() {
     );
   }
 
-  // No game data
-  if (!gameData) {
+  // No game data (only show if not transitioning)
+  if (!gameData && !isTransitioning) {
     return (
       <Box p={8} textAlign="center">
         <Card.Root
@@ -295,7 +400,6 @@ export default function Game() {
         border="none"
         borderColor="border.default"
         borderRadius="sm"
-        // shadow="brutalist.xl"
         minH="50vh"
       >
         <Card.Body p={0}>

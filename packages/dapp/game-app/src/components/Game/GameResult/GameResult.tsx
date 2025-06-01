@@ -302,6 +302,30 @@ export default function GameResult({ matchId }: GameResultProps) {
           </Card.Body>
         </Card.Root>
 
+        {/* Please wait while we process the game */}
+        <Card.Root
+          bg="bg.subtle"
+          border="4px solid"
+          borderColor="border.default"
+          borderRadius="0"
+          shadow="8px 8px 0px rgba(0,0,0,0.8)"
+        >
+          <Card.Body p="6" textAlign="center">
+            <VStack gap="4">
+              <Text
+                fontSize="md"
+                fontWeight="bold"
+                color="fg.default"
+                textAlign="center"
+              >
+                Please wait while we process the game results and update your stats.  
+                This may take a few moments.
+              </Text>
+              <Spinner size="lg" color="primary.emphasis" />
+            </VStack>
+          </Card.Body>
+        </Card.Root>
+
         {/* Play Again Button */}
         <Card.Root
           bg="bg.subtle"

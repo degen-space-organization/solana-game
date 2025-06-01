@@ -55,6 +55,7 @@ import type { PendingLobby } from '@/types/lobby';
 import { PublicKey, SystemProgram, Transaction } from '@solana/web3.js';
 import { solConnection } from '@/web3';
 import { GAME_VAULT_ADDRESS } from '@/web3/constants';
+import apiUrl from '@/api/config';
 
 interface LobbyParticipant {
     id: number;
@@ -215,7 +216,7 @@ const MyLobby: React.FC = () => {
 
             if (!txSignature) throw new Error('Transaction signature is null');
 
-            const response = await fetch('http://localhost:4000/api/v1/game/submit-stake', {
+            const response = await fetch(`${apiUrl}/game/submit-stake`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -259,7 +260,7 @@ const MyLobby: React.FC = () => {
                 type: "loading",
                 duration: 3000,
             });
-            const response = await fetch('http://localhost:4000/api/v1/game/withdraw-lobby', {
+            const response = await fetch(`${apiUrl}/game/withdraw-lobby`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -304,7 +305,7 @@ const MyLobby: React.FC = () => {
                 duration: 3000,
             });
 
-            const response = await fetch('http://localhost:4000/api/v1/game/leave-lobby', {
+            const response = await fetch(`${apiUrl}/game/leave-lobby`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -356,7 +357,7 @@ const MyLobby: React.FC = () => {
 
         setActionLoading(true);
         try {
-            const response = await fetch('http://localhost:4000/api/v1/game/kick-player', {
+            const response = await fetch(`${apiUrl}/game/kick-player`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -398,7 +399,7 @@ const MyLobby: React.FC = () => {
 
         setActionLoading(true);
         try {
-            const response = await fetch('http://localhost:4000/api/v1/game/start-match', {
+            const response = await fetch(`${apiUrl}/game/start-match`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -436,7 +437,7 @@ const MyLobby: React.FC = () => {
 
         setActionLoading(true);
         try {
-            const response = await fetch('http://localhost:4000/api/v1/game/start-tournament', {
+            const response = await fetch(`${apiUrl}/game/start-tournament`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -478,7 +479,7 @@ const MyLobby: React.FC = () => {
         setActionLoading(true);
 
         try {
-            const response = await fetch('http://localhost:4000/api/v1/game/close-lobby', {
+            const response = await fetch(`${apiUrl}/game/close-lobby`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

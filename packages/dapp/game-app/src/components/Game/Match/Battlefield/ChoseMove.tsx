@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Box, Button, VStack, HStack, Image, Text, Card, Grid, Badge } from '@chakra-ui/react';
 import { Zap, CheckCircle, Clock } from 'lucide-react';
+import { supabase } from '@/supabase';
+import apiUrl from '@/api/config';
 
 type MoveOption = 'rock' | 'paper' | 'scissors';
 interface Move {
@@ -46,18 +48,86 @@ export default function ChooseMove({
     const [selectedMove, setSelectedMove] = useState<MoveOption | null>(null);
     const [definiteMove, setDefiniteMove] = useState<Move | null>(null);
     const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
+    const [isInitialized, setIsInitialized] = useState<boolean>(false);
+
+    // Check if user has already submitted a move for this round
+    useEffect(() => {
+        const checkExistingMove = async () => {
+            try {
+                // Get the current round data
+                const { data: roundData, error } = await supabase
+                    .from('game_rounds')
+                    .select('*')
+                    .eq('match_id', matchId)
+                    .eq('round_number', gameRoundNumber)
+                    .single();
+
+                if (error) {
+                    console.error('Error fetching round data:', error);
+                    setIsInitialized(true);
+                    return;
+                }
+
+                if (roundData) {
+                    // Get match participants to determine if this user is player 1 or 2
+                    const { data: participants, error: participantsError } = await supabase
+                        .from('match_participants')
+                        .select('user_id, position')
+                        .eq('match_id', matchId);
+
+                    if (participantsError) {
+                        console.error('Error fetching participants:', participantsError);
+                        setIsInitialized(true);
+                        return;
+                    }
+
+                    // Find user's position
+                    const userParticipant = participants?.find(p => p.user_id === userId);
+                    if (!userParticipant) {
+                        console.error('User not found in match participants');
+                        setIsInitialized(true);
+                        return;
+                    }
+
+                    // Check if user has already submitted a move
+                    let userMove: MoveOption | null = null;
+                    if (userParticipant.position === 1 && roundData.player1_move) {
+                        userMove = roundData.player1_move as MoveOption;
+                    } else if (userParticipant.position === 2 && roundData.player2_move) {
+                        userMove = roundData.player2_move as MoveOption;
+                    }
+
+                    // If user has already submitted a move, set the state
+                    if (userMove) {
+                        const moveObj = moveOptions.find(m => m.name === userMove);
+                        setSelectedMove(userMove);
+                        setDefiniteMove(moveObj || null);
+                        setIsSubmitted(true);
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking existing move:', error);
+            } finally {
+                setIsInitialized(true);
+            }
+        };
+
+        if (userId && matchId && gameRoundNumber) {
+            checkExistingMove();
+        }
+    }, [userId, matchId, gameRoundNumber]);
 
     const handleSelectMove = (move: MoveOption) => {
-        if (!isSubmitted && !loading) {
+        if (!isSubmitted && !loading && isInitialized) {
             setSelectedMove(move);
         }
     };
 
     const handleSubmitMove = async () => {
-        if (selectedMove) {
+        if (selectedMove && !isSubmitted) {
             setLoading(true);
             try {
-                const response = await fetch('http://localhost:4000/api/v1/game/submit-move', {
+                const response = await fetch(`${apiUrl}/game/submit-move`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -67,15 +137,29 @@ export default function ChooseMove({
                         player_move: selectedMove,
                     }),
                 });
+                
+                const data = await response.json();
+                
                 if (!response.ok) {
-                    throw new Error('Failed to submit move');
+                    // Check if the error is because move was already submitted
+                    if (data.error && data.error.includes('already made a move')) {
+                        // Move was already submitted, update state accordingly
+                        setIsSubmitted(true);
+                        setDefiniteMove(moveOptions.find(m => m.name === selectedMove) || null);
+                    } else {
+                        throw new Error(data.error || 'Failed to submit move');
+                    }
+                } else {
+                    // Success
+                    setIsSubmitted(true);
+                    setDefiniteMove(moveOptions.find(m => m.name === selectedMove) || null);
                 }
-                setIsSubmitted(true);
-                setDefiniteMove(moveOptions.find(m => m.name === selectedMove) || null);
             } catch (e) {
                 console.error('Failed to submit move:', e);
                 // Reset loading state on error so user can retry
                 setLoading(false);
+            } finally {
+                if (loading) setLoading(false);
             }
         }
     };
@@ -118,16 +202,37 @@ export default function ChooseMove({
             bg: 'bg.default',
             borderColor: 'border.default',
             opacity: 1,
-            cursor: 'pointer',
+            cursor: isInitialized ? 'pointer' : 'default',
             transform: 'none',
-            _hover: {
+            _hover: isInitialized ? {
                 bg: 'primary.subtle',
                 borderColor: 'primary.emphasis',
                 transform: 'scale(1.02)',
                 shadow: '12px 12px 0px rgba(0,0,0,0.8)',
-            }
+            } : {}
         };
     };
+
+    // Show loading state while checking existing move
+    if (!isInitialized) {
+        return (
+            <Card.Root
+                border={'none'}
+                maxW={{ base: "100%", md: "600px" }}
+                mx="auto"
+                overflow="hidden"
+            >
+                <Card.Body p={{ base: "4", md: "6" }}>
+                    <VStack gap="6" align="center" justify="center" minH="200px">
+                        <Clock size={32} color="var(--chakra-colors-primary-emphasis)" />
+                        <Text fontSize="lg" fontWeight="bold" color="fg.muted">
+                            Loading round data...
+                        </Text>
+                    </VStack>
+                </Card.Body>
+            </Card.Root>
+        );
+    }
 
     return (
         <Card.Root
@@ -138,7 +243,17 @@ export default function ChooseMove({
         >
             <Card.Body p={{ base: "4", md: "6" }}>
                 <VStack gap="6" align="stretch">
-                    {/* Header */}
+                    {/* Header - Show round info */}
+                    <Box textAlign="center">
+                        <Text fontSize="lg" fontWeight="black" color="fg.default" textTransform="uppercase">
+                            Round {gameRoundNumber}
+                        </Text>
+                        {isSubmitted && (
+                            <Text fontSize="sm" color="primary.emphasis" fontWeight="bold" mt={1}>
+                                Move Locked In
+                            </Text>
+                        )}
+                    </Box>
 
                     {/* Move Options */}
                     <Grid
@@ -159,7 +274,6 @@ export default function ChooseMove({
                                     {...cardStyle}
                                     border="2px solid"
                                     borderRadius="0"
-                                    // shadow="8px 8px 0px rgba(0,0,0,0.8)"
                                     p={{ base: "3", md: "4" }}
                                     transition="all 0.2s ease"
                                     position="relative"
@@ -253,7 +367,6 @@ export default function ChooseMove({
                             border="2px solid"
                             borderColor='brutalist.black'
                             borderRadius="2"
-                            // shadow="8px 8px 0px rgba(0,0,0,0.8)"
                             fontWeight="black"
                             fontSize={{ base: "md", md: "lg" }}
                             textTransform="uppercase"
@@ -321,7 +434,7 @@ export default function ChooseMove({
                                     </Text>
                                 </HStack>
                                 <Text fontSize="xs" color="fg.muted" fontWeight="medium">
-                                    Your move has been locked in. Good luck!
+                                    Your {definiteMove?.name.toUpperCase()} has been locked in. Good luck!
                                 </Text>
                             </VStack>
                         </Box>

@@ -20,11 +20,10 @@ CREATE TABLE tournament_participants (
 --Indexes
 CREATE INDEX idx_tournament_participants_tournament ON tournament_participants(tournament_id);
 CREATE INDEX idx_tournament_participants_user ON tournament_participants(user_id);
-CREATE UNIQUE INDEX idx_tournament_active_participants 
-ON match_participants(user_id) 
-WHERE EXISTS (
-    SELECT 1 FROM matches m 
-    WHERE m.id = match_participants.match_id 
-    AND m.tournament_id IS NOT NULL 
-    AND m.status IN ('in_progress', 'showing_results')
-);
+-- CREATE UNIQUE INDEX idx_tournament_active_participants 
+-- ON match_participants(user_id) WHERE EXISTS (
+--     SELECT 1 FROM matches m 
+--     WHERE m.id = match_participants.match_id 
+--     AND m.tournament_id IS NOT NULL 
+--     AND m.status IN ('in_progress', 'showing_results')
+-- );

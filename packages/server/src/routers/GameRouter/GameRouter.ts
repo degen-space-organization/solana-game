@@ -28,7 +28,7 @@ gameRouter.post('/withdraw-lobby', GameController.withdrawFromLobby as unknown a
 gameRouter.post('/close-lobby', GameController.deleteLobby as unknown as RequestHandler);
 gameRouter.post('/kick-player', GameController.kickPlayer as unknown as RequestHandler);
 
-
+gameRouter.get('/tournament/:tournament_id/bracket', GameController.getTournamentBracket as RequestHandler);
 
 
 

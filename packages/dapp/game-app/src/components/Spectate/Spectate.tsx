@@ -60,11 +60,11 @@ const Spectate: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Match list state
   const [ongoingMatches, setOngoingMatches] = useState<OngoingMatch[]>([]);
   const [isLoadingMatches, setIsLoadingMatches] = useState(true);
-  
+
   // Selected match state
   const [selectedMatch, setSelectedMatch] = useState<MatchData | null>(null);
   const [gameRounds, setGameRounds] = useState<GameRound[]>([]);
@@ -151,7 +151,7 @@ const Spectate: React.FC = () => {
         return { result: 'TIE', winner: null };
       }
 
-      const isPlayer1Winner = 
+      const isPlayer1Winner =
         (round.player1_move === 'rock' && round.player2_move === 'scissors') ||
         (round.player1_move === 'paper' && round.player2_move === 'rock') ||
         (round.player1_move === 'scissors' && round.player2_move === 'paper');
@@ -209,7 +209,7 @@ const Spectate: React.FC = () => {
   const fetchMatchData = async (matchId: number): Promise<void> => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
       // Fetch match details
       const { data: match, error: matchError } = await supabase
@@ -270,24 +270,27 @@ const Spectate: React.FC = () => {
       // Calculate scores using the same logic as getRoundResult
       const player1 = participants?.find(p => p.position === 1);
       const player2 = participants?.find(p => p.position === 2);
-      
+
       let p1Score = 0;
       let p2Score = 0;
 
       rounds?.forEach(round => {
-        // Use the same logic as getRoundResult to determine who actually won each round
-        const { result, winner } = getRoundResult(round, participants || []);
-        
-        if (result === 'WIN') {
-          const player1Name = getDisplayName(player1?.users, 'Player 1');
-          const player2Name = getDisplayName(player2?.users, 'Player 2');
-          
-          if (winner === player1Name) {
-            p1Score++;
-          } else if (winner === player2Name) {
-            p2Score++;
+        if (round.completed_at) {
+          // @ts-ignore
+          const { result, winner } = getRoundResult(round, participants || []);
+
+          if (result === 'WIN') {
+            const player1Name = getDisplayName(player1?.users, 'Player 1');
+            const player2Name = getDisplayName(player2?.users, 'Player 2');
+
+            if (winner === player1Name) {
+              p1Score++;
+            } else if (winner === player2Name) {
+              p2Score++;
+            }
           }
         }
+
         // Ties don't count towards score
       });
 
@@ -409,17 +412,17 @@ const Spectate: React.FC = () => {
             {/* Title */}
             <HStack gap="3" align="center" justify="center">
               <Eye size={28} color="#7B2CBF" />
-              <Text 
-                fontSize="2xl" 
-                fontWeight="black" 
-                color="fg.default" 
+              <Text
+                fontSize="2xl"
+                fontWeight="black"
+                color="fg.default"
                 textTransform="uppercase"
                 letterSpacing="wider"
               >
                 👁️ SPECTATE MODE
               </Text>
             </HStack>
-            
+
             {/* Search Bar */}
             <HStack gap={3}>
               <Box position="relative" flex="1">
@@ -452,7 +455,7 @@ const Spectate: React.FC = () => {
                   }}
                 />
               </Box>
-              
+
               <Button
                 onClick={handleSearch}
                 disabled={!searchTerm.trim() || isLoading}
@@ -474,7 +477,7 @@ const Spectate: React.FC = () => {
               >
                 {isLoading ? <Spinner size="sm" /> : "SEARCH"}
               </Button>
-              
+
               {(selectedMatch || searchTerm) && (
                 <Button
                   onClick={clearSearch}
@@ -497,7 +500,7 @@ const Spectate: React.FC = () => {
                   CLEAR
                 </Button>
               )}
-              
+
               <IconButton
                 onClick={fetchOngoingMatches}
                 bg="brutalist.green"
@@ -523,7 +526,7 @@ const Spectate: React.FC = () => {
               textAlign="center"
               fontWeight="medium"
             >
-              {selectedMatch 
+              {selectedMatch
                 ? `Viewing Match #${selectedMatch.match.id} • Score: ${player1Score}-${player2Score} • ${sortedRounds.length} rounds`
                 : `${ongoingMatches.length} ongoing matches available`
               }
@@ -647,11 +650,11 @@ const Spectate: React.FC = () => {
                 {selectedMatch.match.status === 'completed' && (
                   <Box mt={3} p={3} bg="brutalist.green" borderRadius="sm">
                     <Text fontSize="sm" fontWeight="bold" color="white" textAlign="center">
-                      🏆 MATCH COMPLETED: {player1Score > player2Score 
-                        ? `${getDisplayName(selectedMatch.participants?.find(p => p.position === 1)?.users, 'Player 1')} WINS ${player1Score}-${player2Score}!` 
-                        : player2Score > player1Score 
-                        ? `${getDisplayName(selectedMatch.participants?.find(p => p.position === 2)?.users, 'Player 2')} WINS ${player2Score}-${player1Score}!`
-                        : `TIE GAME ${player1Score}-${player2Score}!`
+                      🏆 MATCH COMPLETED: {player1Score > player2Score
+                        ? `${getDisplayName(selectedMatch.participants?.find(p => p.position === 1)?.users, 'Player 1')} WINS ${player1Score}-${player2Score}!`
+                        : player2Score > player1Score
+                          ? `${getDisplayName(selectedMatch.participants?.find(p => p.position === 2)?.users, 'Player 2')} WINS ${player2Score}-${player1Score}!`
+                          : `TIE GAME ${player1Score}-${player2Score}!`
                       }
                     </Text>
                   </Box>
@@ -696,69 +699,52 @@ const Spectate: React.FC = () => {
                       const bothMovesSubmitted = round.player1_move !== null && round.player2_move !== null;
                       const showMoves = bothMovesSubmitted && isCompleted;
 
-                        return (
-                          <Grid
-                            key={round.id}
-                            templateColumns={{ base: "auto 1fr auto", md: "auto 1fr 1fr 1fr auto" }}
-                            gap={4}
-                            alignItems="center"
-                            p={4}
-                            borderBottom="1px solid"
-                            borderColor="border.subtle"
-                            _hover={{ bg: "bg.subtle" }}
-                          >
-                            <Text fontWeight="bold" fontSize="lg">
-                              #{round.round_number}
+                      return (
+                        <Grid
+                          key={round.id}
+                          templateColumns={{ base: "auto 1fr auto", md: "auto 1fr 1fr 1fr auto" }}
+                          gap={4}
+                          alignItems="center"
+                          p={4}
+                          borderBottom="1px solid"
+                          borderColor="border.subtle"
+                          _hover={{ bg: "bg.subtle" }}
+                        >
+                          <Text fontWeight="bold" fontSize="lg">
+                            #{round.round_number}
+                          </Text>
+
+                          {/* Player 1 Move */}
+                          <VStack align="center" gap={1}>
+                            <Text fontSize="2xl">
+                              {showMoves ? getMoveEmoji(round.player1_move) : (round.player1_move ? '🤐' : '❓')}
                             </Text>
+                            <Text fontSize="xs" color="fg.muted" textAlign="center">
+                              {showMoves
+                                ? (round.player1_move || 'No move').toUpperCase()
+                                : round.player1_move ? 'SUBMITTED' : 'WAITING'
+                              }
+                            </Text>
+                          </VStack>
 
-                            {/* Player 1 Move */}
-                            <VStack align="center" gap={1}>
-                              <Text fontSize="2xl">
-                                {showMoves ? getMoveEmoji(round.player1_move) : (round.player1_move ? '🤐' : '❓')}
-                              </Text>
-                              <Text fontSize="xs" color="fg.muted" textAlign="center">
-                                {showMoves 
-                                  ? (round.player1_move || 'No move').toUpperCase()
-                                  : round.player1_move ? 'SUBMITTED' : 'WAITING'
-                                }
-                              </Text>
-                            </VStack>
+                          {/* Player 2 Move - Desktop */}
+                          <VStack align="center" gap={1} display={{ base: "none", md: "flex" }}>
+                            <Text fontSize="2xl">
+                              {showMoves ? getMoveEmoji(round.player2_move) : (round.player2_move ? '🤐' : '❓')}
+                            </Text>
+                            <Text fontSize="xs" color="fg.muted" textAlign="center">
+                              {showMoves
+                                ? (round.player2_move || 'No move').toUpperCase()
+                                : round.player2_move ? 'SUBMITTED' : 'WAITING'
+                              }
+                            </Text>
+                          </VStack>
 
-                            {/* Player 2 Move - Desktop */}
-                            <VStack align="center" gap={1} display={{ base: "none", md: "flex" }}>
-                              <Text fontSize="2xl">
-                                {showMoves ? getMoveEmoji(round.player2_move) : (round.player2_move ? '🤐' : '❓')}
-                              </Text>
-                              <Text fontSize="xs" color="fg.muted" textAlign="center">
-                                {showMoves 
-                                  ? (round.player2_move || 'No move').toUpperCase()
-                                  : round.player2_move ? 'SUBMITTED' : 'WAITING'
-                                }
-                              </Text>
-                            </VStack>
-
-                            {/* Result - Desktop */}
-                            <Box textAlign="center" display={{ base: "none", md: "block" }}>
-                              {showMoves && (
-                                <Badge
-                                  bg={result === 'WIN' ? "brutalist.green" : result === 'TIE' ? "brutalist.orange" : "fg.muted"}
-                                  color="white"
-                                  fontSize="xs"
-                                  fontWeight="black"
-                                  px={2}
-                                  py={1}
-                                  borderRadius="sm"
-                                  textTransform="uppercase"
-                                >
-                                  {result === 'WIN' ? `${winner} WINS` : result}
-                                </Badge>
-                              )}
-                            </Box>
-
-                            {/* Status */}
-                            <Box textAlign="center">
+                          {/* Result - Desktop */}
+                          <Box textAlign="center" display={{ base: "none", md: "block" }}>
+                            {showMoves && (
                               <Badge
-                                bg={isCompleted ? "brutalist.green" : bothMovesSubmitted ? "brutalist.blue" : "brutalist.orange"}
+                                bg={result === 'WIN' ? "brutalist.green" : result === 'TIE' ? "brutalist.orange" : "fg.muted"}
                                 color="white"
                                 fontSize="xs"
                                 fontWeight="black"
@@ -767,12 +753,29 @@ const Spectate: React.FC = () => {
                                 borderRadius="sm"
                                 textTransform="uppercase"
                               >
-                                {isCompleted ? 'DONE' : bothMovesSubmitted ? 'PROCESSING' : 'WAITING'}
+                                {result === 'WIN' ? `${winner} WINS` : result}
                               </Badge>
-                            </Box>
-                          </Grid>
-                        );
-                      })}
+                            )}
+                          </Box>
+
+                          {/* Status */}
+                          <Box textAlign="center">
+                            <Badge
+                              bg={isCompleted ? "brutalist.green" : bothMovesSubmitted ? "brutalist.blue" : "brutalist.orange"}
+                              color="white"
+                              fontSize="xs"
+                              fontWeight="black"
+                              px={2}
+                              py={1}
+                              borderRadius="sm"
+                              textTransform="uppercase"
+                            >
+                              {isCompleted ? 'DONE' : bothMovesSubmitted ? 'PROCESSING' : 'WAITING'}
+                            </Badge>
+                          </Box>
+                        </Grid>
+                      );
+                    })}
                   </VStack>
 
                   {/* Pagination Footer */}
@@ -958,17 +961,17 @@ const Spectate: React.FC = () => {
                           )}
                         </VStack>
 
-                        <Text 
-                          fontSize="sm" 
-                          fontWeight="bold" 
+                        <Text
+                          fontSize="sm"
+                          fontWeight="bold"
                           color="fg.default"
                           display={{ base: "none", md: "block" }}
                         >
                           {formatSolAmount(match.stake_amount)} ◎
                         </Text>
 
-                        <HStack 
-                          gap={1} 
+                        <HStack
+                          gap={1}
                           align="center"
                           display={{ base: "none", md: "flex" }}
                         >

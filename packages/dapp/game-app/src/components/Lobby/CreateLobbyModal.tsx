@@ -12,6 +12,7 @@ import {
 import { solConnection } from '@/web3';
 import { GAME_VAULT_ADDRESS } from '@/web3/constants';
 import { useNavigate } from 'react-router-dom';
+import apiUrl from '@/api/config';
 
 interface CreateLobbyModalProps {
   isOpen: boolean;
@@ -102,7 +103,7 @@ export const CreateLobbyModal: React.FC<CreateLobbyModalProps> = ({
     
       let tournament_id;
       if(maxPlayers == 4 || maxPlayers == 8){
-        const response = await fetch('http://localhost:4000/api/v1/game/create-tournament', {
+        const response = await fetch(`${apiUrl}/game/create-tournament`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -120,7 +121,7 @@ export const CreateLobbyModal: React.FC<CreateLobbyModalProps> = ({
       }
 
       console.log(tournament_id)
-      const response = await fetch('http://localhost:4000/api/v1/game/create-lobby', {
+      const response = await fetch(`${apiUrl}/game/create-lobby`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

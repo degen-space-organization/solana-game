@@ -15,6 +15,7 @@ import LobbyDetailsPage from './components/Lobby/LobbyDetailsPage';
 import { database } from '@/supabase/Database';
 import { toaster } from './components/ui/toaster';
 import type { User } from './types/lobby';
+import apiUrl from './api/config';
 
 // Types
 export type SectionType = 'mygame' | 'lobbies' | 'joined_lobbies' | 'tournaments' | 'leaderboard' | 'spectate' | 'demo';
@@ -87,7 +88,7 @@ function App() {
     });
 
     try {
-      const response = await fetch('http://localhost:4000/api/v1/game/join-lobby', {
+      const response = await fetch(`${apiUrl}/game/join-lobby`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -157,7 +158,7 @@ function App() {
               <Header 
                 currentUser={currentUser}
                 currentUserRank={currentUserRank}
-              />
+                />
             </GridItem>
 
             {/* Navigation */}
@@ -248,10 +249,10 @@ function App() {
                     />
                   } 
                 />
-                <Route 
+                {/* <Route 
                   path="/lobby/:lobbyId" 
                   element={<LobbyDetailsPage />} 
-                />
+                /> */}
               </Routes>
 
               {/* Chat Drawer for Mobile */}

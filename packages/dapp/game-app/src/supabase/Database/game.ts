@@ -1,4 +1,3 @@
-// src/supabase/Database/games.ts
 import type { IGameDataWithTournament } from '@/components/Game/GameInfo/GameInfo';
 import { supabase } from '../index';
 import type { Tables } from '../types';
@@ -622,13 +621,10 @@ export const games = {
       .order('created_at', { ascending: false })
       .limit(1);
 
-    console.log('nigger', rounds)
     
-
     if (roundsError || !rounds || rounds.length === 0) {
       throw new Error('No game rounds found for user');
     }
-    console.log('niggerino')
 
     return rounds[0];
   },

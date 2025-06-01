@@ -19,6 +19,7 @@ import { ChevronLeft, ChevronRight, Users, Trophy, Swords, RotateCcw, AlertCircl
 import type { PendingLobby } from '../../types/lobby';
 import { database } from '@/supabase/Database';
 import { useWallet } from '@solana/wallet-adapter-react';
+import apiUrl from '@/api/config';
 
 // Pagination Component - Mobile Responsive
 interface PaginationProps {
@@ -433,7 +434,7 @@ const LobbyPending: React.FC<LobbyPendingProps> = ({
 
     const userId = await database.users.getByWallet(publicKey.toBase58());
 
-    const response = await fetch('http://localhost:4000/api/v1/game/join-lobby', {
+    const response = await fetch(`${apiUrl}/game/join-lobby`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

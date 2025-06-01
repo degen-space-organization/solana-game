@@ -13,9 +13,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { Gamepad2 } from 'lucide-react';
 
 // Components
-import Game from '../Game/Game';
 import LobbyPending from '../Lobby/LobbyPending';
-import LobbyJoined from '../Lobby/LobbyJoined';
 import Leaderboard from '../Leaderboard/Leaderboard';
 import Spectate from '../Spectate/Spectate';
 import { CreateLobbyModal } from '../Lobby/CreateLobbyModal';
@@ -105,16 +103,6 @@ const MainContent: React.FC<MainContentProps> = ({
       type: "success",
       duration: 4000,
     });
-  };
-
-  const handleViewLobbyDetails = (lobbyId: number) => {
-    toaster.create({
-      title: "🔎 Viewing Lobby",
-      description: `Loading details for lobby #${lobbyId}`,
-      type: "info",
-      duration: 2000,
-    });
-    navigate(`/lobby/${lobbyId}`);
   };
 
   const handleJoinLobbyWithStatusCheck = async (lobbyId: number) => {

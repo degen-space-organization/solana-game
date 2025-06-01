@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Card,
@@ -6,7 +6,6 @@ import {
   HStack,
   Text,
   Image,
-  Flex,
   Spinner,
 } from '@chakra-ui/react';
 import { supabase } from '@/supabase/index';

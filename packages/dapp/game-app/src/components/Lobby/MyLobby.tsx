@@ -35,7 +35,6 @@ import {
     useBreakpointValue,
 } from '@chakra-ui/react';
 import {
-    Users,
     CheckCircle,
     Clock,
     UserX,
@@ -52,7 +51,7 @@ import {
 import { database } from '@/supabase/Database';
 import { toaster } from '@/components/ui/toaster';
 import type { PendingLobby } from '@/types/lobby';
-import { PublicKey, SystemProgram, Transaction } from '@solana/web3.js';
+import { SystemProgram, Transaction } from '@solana/web3.js';
 import { solConnection } from '@/web3';
 import { GAME_VAULT_ADDRESS } from '@/web3/constants';
 import apiUrl from '@/api/config';

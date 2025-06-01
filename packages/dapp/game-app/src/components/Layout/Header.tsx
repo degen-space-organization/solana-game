@@ -9,7 +9,7 @@ import {
   Heading,
   IconButton,
   Badge,
-  useBreakpointValue,
+  // useBreakpointValue,
 } from "@chakra-ui/react";
 import { Menu, MessageCircle } from 'lucide-react';
 
@@ -43,10 +43,10 @@ const Header: React.FC<HeaderProps> = ({
   onToggleNav,
   onToggleChat
 }) => {
-  const headerLayout = useBreakpointValue({ 
-    base: 'column', 
-    md: 'row' 
-  });
+  // const headerLayout = useBreakpointValue({ 
+  //   base: 'column', 
+  //   md: 'row' 
+  // });
 
   return (
     <Box

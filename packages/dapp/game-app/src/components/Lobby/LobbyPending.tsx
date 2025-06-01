@@ -46,10 +46,10 @@ interface LobbyPendingProps {
 
 
 const LobbyCard: React.FC<LobbyCardProps> = ({ lobby, onJoin, isUserInLobby, isLoading = false }) => {
-  const getDisplayName = (user: any) => {
-    if (!user) return 'Unknown';
-    return user.nickname || `${user.solana_address.slice(0, 4)}...${user.solana_address.slice(-4)}`;
-  };
+  // const getDisplayName = (user: any) => {
+  //   if (!user) return 'Unknown';
+  //   return user.nickname || `${user.solana_address.slice(0, 4)}...${user.solana_address.slice(-4)}`;
+  // };
 
   const isTournament = lobby.tournament_id !== null;
   const isFull = lobby.current_players >= lobby.max_players;

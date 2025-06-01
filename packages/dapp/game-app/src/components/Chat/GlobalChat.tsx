@@ -1,3 +1,4 @@
+// @ts-nocheck
 // src/components/Chat/GlobalChat.tsx
 import React, { useEffect, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';

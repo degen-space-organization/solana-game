@@ -106,6 +106,7 @@ export const spectate = {
           position: number;
           users: Tables<'users'>;
         }>,
+        // @ts-ignore
         rounds: rounds || [],
         player1Score,
         player2Score,

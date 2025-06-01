@@ -37,10 +37,10 @@ import {
 import { database } from '@/supabase/Database';
 import { toaster } from '@/components/ui/toaster';
 import type { PendingLobby } from '@/types/lobby';
-import { PublicKey, SystemProgram, Transaction } from '@solana/web3.js';
+import { SystemProgram, Transaction } from '@solana/web3.js';
 import { solConnection } from '@/web3';
 import { GAME_VAULT_ADDRESS } from '@/web3/constants';
-import { tournaments } from '@/supabase/Database/tournaments';
+// import { tournaments } from '@/supabase/Database/tournaments';
 
 
 // const GAME_VAULT_ADDRESS = new PublicKey('48wcCEj1hdV5UGwr3PmhqvU3ix1eN5rMqEsBxT4XKRfc'); // Replace with your actual vault address
@@ -90,7 +90,7 @@ const LobbyDetailsPage: React.FC = () => {
       try {
         setLoading(true);
         const id = parseInt(lobbyId, 10);
-        if (isNaN(id)) { 
+        if (isNaN(id)) {
           setError('Invalid Lobby ID.');
           setLoading(false);
           return;
@@ -436,7 +436,7 @@ const LobbyDetailsPage: React.FC = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          tournament_id: lobby!.tournament_id, 
+          tournament_id: lobby!.tournament_id,
           creator_user_id: lobby!.created_by,
         }),
       });
@@ -547,18 +547,20 @@ const LobbyDetailsPage: React.FC = () => {
         duration: 3000,
       });
 
-      if(lobby?.tournament_id){
+      if (lobby?.tournament_id) {
         const response = await fetch(`${apiUrl}/game/join-tournament`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          user_id: currentUser.id,
-          tournament_id: lobby!.tournament_id,
-        }),
-      });
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            user_id: currentUser.id,
+            tournament_id: lobby!.tournament_id,
+          }),
+        });
+        if (response.ok) console.log('Joined tournament successfully');
       }
+
 
       // Call the backend API to handle joining the lobby
       const response = await fetch(`${apiUrl}/game/join-lobby`, {
@@ -1236,34 +1238,34 @@ const LobbyDetailsPage: React.FC = () => {
                     <VStack align="stretch" padding="2">
                       {hasUserStaked() ? (
 
-                          <Button
-                            onClick={handleLeave}
-                            disabled={actionLoading}
-                            bg="#FF6B35"
-                            color="white"
-                            fontWeight="black"
-                            fontSize="lg"
-                            py="6"
-                            borderRadius="0"
-                            border="3px solid"
-                            borderColor="gray.900"
-                            shadow="4px 4px 0px rgba(0,0,0,0.8)"
-                            textTransform="uppercase"
-                            _hover={!actionLoading ? {
-                              bg: "#E55A2B",
-                              transform: "translate(-2px, -2px)",
-                              shadow: "6px 6px 0px rgba(0,0,0,0.8)",
-                            } : {}}
-                          >
-                            {actionLoading ? (
-                              <Spinner size="sm" />
-                            ) : (
-                              <HStack>
-                                <LogOut size={20} />
-                                <Text>Withdraw from Lobby</Text>
-                              </HStack>
-                            )}
-                          </Button>
+                        <Button
+                          onClick={handleLeave}
+                          disabled={actionLoading}
+                          bg="#FF6B35"
+                          color="white"
+                          fontWeight="black"
+                          fontSize="lg"
+                          py="6"
+                          borderRadius="0"
+                          border="3px solid"
+                          borderColor="gray.900"
+                          shadow="4px 4px 0px rgba(0,0,0,0.8)"
+                          textTransform="uppercase"
+                          _hover={!actionLoading ? {
+                            bg: "#E55A2B",
+                            transform: "translate(-2px, -2px)",
+                            shadow: "6px 6px 0px rgba(0,0,0,0.8)",
+                          } : {}}
+                        >
+                          {actionLoading ? (
+                            <Spinner size="sm" />
+                          ) : (
+                            <HStack>
+                              <LogOut size={20} />
+                              <Text>Withdraw from Lobby</Text>
+                            </HStack>
+                          )}
+                        </Button>
                       ) : (
                         <VStack>
                           <Button
@@ -1315,9 +1317,9 @@ const LobbyDetailsPage: React.FC = () => {
                             } : {}}
                           >
                             <HStack>
-                                <LogOut size={20} />
-                                <Text>Leave Lobby</Text>
-                              </HStack>
+                              <LogOut size={20} />
+                              <Text>Leave Lobby</Text>
+                            </HStack>
                           </Button>
                         </VStack>
                       )}

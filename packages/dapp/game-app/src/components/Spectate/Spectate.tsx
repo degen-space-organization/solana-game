@@ -10,9 +10,8 @@ import {
   IconButton,
   Card,
   Grid,
-  GridItem,
   Badge,
-  useBreakpointValue,
+  // useBreakpointValue,
   Spinner,
 } from '@chakra-ui/react';
 import {
@@ -22,7 +21,6 @@ import {
   Clock,
   Trophy,
   Users,
-  Gamepad2,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
@@ -75,7 +73,7 @@ const Spectate: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const ROUNDS_PER_PAGE = 10;
 
-  const isMobile = useBreakpointValue({ base: true, md: false });
+  // const isMobile = useBreakpointValue({ base: true, md: false });
 
   // Utility functions
   const getDisplayName = (user: any, fallback: string = 'Unknown'): string => {

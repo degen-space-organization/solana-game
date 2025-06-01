@@ -8,7 +8,7 @@ import {
   Heading,
   Text,
 } from "@chakra-ui/react";
-import { useNavigate } from 'react-router-dom';
+// import { useNavigate } from 'react-router-dom';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { Gamepad2 } from 'lucide-react';
 
@@ -35,7 +35,7 @@ interface MainContentProps {
 
 const MainContent: React.FC<MainContentProps> = ({
   activeSection,
-  currentUser,
+  // currentUser,
   onJoinLobby,
   onSectionChange
 }) => {
@@ -43,7 +43,7 @@ const MainContent: React.FC<MainContentProps> = ({
   const [lobbiesRefreshTrigger, setLobbiesRefreshTrigger] = useState(0);
   const [isUserInLobby, setIsUserInLobby] = useState(false);
   const { publicKey } = useWallet();
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
 
   // Check if user is already in a lobby/game
   const checkUserGameStatus = async () => {

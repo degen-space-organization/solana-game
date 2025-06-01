@@ -1,17 +1,17 @@
 // packages/dapp/game-app/src/components/Lobby/CreateLobbyModal.tsx
 import React, { useState, useEffect } from 'react';
-import { useConnection, useWallet } from '@solana/wallet-adapter-react';
+import { useWallet } from '@solana/wallet-adapter-react';
 import { toaster } from '../ui/toaster';
 import { database } from '@/supabase/Database';
 import {
   Transaction,
   SystemProgram,
-  PublicKey,
-  LAMPORTS_PER_SOL
+  // PublicKey,
+  // LAMPORTS_PER_SOL
 } from '@solana/web3.js';
 import { solConnection } from '@/web3';
 import { GAME_VAULT_ADDRESS } from '@/web3/constants';
-import { useNavigate } from 'react-router-dom';
+// import { useNavigate } from 'react-router-dom';
 import apiUrl from '@/api/config';
 
 interface CreateLobbyModalProps {
@@ -43,7 +43,7 @@ export const CreateLobbyModal: React.FC<CreateLobbyModalProps> = ({
   if (!isOpen) return null;
 
   const { publicKey, connected, signTransaction } = useWallet();
-  const { connection } = useConnection();
+  // const { connection } = useConnection();
   const [lobbyName, setLobbyName] = useState('');
   const [stakeAmount, setStakeAmount] = useState<string>(stakeOptions[0].value);
   const [maxPlayers, setMaxPlayers] = useState<number>(maxPlayersOptions[0].value);

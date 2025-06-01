@@ -1,21 +1,18 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Box,
   VStack,
-  HStack,
   Text,
   Spinner,
   Card,
-  useBreakpointValue,
+  // useBreakpointValue,
   Heading,
-  Badge,
 } from '@chakra-ui/react';
 import {
-  Trophy,
-  Swords,
-  Clock,
+  // Trophy,
+  // Swords,
+  // Clock,
   AlertTriangle,
-  CheckCircle
 } from 'lucide-react';
 import { useWallet } from '@solana/wallet-adapter-react';
 
@@ -49,7 +46,7 @@ export default function Game() {
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const isMobile = useBreakpointValue({ base: true, md: false });
+  // const isMobile = useBreakpointValue({ base: true, md: false });
 
   // Fetch current game data with retry logic
   const fetchGameData = async (isRetry = false) => {
@@ -240,46 +237,46 @@ export default function Game() {
     return { status: 'unknown', component: null };
   };
 
-  const getStatusInfo = (status: string) => {
-    switch (status) {
-      case 'waiting_tournament':
-        return {
-          icon: <Clock size={20} />,
-          text: 'WAITING FOR TOURNAMENT',
-          color: '#FF6B35',
-          bgColor: 'brutalist.orange'
-        };
-      case 'waiting_match':
-        return {
-          icon: <Clock size={20} />,
-          text: 'ADVANCING TO NEXT ROUND',
-          color: '#FF6B35',
-          bgColor: 'brutalist.orange'
-        };
-      case 'in_progress':
-        return {
-          icon: <Swords size={20} />,
-          text: 'BATTLE IN PROGRESS',
-          color: '#06D6A0',
-          bgColor: 'brutalist.green'
-        };
-      case 'completed':
-      case 'tournament_completed':
-        return {
-          icon: <Trophy size={20} />,
-          text: 'MATCH COMPLETED',
-          color: '#7B2CBF',
-          bgColor: 'primary.emphasis'
-        };
-      default:
-        return {
-          icon: <AlertTriangle size={20} />,
-          text: 'UNKNOWN STATUS',
-          color: '#6B7280',
-          bgColor: 'brutalist.gray.500'
-        };
-    }
-  };
+  // const getStatusInfo = (status: string) => {
+  //   switch (status) {
+  //     case 'waiting_tournament':
+  //       return {
+  //         icon: <Clock size={20} />,
+  //         text: 'WAITING FOR TOURNAMENT',
+  //         color: '#FF6B35',
+  //         bgColor: 'brutalist.orange'
+  //       };
+  //     case 'waiting_match':
+  //       return {
+  //         icon: <Clock size={20} />,
+  //         text: 'ADVANCING TO NEXT ROUND',
+  //         color: '#FF6B35',
+  //         bgColor: 'brutalist.orange'
+  //       };
+  //     case 'in_progress':
+  //       return {
+  //         icon: <Swords size={20} />,
+  //         text: 'BATTLE IN PROGRESS',
+  //         color: '#06D6A0',
+  //         bgColor: 'brutalist.green'
+  //       };
+  //     case 'completed':
+  //     case 'tournament_completed':
+  //       return {
+  //         icon: <Trophy size={20} />,
+  //         text: 'MATCH COMPLETED',
+  //         color: '#7B2CBF',
+  //         bgColor: 'primary.emphasis'
+  //       };
+  //     default:
+  //       return {
+  //         icon: <AlertTriangle size={20} />,
+  //         text: 'UNKNOWN STATUS',
+  //         color: '#6B7280',
+  //         bgColor: 'brutalist.gray.500'
+  //       };
+  //   }
+  // };
 
   // Loading state
   if (loading && !gameData) {
@@ -380,8 +377,9 @@ export default function Game() {
     );
   }
 
-  const { status, component } = getGameStatus();
-  const statusInfo = getStatusInfo(status);
+  // const { status, component } = getGameStatus();
+  const { component } = getGameStatus();
+  // const statusInfo = getStatusInfo(status);
 
   return (
     <VStack align="stretch">

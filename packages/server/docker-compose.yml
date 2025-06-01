@@ -11,7 +11,20 @@ services:
       - .env
     environment:
       - NODE_ENV=development
-    # volumes:
+      # volumes:
       # - .:/app
       # - /app/node_modules
-    # command: yarn dev
+      # command: yarn dev
+
+
+  nginx-proxy-manager:
+    image: jc21/nginx-proxy-manager:latest
+    container_name: nginx-proxy-manager
+    restart: always
+    ports:
+      - "80:80" # HTTP
+      - "443:443" # HTTPS
+      - "81:81" # Admin UI
+    volumes:
+      - ./data/nginx/data:/data
+      - ./data/nginx/letsencrypt:/etc/letsencrypt

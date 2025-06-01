@@ -10,8 +10,6 @@ import type { PendingTournament } from "../../types/tournament";
 import type { User } from "../../types/index";
 
 import { supabase } from "..";
-import { LAMPORTS_PER_SOL } from '@solana/web3.js';
-
 // Extended types for tournament usage
 
 
@@ -133,35 +131,35 @@ export const tournaments = {
      * @param tournamentId The ID of the tournament to fetch
      * @returns {Promise<PendingTournament | null>} - Returns the tournament details or null if not found
      */
-    async getById(tournamentId: number): Promise<PendingTournament | null> {
-        const { data, error } = await supabase
-            .from('tournaments')
-            .select(`
-                *,
-                created_by_user:users!tournaments_created_by_fkey(id, nickname, solana_address, matches_won, matches_lost)
-            `)
-            .eq('id', tournamentId)
-            .single(); // Use .single() to expect one result
+    // async getById(tournamentId: number): Promise<PendingTournament | null> {
+    //     const { data, error } = await supabase
+    //         .from('tournaments')
+    //         .select(`
+    //             *,
+    //             created_by_user:users!tournaments_created_by_fkey(id, nickname, solana_address, matches_won, matches_lost)
+    //         `)
+    //         .eq('id', tournamentId)
+    //         .single(); // Use .single() to expect one result
 
-        if (error) {
-            console.error(`Error fetching tournament with ID ${tournamentId}:`, error);
-            return null;
-        }
+    //     if (error) {
+    //         console.error(`Error fetching tournament with ID ${tournamentId}:`, error);
+    //         return null;
+    //     }
 
-        if (data) {
-            return {
-                ...data,
-                prize_pool_sol: parseFloat(data.prize_pool || '0') / 1e9,
-                entry_fee_sol: parseFloat(data.prize_pool || '0') / (data.max_players! * 1e9),
-                time_since_created: new Date(data.created_at!).toLocaleString(),
-                can_start: data.current_players === data.max_players,
-                slots_remaining: data.max_players! - data.current_players!,
-            } as PendingTournament;
-        } else {
-            console.warn(`Tournament with ID ${tournamentId} not found.`);
-            return null;
-        }
-    },
+    //     if (data) {
+    //         return {
+    //             ...data,
+    //             prize_pool_sol: parseFloat(data.prize_pool || '0') / 1e9,
+    //             entry_fee_sol: parseFloat(data.prize_pool || '0') / (data.max_players! * 1e9),
+    //             time_since_created: new Date(data.created_at!).toLocaleString(),
+    //             can_start: data.current_players === data.max_players,
+    //             slots_remaining: data.max_players! - data.current_players!,
+    //         } as PendingTournament;
+    //     } else {
+    //         console.warn(`Tournament with ID ${tournamentId} not found.`);
+    //         return null;
+    //     }
+    // },
 
     /**
      * Fetches tournament participants by tournament ID

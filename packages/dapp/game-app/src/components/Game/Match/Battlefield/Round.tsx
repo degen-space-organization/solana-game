@@ -5,15 +5,13 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import {
   Box,
   VStack,
-  HStack,
   Text,
   Button,
   Spinner,
   Card,
-  Badge,
   useBreakpointValue,
 } from '@chakra-ui/react';
-import { RefreshCw, AlertTriangle, Info } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 
 import Timer from './Timer';
 import ChooseMove from './ChoseMove';
@@ -102,7 +100,7 @@ export default function Round() {
             console.log('🔄 Fetching round info for:', publicKey.toString());
 
             // Fetch user info, match IDs, and latest round info
-            const [userResult, matchIds] = await Promise.all([
+            const [userResult] = await Promise.all([
                 database.users.getByWallet(publicKey.toString()),
                 fetchUserMatches(publicKey.toString())
             ]);
@@ -385,17 +383,6 @@ export default function Round() {
             </Box>
         );
     }
-
-    const handleManualRefresh = async () => {
-        console.log('🔄 Manual refresh triggered');
-        const latest = await database.games.findLatestGameRoundForUser(userInfo!.solana_address);
-        console.log('📋 Manual fetch result:', latest);
-        if (latest && latest.id !== roundInfo?.id) {
-            console.log('✅ Different round found manually');
-            setComponentKey(prev => prev + 1);
-            await fetchRoundInfo();
-        }
-    };
 
     return (
         <Box key={componentKey} border={'none'} shadow={'none'}>

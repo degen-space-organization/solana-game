@@ -4,5 +4,10 @@
   "workspaces": [
     "packages/*",
     "packages/dapp/*"
-  ]
+  ],
+  "scripts": {
+    "server:build": "bash packages/server/scripts/build.sh",
+    "server:dev": "bash packages/server/scripts/dev.sh",
+    "server:stop": "bash packages/server/scripts/stop.sh"
+  }
 }

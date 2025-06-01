@@ -1,29 +1,30 @@
 // src/components/Layout/MainContent.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Container,
   VStack,
-  HStack,
-  Button,
   Card,
   Heading,
   Text,
 } from "@chakra-ui/react";
 import { useNavigate } from 'react-router-dom';
+import { useWallet } from '@solana/wallet-adapter-react';
+import { Gamepad2 } from 'lucide-react';
 
 // Components
-import Game from '../Game/Game';
 import LobbyPending from '../Lobby/LobbyPending';
-import LobbyJoined from '../Lobby/LobbyJoined';
 import Leaderboard from '../Leaderboard/Leaderboard';
 import Spectate from '../Spectate/Spectate';
 import { CreateLobbyModal } from '../Lobby/CreateLobbyModal';
 
 // Utils
 import { toaster } from '../ui/toaster';
+import { database } from '@/supabase/Database';
 import type { User } from '../../types/lobby';
 import type { SectionType } from '../../App';
+import MyLobby from '../Lobby/MyLobby';
+import GamePage from '../Game/GamePage';
 
 interface MainContentProps {
   activeSection: SectionType;
@@ -40,15 +41,62 @@ const MainContent: React.FC<MainContentProps> = ({
 }) => {
   const [isCreateLobbyModalOpen, setIsCreateLobbyModalOpen] = useState(false);
   const [lobbiesRefreshTrigger, setLobbiesRefreshTrigger] = useState(0);
+  const [isUserInLobby, setIsUserInLobby] = useState(false);
+  const { publicKey } = useWallet();
   const navigate = useNavigate();
 
+  // Check if user is already in a lobby/game
+  const checkUserGameStatus = async () => {
+    if (!publicKey) {
+      setIsUserInLobby(false);
+      return;
+    }
+
+    try {
+      const isInGame = await database.games.isInTournamentOrMatch(publicKey.toBase58());
+      setIsUserInLobby(isInGame);
+    } catch (error) {
+      console.error("Error checking user game status:", error);
+      setIsUserInLobby(false);
+    }
+  };
+
+  useEffect(() => {
+    checkUserGameStatus();
+  }, [publicKey, activeSection]);
+
   const handleCreateLobby = () => {
+    // Only allow creating lobby if user is not already in one
+    if (isUserInLobby) {
+      toaster.create({
+        title: "Already in Game",
+        description: "You're already participating in a game. Complete it first before creating a new lobby.",
+        type: "warning",
+        duration: 5000,
+      });
+      return;
+    }
+
+    if (!publicKey) {
+      toaster.create({
+        title: "Wallet Not Connected",
+        description: "Please connect your wallet to create a lobby.",
+        type: "error",
+        duration: 5000,
+      });
+      return;
+    }
+
     setIsCreateLobbyModalOpen(true);
   };
 
   const handleLobbyCreated = () => {
     setIsCreateLobbyModalOpen(false);
     setLobbiesRefreshTrigger(prev => prev + 1);
+
+    // Refresh user status after creating lobby
+    checkUserGameStatus();
+
     toaster.create({
       title: "Lobby Created! 🎉",
       description: "Your lobby has been created successfully.",
@@ -57,162 +105,52 @@ const MainContent: React.FC<MainContentProps> = ({
     });
   };
 
-  const handleViewLobbyDetails = (lobbyId: number) => {
-    toaster.create({
-      title: "🔎 Viewing Lobby",
-      description: `Loading details for lobby #${lobbyId}`,
-      type: "info",
-      duration: 2000,
-    });
-    navigate(`/lobby/${lobbyId}`);
+  const handleJoinLobbyWithStatusCheck = async (lobbyId: number) => {
+    // Check user status before allowing join
+    if (isUserInLobby) {
+      toaster.create({
+        title: "Already in Game",
+        description: "You're already participating in a game. Complete it first before joining another lobby.",
+        type: "warning",
+        duration: 5000,
+      });
+      return;
+    }
+
+    onJoinLobby(lobbyId);
+
+    //set activeSection to 'joined_lobbies' after joining
+    onSectionChange('joined_lobbies');
+
+    // Refresh user status after attempting to join
+    setTimeout(() => {
+      checkUserGameStatus();
+    }, 1000);
+  };
+
+  const handleRefreshLobbies = () => {
+    setLobbiesRefreshTrigger(prev => prev + 1);
+    checkUserGameStatus();
   };
 
   const renderContent = () => {
     switch (activeSection) {
       case 'mygame':
-        return (
-          <Container maxW="100%" p={0}>
-            <Card.Root
-              borderWidth="4px"
-              borderStyle="solid"
-              borderColor="border.default"
-              bg="bg.default"
-              shadow="brutalist.xl"
-              borderRadius="none"
-              overflow="hidden"
-            >
-              <Card.Body p={0}>
-                <Game />
-              </Card.Body>
-            </Card.Root>
-          </Container>
-        );
+        return <GamePage />;
 
       case 'lobbies':
         return (
-          <VStack padding={6} align="stretch">
-            {/* Action Buttons */}
-            <HStack padding={4} justify="center" wrap="wrap">
-              <Button
-                onClick={handleCreateLobby}
-                bg="brutalist.green"
-                color="primary.contrast"
-                fontWeight="black"
-                fontSize="xl"
-                textTransform="uppercase"
-                letterSpacing="wider"
-                borderRadius="none"
-                border="4px solid"
-                borderColor="border.default"
-                shadow="brutalist.lg"
-                _hover={{
-                  transform: "translate(-3px, -3px)",
-                  shadow: "brutalist.xl",
-                }}
-                _active={{
-                  transform: "translate(0px, 0px)",
-                  shadow: "brutalist.md",
-                }}
-                size="lg"
-                px={12}
-                py={6}
-              >
-                🚀 Create New Game
-              </Button>
-
-              <Button
-                onClick={() => window.location.reload()}
-                bg="primary.solid"
-                color="primary.contrast"
-                fontWeight="black"
-                fontSize="xl"
-                textTransform="uppercase"
-                letterSpacing="wider"
-                borderRadius="none"
-                border="4px solid"
-                borderColor="border.default"
-                shadow="brutalist.lg"
-                _hover={{
-                  transform: "translate(-3px, -3px)",
-                  shadow: "brutalist.xl",
-                }}
-                _active={{
-                  transform: "translate(0px, 0px)",
-                  shadow: "brutalist.md",
-                }}
-                size="lg"
-                px={12}
-                py={6}
-              >
-                🔄 Refresh Games
-              </Button>
-            </HStack>
-
-            {/* Lobbies List */}
-            <Box>
-              {isCreateLobbyModalOpen ? (
-                <CreateLobbyModal
-                  isOpen={isCreateLobbyModalOpen}
-                  onClose={() => setIsCreateLobbyModalOpen(false)}
-                  onLobbyCreated={handleLobbyCreated}
-                />
-              ) : (
-                <LobbyPending 
-                  onJoinLobby={onJoinLobby}
-                  useMockData={false}
-                />
-              )}
-            </Box>
-          </VStack>
-        );
-
-      case 'joined_lobbies':
-        return (
-          <LobbyJoined
-            onViewLobbyDetails={handleViewLobbyDetails}
-            currentUser={currentUser}
+          <LobbyPending
+            onJoinLobby={handleJoinLobbyWithStatusCheck}
+            useMockData={false}
+            refreshTrigger={lobbiesRefreshTrigger}
+            onCreateLobby={handleCreateLobby}
+            onRefresh={handleRefreshLobbies}
           />
         );
 
-      case 'tournaments':
-        return (
-          <Container maxW="4xl">
-            <Card.Root
-              borderWidth="4px"
-              borderStyle="solid"
-              borderColor="border.default"
-              bg="bg.default"
-              shadow="brutalist.xl"
-              borderRadius="none"
-              p={12}
-              textAlign="center"
-              transform="rotate(-0.5deg)"
-              _hover={{
-                transform: "rotate(0deg) scale(1.02)",
-                shadow: "brutalist.2xl",
-              }}
-              transition="all 0.2s ease"
-            >
-              <Card.Body>
-                <Heading 
-                  size="xl" 
-                  fontWeight="black" 
-                  color="fg.default" 
-                  mb={6} 
-                  textTransform="uppercase"
-                >
-                  🏆 TOURNAMENTS
-                </Heading>
-                <Text fontSize="xl" color="fg.muted" mb={4}>
-                  Tournament brackets coming soon!
-                </Text>
-                <Text fontSize="md" color="fg.subtle">
-                  Get ready for epic multi-player competitions with prize pools!
-                </Text>
-              </Card.Body>
-            </Card.Root>
-          </Container>
-        );
+      case 'joined_lobbies':
+        return <MyLobby />
 
       case 'leaderboard':
         return <Leaderboard />;
@@ -229,17 +167,27 @@ const MainContent: React.FC<MainContentProps> = ({
               borderColor="border.default"
               bg="bg.default"
               shadow="brutalist.xl"
-              borderRadius="none"
+              borderRadius="0"
               p={12}
               textAlign="center"
             >
               <Card.Body>
-                <Heading size="xl" fontWeight="black" color="fg.default" mb={4}>
-                  🎮 Welcome to Solana Game
-                </Heading>
-                <Text fontSize="lg" color="fg.muted">
-                  Select a section from the navigation above to get started!
-                </Text>
+                <VStack padding={6}>
+                  <Box
+                    bg="primary.solid"
+                    p={6}
+                    border="4px solid"
+                    borderColor="border.default"
+                  >
+                    <Gamepad2 size={64} color="black" />
+                  </Box>
+                  <Heading size="xl" fontWeight="black" color="fg.default">
+                    🎮 Welcome to Solana Game
+                  </Heading>
+                  <Text fontSize="lg" color="fg.muted" textAlign="center" maxW="400px">
+                    Select a section from the navigation to get started with your gaming adventure!
+                  </Text>
+                </VStack>
               </Card.Body>
             </Card.Root>
           </Container>
@@ -248,13 +196,22 @@ const MainContent: React.FC<MainContentProps> = ({
   };
 
   return (
-    <Box
-      p={6}
-      minH="100%"
-      overflow="auto"
-    >
-      {renderContent()}
-    </Box>
+    <>
+      <Box
+        p={{ base: 4, md: 6 }}
+        minH="100%"
+        overflow="auto"
+      >
+        {renderContent()}
+      </Box>
+
+      {/* Create Lobby Modal */}
+      <CreateLobbyModal
+        isOpen={isCreateLobbyModalOpen}
+        onClose={() => setIsCreateLobbyModalOpen(false)}
+        onLobbyCreated={handleLobbyCreated}
+      />
+    </>
   );
 };
 

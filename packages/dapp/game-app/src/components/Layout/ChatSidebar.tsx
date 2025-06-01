@@ -23,28 +23,64 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   isMobile
 }) => {
   const chatContent = (
-    <>
+    <Box
+      h="100%"
+      display="flex"
+      flexDirection="column"
+      overflow="hidden"
+    >
       {isMobile && (
-        <IconButton
-          onClick={onClose}
-          bg="transparent"
-          color="primary.contrast"
-          _hover={{ bg: "bg.muted" }}
-          _active={{ bg: "bg.subtle" }}
-          border="2px solid"
-          borderColor="border.subtle"
-          borderRadius="none"
-          shadow="brutalist.sm"
+        <Box
+          p={4}
+          borderBottom="4px solid"
+          borderColor="border.default"
+          bg="bg.subtle"
+          flexShrink={0}
         >
-          <X size={20} />
-        </IconButton>
+          <HStack justify="space-between" align="center">
+            <HStack>
+              <MessageCircle size={24} color="#118AB2" />
+              <Heading
+                size="md"
+                fontWeight="black"
+                color="fg.default"
+                textTransform="uppercase"
+                letterSpacing="wider"
+              >
+                Chat
+              </Heading>
+            </HStack>
+            <IconButton
+              onClick={onClose}
+              bg="error"
+              color="fg.inverted"
+              _hover={{ 
+                bg: "red.600",
+                transform: "translate(-1px, -1px)",
+                shadow: "brutalist.md",
+              }}
+              _active={{ 
+                bg: "red.700",
+                transform: "translate(0px, 0px)",
+                shadow: "brutalist.sm",
+              }}
+              border="2px solid"
+              borderColor="border.default"
+              borderRadius="none"
+              shadow="brutalist.sm"
+              size="sm"
+            >
+              <X size={20} />
+            </IconButton>
+          </HStack>
+        </Box>
       )}
 
-      {/* Chat Content */}
-      <Box flex="1" overflow="hidden">
+      {/* Chat Content - Takes remaining space */}
+      <Box flex="1" overflow="hidden" minH="0">
         <GlobalChatWrapper />
       </Box>
-    </>
+    </Box>
   );
 
   if (isMobile) {
@@ -67,6 +103,7 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
             w="350px"
             display="flex"
             flexDirection="column"
+            overflow="hidden"
           >
             {chatContent}
           </Drawer.Content>
@@ -79,15 +116,14 @@ const ChatSidebar: React.FC<ChatSidebarProps> = ({
   return (
     <Box
       bg="bg.default"
-      // border="4px solid"
       borderColor="border.default"
       borderRadius="none"
       shadow="brutalist.lg"
       h="100%"
       display="flex"
       flexDirection="column"
-      position="sticky"
-      top="0"
+      overflow="hidden"
+      position="relative"
     >
       {chatContent}
     </Box>

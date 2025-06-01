@@ -21,6 +21,7 @@ import { Connection, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { dbClient } from "../../database/provider";
 import { gSolanaProvider } from "../../utils/provider";
 import { ADMIN_PUBLIC_KEY } from "../../utils/constants";
+import AdminWallet from "../../utils/adminWallet";
 
 
 // const adminWallet = '48wcCEj1hdV5UGwr3PmhqvU3ix1eN5rMqEsBxT4XKRfc'
@@ -63,8 +64,68 @@ export default class VaultController {
             return false;
         }
     };
+    
+    static async processPayoutDuel(matchId: number) {
+        try {
+            // fetch the match
+            const match = await dbClient.from('matches').select('*').eq('id', matchId).single();
+            if (!match) {
+                console.error('Match not found for ID:', matchId);
+                return false;
+            }
 
+            // fetch the winner
+            const winner = await dbClient.from('users').select('*').eq('id', match.data?.winner_id!).single();
+            if (!winner) {
+                console.error('Winner not found for ID:', match.data?.winner_id);
+                return false;
+            }
 
+            // calculate the payout amount that is in the following format: 100000000', '250000000', '500000000', '750000000', '1000000000'
+            const payoutInSol = parseFloat(match.data?.total_prize_pool!) / 1e9; // Convert lamports to SOL
+
+            // process the payout
+            const txHash = await AdminWallet.processPayoutDuel(winner.data?.solana_address!, payoutInSol);
+            if (!txHash) {
+                console.error('Failed to process payout for duel');
+                return false;
+            }
+            return txHash;
+
+        } catch (error) {
+            console.error('Error processing payout for duel:', error);
+            return null;
+        }
+    }
+
+    static async processPayoutTournamentSingle(tournamentId: number) {
+        try {
+            // fetch tournament
+            const tournament = await dbClient.from('tournaments').select('*').eq('id', tournamentId).single();
+            if (!tournament) {
+                console.error('Tournament not found for ID:', tournamentId);
+                return false;
+            }
+            // fetch the winner
+            const winner = await dbClient.from('users').select('*').eq('id', tournament.data?.winner_id!).single();
+            if (!winner) {
+                console.error('Winner not found for ID:', tournament.data?.winner_id);
+                return false;
+            }
+            // calculate the payout amount that is in the following format: 100000000', '250000000', '500000000', '750000000', '1000000000'
+            const payoutInSol = parseFloat(tournament.data?.prize_pool!) / 1e9; // Convert lamports to SOL
+            // process the payout
+            const txHash = await AdminWallet.processPayoutTournamentSingle(winner.data?.solana_address!, payoutInSol);
+            if (!txHash) {
+                console.error('Failed to process payout for tournament single');
+                return false;
+            }
+            return true;
+        } catch (error) {
+            console.error('Error processing payout for tournament:', error);
+            return null;
+        }
+    }
 
     static async validateDeposit(txHash: string, userId: number, amount: number, lobbyId: number): Promise<boolean> {
         try {

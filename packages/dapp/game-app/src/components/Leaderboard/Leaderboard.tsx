@@ -227,7 +227,7 @@ const Leaderboard: React.FC = () => {
       >
         {/* Search Header */}
         <Box
-          bg="primary.subtle"
+          bg="primary.solid"
           // bg="violet.500"
           borderBottom="2px solid"
           borderColor="border.default"

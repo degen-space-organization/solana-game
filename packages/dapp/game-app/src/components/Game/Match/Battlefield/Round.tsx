@@ -2,6 +2,18 @@ import { database } from '@/supabase/Database';
 import { supabase } from '@/supabase';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useEffect, useState, useCallback, useRef } from 'react';
+import {
+  Box,
+  VStack,
+  HStack,
+  Text,
+  Button,
+  Spinner,
+  Card,
+  Badge,
+  useBreakpointValue,
+} from '@chakra-ui/react';
+import { RefreshCw, AlertTriangle, Info } from 'lucide-react';
 
 import Timer from './Timer';
 import ChooseMove from './ChoseMove';
@@ -34,6 +46,8 @@ export default function Round() {
     const [error, setError] = useState<string | null>(null);
     const [componentKey, setComponentKey] = useState(0);
     const [userMatchIds, setUserMatchIds] = useState<number[]>([]);
+
+    const isMobile = useBreakpointValue({ base: true, md: false });
 
     // Use ref to track current round ID for subscription comparison
     const currentRoundIdRef = useRef<number | null>(null);
@@ -249,100 +263,171 @@ export default function Round() {
     // Loading state
     if (loading) {
         return (
-            <div className="round-info" style={{ padding: '20px', textAlign: 'center' }}>
-                <div>Loading round information...</div>
-                <div style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>
-                    Check console for debug info
-                </div>
-            </div>
+            <Box p={6} textAlign="center">
+                <Card.Root
+                    bg="bg.default"
+                    border="2px solid"
+                    borderColor="border.default"
+                    borderRadius="sm"
+                    shadow="brutalist.md"
+                >
+                    <Card.Body p={6}>
+                        <VStack padding={4}>
+                            <Spinner size="lg" color="primary.emphasis" />
+                            <Text fontSize="md" fontWeight="bold" color="fg.default" textTransform="uppercase">
+                                Loading Round Information...
+                            </Text>
+                            <Text fontSize="xs" color="fg.muted">
+                                Fetching latest game data
+                            </Text>
+                        </VStack>
+                    </Card.Body>
+                </Card.Root>
+            </Box>
         );
     }
 
     // Error state
     if (error) {
         return (
-            <div className="round-info" style={{ padding: '20px', textAlign: 'center' }}>
-                <div style={{ color: 'red' }}>Error: {error}</div>
-                <button
-                    onClick={fetchRoundInfo}
-                    style={{ marginTop: '10px', padding: '5px 10px' }}
+            <Box p={6} textAlign="center">
+                <Card.Root
+                    bg="error"
+                    color="fg.inverted"
+                    border="2px solid"
+                    borderColor="border.default"
+                    borderRadius="sm"
+                    shadow="brutalist.md"
                 >
-                    Retry
-                </button>
-                <div style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>
-                    Check console for debug info
-                </div>
-            </div>
+                    <Card.Body p={6}>
+                        <VStack padding={4}>
+                            <AlertTriangle size={36} />
+                            <Text fontSize="md" fontWeight="bold" textTransform="uppercase">
+                                Round Error
+                            </Text>
+                            <Text fontSize="sm" textAlign="center">
+                                {error}
+                            </Text>
+                            <Button
+                                onClick={fetchRoundInfo}
+                                bg="fg.inverted"
+                                color="error"
+                                border="2px solid"
+                                borderColor="fg.inverted"
+                                borderRadius="sm"
+                                shadow="brutalist.sm"
+                                fontWeight="bold"
+                                textTransform="uppercase"
+                                // leftIcon={<RefreshCw size={16} />}
+                                _hover={{
+                                    transform: "translate(-1px, -1px)",
+                                    shadow: "brutalist.md",
+                                }}
+                            >
+                                Retry
+                            </Button>
+                            {!isMobile && (
+                                <Text fontSize="xs" opacity={0.8}>
+                                    Check console for debug info
+                                </Text>
+                            )}
+                        </VStack>
+                    </Card.Body>
+                </Card.Root>
+            </Box>
         );
     }
 
     // No data state
     if (!roundInfo || !userId) {
         return (
-            <div className="round-info" style={{ padding: '20px', textAlign: 'center' }}>
-                <div>No active round found</div>
-                <button
-                    onClick={fetchRoundInfo}
-                    style={{ marginTop: '10px', padding: '5px 10px' }}
+            <Box p={6} textAlign="center">
+                <Card.Root
+                    bg="brutalist.gray.100"
+                    color="fg.default"
+                    border="2px solid"
+                    borderColor="border.default"
+                    borderRadius="sm"
+                    shadow="brutalist.md"
                 >
-                    Refresh
-                </button>
-                <div style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>
-                    Matches: {userMatchIds.join(', ') || 'None'} | Check console for debug info
-                </div>
-            </div>
+                    <Card.Body p={6}>
+                        <VStack padding={4}>
+                            <Text fontSize="3xl">🔍</Text>
+                            <Text fontSize="md" fontWeight="bold" textTransform="uppercase">
+                                No Active Round Found
+                            </Text>
+                            <Button
+                                onClick={fetchRoundInfo}
+                                bg="primary.emphasis"
+                                color="fg.inverted"
+                                border="2px solid"
+                                borderColor="border.default"
+                                borderRadius="sm"
+                                shadow="brutalist.sm"
+                                fontWeight="bold"
+                                textTransform="uppercase"
+                                // leftIcon={<RefreshCw size={16} />}
+                                _hover={{
+                                    transform: "translate(-1px, -1px)",
+                                    shadow: "brutalist.md",
+                                }}
+                            >
+                                Refresh
+                            </Button>
+                            {!isMobile && (
+                                <Text fontSize="xs" color="fg.muted">
+                                    Matches: {userMatchIds.join(', ') || 'None'}
+                                </Text>
+                            )}
+                        </VStack>
+                    </Card.Body>
+                </Card.Root>
+            </Box>
         );
     }
 
+    const handleManualRefresh = async () => {
+        console.log('🔄 Manual refresh triggered');
+        const latest = await database.games.findLatestGameRoundForUser(userInfo!.solana_address);
+        console.log('📋 Manual fetch result:', latest);
+        if (latest && latest.id !== roundInfo?.id) {
+            console.log('✅ Different round found manually');
+            setComponentKey(prev => prev + 1);
+            await fetchRoundInfo();
+        }
+    };
+
     return (
-        <div className="round-info" key={componentKey}>
-            {/* Enhanced debug info */}
-            <div style={{
-                fontSize: '12px',
-                color: '#666',
-                marginBottom: '10px',
-                padding: '5px',
-                background: '#f0f0f0',
-                borderRadius: '3px'
-            }}>
-                <div>🎮 Round {roundInfo.round_number} (ID: {roundInfo.id}) • Status: <strong>{roundInfo.status}</strong></div>
-                <div>🎯 Match: {roundInfo.match_id} • Component Key: {componentKey} • User Matches: {userMatchIds.join(', ')}</div>
-                <div>⏰ Created: {new Date(roundInfo.created_at).toLocaleTimeString()}</div>
-            </div>
+        <Box key={componentKey} border={'none'} shadow={'none'}>
+            {/* <VStack padding={6} align="stretch"> */}
 
-            <Battlefield
-                roundId={roundInfo.id}
-                userId={userId}
-                key={`battlefield-${componentKey}-${roundInfo.id}`}
-            />
+                {/* Timer Component */}
+                <Box display="flex" justifyContent="center">
+                    <Timer
+                        gameId={roundInfo.id}
+                        key={`timer-${componentKey}-${roundInfo.id}`}
+                    />
+                </Box>
 
-            <Timer
-                gameId={roundInfo.id}
-                key={`timer-${componentKey}-${roundInfo.id}`}
-            />
+                {/* Battlefield Component */}
+                <Box>
+                    <Battlefield
+                        roundId={roundInfo.id}
+                        userId={userId}
+                        key={`battlefield-${componentKey}-${roundInfo.id}`}
+                    />
+                </Box>
 
-            <ChooseMove
-                gameRoundNumber={roundInfo.round_number}
-                userId={userId}
-                matchId={roundInfo.match_id}
-                key={`choosemove-${componentKey}-${roundInfo.id}`}
-            />
-
-            <button
-                onClick={async () => {
-                    console.log('🔄 Manual refresh triggered');
-                    const latest = await database.games.findLatestGameRoundForUser(userInfo!.solana_address);
-                    console.log('📋 Manual fetch result:', latest);
-                    if (latest && latest.id !== roundInfo?.id) {
-                        console.log('✅ Different round found manually');
-                        setComponentKey(prev => prev + 1);
-                        await fetchRoundInfo();
-                    }
-                }}
-                style={{ margin: '10px', padding: '5px 10px' }}
-            >
-                Manual Refresh
-            </button>
-        </div>
+                {/* Choose Move Component */}
+                <Box>
+                    <ChooseMove
+                        gameRoundNumber={roundInfo.round_number}
+                        userId={userId}
+                        matchId={roundInfo.match_id}
+                        key={`choosemove-${componentKey}-${roundInfo.id}`}
+                    />
+                </Box>
+            {/* </VStack> */}
+        </Box>
     );
 }

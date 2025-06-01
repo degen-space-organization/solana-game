@@ -44,6 +44,17 @@ const prefix = {
 app.use(prefix.get('game'), GameRouter.default);
 app.use(prefix.post('game'), GameRouter.default)
 
+// simple health check route
+app.get('/health', (req, res) => {
+    res.status(200).json({
+        status: 'ok',
+        message: 'Game server is running',
+        version: API_VERSION,
+        port: PORT,
+        supabaseUrl: SUPABASE_URL
+    });
+});
+
 
 
 /** Main server runtime */

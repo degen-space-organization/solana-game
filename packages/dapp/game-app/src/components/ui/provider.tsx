@@ -8,10 +8,14 @@ import {
   type ColorModeProviderProps,
 } from "./color-mode"
 
+import { Toaster } from "./toaster";
+
+
 export function Provider(props: ColorModeProviderProps) {
   return (
     <ChakraProvider value={neobrutalistSystem}>
       <ColorModeProvider {...props} />
+      <Toaster />
     </ChakraProvider>
   )
 }

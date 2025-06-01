@@ -1,148 +1,191 @@
 // components/Lobby/LobbyPending.tsx
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Button,
   Card,
-  Flex,
   Grid,
   Heading,
-  Stack,
   Text,
   Badge,
-  Icon,
   HStack,
   VStack,
+  Container,
+  IconButton,
+  useBreakpointValue,
+  Stack,
 } from '@chakra-ui/react';
+import { ChevronLeft, ChevronRight, Users, Trophy, Swords, RotateCcw, AlertCircle } from 'lucide-react';
 import type { PendingLobby } from '../../types/lobby';
 import { database } from '@/supabase/Database';
 import { useWallet } from '@solana/wallet-adapter-react';
+import apiUrl from '@/api/config';
 
+// Pagination Component - Mobile Responsive
+interface PaginationProps {
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+}
 
 interface LobbyCardProps {
   lobby: PendingLobby;
   onJoin: (lobbyId: number) => void;
+  isUserInLobby: boolean;
+  isLoading?: boolean;
 }
 
-const LobbyCard: React.FC<LobbyCardProps> = ({ lobby, onJoin }) => {
+interface LobbyPendingProps {
+  onJoinLobby?: (lobbyId: number) => void;
+  useMockData?: boolean;
+  refreshTrigger?: number;
+  onCreateLobby?: () => void;
+  onRefresh?: () => void;
+}
 
 
+
+const LobbyCard: React.FC<LobbyCardProps> = ({ lobby, onJoin, isUserInLobby, isLoading = false }) => {
   const getDisplayName = (user: any) => {
     if (!user) return 'Unknown';
     return user.nickname || `${user.solana_address.slice(0, 4)}...${user.solana_address.slice(-4)}`;
   };
 
-  const getBorderColor = () => {
-    if (lobby.is_tournament) {
-      return lobby.current_players === 0 ? '#FF6B35' : '#7B2CBF'; // Orange for empty tournaments, purple for active
-    }
-    return lobby.current_players === 0 ? '#06D6A0' : '#118AB2'; // Green for empty 1v1, blue for active
-  };
-
-  const getBackgroundColor = () => {
-    if (lobby.is_tournament) {
-      return lobby.current_players === 0 ? '#FFF4E6' : '#F3E8FF'; // Light orange/purple
-    }
-    return lobby.current_players === 0 ? '#E6FFFA' : '#E0F4FF'; // Light green/blue
-  };
-
+  const isTournament = lobby.tournament_id !== null;
   const isFull = lobby.current_players >= lobby.max_players;
   const isEmpty = lobby.current_players === 0;
+  const isJoinDisabled = isFull || isUserInLobby || isLoading;
+
+  const getJoinButtonText = () => {
+    if (isLoading) return "🔄 Loading...";
+    if (isFull) return "🔒 FULL";
+    if (isUserInLobby) return "⚠️ Already in Lobby";
+    return "⚡ JOIN GAME";
+  };
+
+  const getJoinButtonBg = () => {
+    if (isJoinDisabled) return "bg.muted";
+    return "brutalist.green";
+  };
+
+  const getJoinButtonColor = () => {
+    if (isJoinDisabled) return "fg.muted";
+    return "fg.inverted";
+  };
 
   return (
     <Card.Root
-      borderWidth="4px"
+      borderWidth="2px"
       borderStyle="solid"
-      borderColor={getBorderColor()}
-      bg={getBackgroundColor()}
-      shadow="8px 8px 0px rgba(0,0,0,0.8)"
-      borderRadius="0" // Sharp edges for neobrutalism
-      transform="rotate(-0.5deg)"
+      borderColor="border.default"
+      bg={isTournament? "lobbies.tournament" : "lobbies.duel"}
+      shadow="brutalist.lg"
+      borderRadius="0"
       _hover={{
-        transform: "rotate(0deg) scale(1.02)",
-        shadow: "12px 12px 0px rgba(0,0,0,0.8)",
+        shadow: "brutalist.xl",
       }}
       transition="all 0.2s ease"
-      position="relative"
+      h="100%"
+      maxW="100%"
+      overflow="hidden"
     >
-      <Card.Body p="6">
-        {/* Header */}
-        <Flex justify="space-between" align="flex-start" mb="4">
-          <VStack align="flex-start" padding="1">
+      <Card.Body p={{ base: 4, md: 6 }}>
+        {/* Header - Mobile Responsive */}
+        <VStack align="flex-start" padding={0} mb={4}>
+          <Stack
+            direction={{ base: "column", sm: "row" }}
+            justify="space-between"
+            align={{ base: "flex-start", sm: "center" }}
+            w="100%"
+            padding={2}
+          >
             <Badge
-              variant="solid"
-              bg={lobby.is_tournament ? "#7B2CBF" : "#118AB2"}
-              color="white"
-              fontSize="xs"
+              bg={lobby.is_tournament ? "brutalist.purple" : "brutalist.blue"}
+              color="fg.inverted"
+              fontSize={{ base: "xs", md: "xs" }}
               fontWeight="black"
-              px="3"
-              py="1"
+              px={3}
+              py={1}
               borderRadius="0"
               textTransform="uppercase"
               letterSpacing="wider"
+              border="2px solid"
+              borderColor="border.default"
+              flexShrink={0}
             >
-              {lobby.is_tournament ? '🏆 TOURNAMENT' : '⚔️ 1v1 DUEL'}
+              <HStack padding={0}>
+                {lobby.is_tournament ? <Trophy size={12} /> : <Swords size={12} />}
+                <Text display={{ base: "none", sm: "block" }}>
+                  {lobby.is_tournament ? "TOURNAMENT" : "1v1 DUEL"}
+                </Text>
+              </HStack>
             </Badge>
-            <Text fontSize="xs" fontWeight="bold" color="gray.600">
-              #{lobby.id} • {lobby.time_since_created}
-            </Text>
-          </VStack>
 
-          <Box
-            bg={isEmpty ? "#FF6B35" : isFull ? "#DC143C" : "#06D6A0"}
-            color="white"
-            px="2"
-            py="1"
-            fontSize="xs"
-            fontWeight="black"
-            borderRadius="0"
-            transform="rotate(5deg)"
-          >
-            {isEmpty ? "EMPTY" : isFull ? "FULL" : "ACTIVE"}
-          </Box>
-        </Flex>
-
-        {/* Title */}
-        <Heading
-          size="md"
-          fontWeight="black"
-          color="gray.900"
-          mb="3"
-          textTransform="uppercase"
-          letterSpacing="tight"
-        >
-          {lobby.is_tournament && lobby.tournament
-            ? lobby.tournament.name
-            : lobby.name || `${lobby.is_tournament ? 'Tournament' : '1v1'} Game #${lobby.id}`
-          }
-        </Heading>
-
-        {/* Players Info */}
-        <Box
-          bg="white"
-          border="3px solid"
-          borderColor="gray.900"
-          p="3"
-          mb="4"
-          position="relative"
-        >
-          <HStack justify="space-between" mb="2">
-            <Text fontSize="sm" fontWeight="bold" color="gray.700">
-              PLAYERS
-            </Text>
-            <Text
-              fontSize="lg"
+            <Badge
+              bg={isEmpty ? "brutalist.orange" : isFull ? "error" : "success"}
+              color="fg.inverted"
+              fontSize="xs"
               fontWeight="black"
-              color={lobby.current_players === lobby.max_players ? "#DC143C" : "#06D6A0"}
+              px={2}
+              py={1}
+              borderRadius="0"
+              border="2px solid"
+              borderColor="border.default"
+              flexShrink={0}
+            >
+              {isEmpty ? "EMPTY" : isFull ? "FULL" : "ACTIVE"}
+            </Badge>
+          </Stack>
+
+          <Heading
+            size={{ base: "sm", md: "md" }}
+            fontWeight="black"
+            color="fg.default"
+            textTransform="uppercase"
+            letterSpacing="tight"
+            lineHeight="1.2"
+            // noOfLines={2}
+            wordBreak="break-word"
+          >
+            {lobby.name || `Game #${lobby.id}`}
+          </Heading>
+        </VStack>
+
+        {/* Players Info - Mobile Optimized */}
+        <Box
+          bg="bg.subtle"
+          border="3px solid"
+          borderColor="border.default"
+          p={{ base: 3, md: 4 }}
+          mb={4}
+          borderRadius="0"
+        >
+          <Stack
+            direction={{ base: "column", sm: "row" }}
+            justify="space-between"
+            align={{ base: "flex-start", sm: "center" }}
+            mb={2}
+            padding={2}
+          >
+            <HStack padding={0}>
+              <Users size={16} />
+              <Text fontSize="sm" fontWeight="bold" color="fg.default">
+                PLAYERS
+              </Text>
+            </HStack>
+            <Text
+              fontSize={{ base: "md", md: "lg" }}
+              fontWeight="black"
+              color={isFull ? "error" : "success"}
             >
               {lobby.current_players}/{lobby.max_players}
             </Text>
-          </HStack>
+          </Stack>
 
           {/* Progress Bar */}
-          <Box bg="gray.200" h="3" borderRadius="0" overflow="hidden">
+          <Box bg="bg.muted" h={3} borderRadius="0" overflow="hidden" border="2px solid" borderColor="border.subtle">
             <Box
-              bg={lobby.current_players === lobby.max_players ? "#DC143C" : "#06D6A0"}
+              bg={isFull ? "error" : "success"}
               h="100%"
               w={`${(lobby.current_players / lobby.max_players) * 100}%`}
               transition="width 0.3s ease"
@@ -150,80 +193,69 @@ const LobbyCard: React.FC<LobbyCardProps> = ({ lobby, onJoin }) => {
           </Box>
         </Box>
 
-        {/* Stake Info */}
+        {/* Stake Info - Mobile Responsive Grid */}
         <Box
-          bg="yellow.100"
+          bg="brutalist.yellow"
           border="3px solid"
-          borderColor="yellow.600"
-          p="3"
-          mb="4"
+          borderColor="border.default"
+          p={{ base: 3, md: 4 }}
+          mb={4}
+          borderRadius="0"
+          color="fg.default"
         >
-          <HStack justify="space-between">
-            <VStack align="flex-start" padding="0">
-              <Text fontSize="xs" fontWeight="bold" color="yellow.800">
-                STAKE AMOUNT
+          <Grid
+            templateColumns={{ base: "1fr", sm: "1fr 1fr" }}
+            gap={{ base: 3, sm: 2 }}
+          >
+            <VStack align="flex-start" padding={1}>
+              <Text fontSize="xs" fontWeight="black">
+                STAKE
               </Text>
-              <Text fontSize="lg" fontWeight="black" color="yellow.900">
+              <Text fontSize={{ base: "md", md: "lg" }} fontWeight="black">
                 {lobby.stake_amount_sol} SOL
               </Text>
             </VStack>
-            <VStack align="flex-end" padding="0">
-              <Text fontSize="xs" fontWeight="bold" color="yellow.800">
-                TOTAL PRIZE
+            <VStack align={{ base: "flex-start", sm: "flex-end" }} padding={1}>
+              <Text fontSize="xs" fontWeight="black">
+                PRIZE
               </Text>
-              <Text fontSize="lg" fontWeight="black" color="yellow.900">
+              <Text fontSize={{ base: "md", md: "lg" }} fontWeight="black">
                 {lobby.total_prize_pool_sol} SOL
               </Text>
             </VStack>
-          </HStack>
-        </Box>
-
-        {/* Creator Info */}
-        <Box mb="4">
-          <Text fontSize="xs" fontWeight="bold" color="gray.600" mb="1">
-            CREATED BY
-          </Text>
-          <HStack>
-            <Text fontSize="sm" fontWeight="bold" color="gray.900">
-              {getDisplayName(lobby.created_by_user)}
-            </Text>
-            {lobby.created_by_user && (
-              <Text fontSize="xs" color="gray.600">
-                ({lobby.created_by_user.matches_won}W-{lobby.created_by_user.matches_lost}L)
-              </Text>
-            )}
-          </HStack>
+          </Grid>
         </Box>
       </Card.Body>
 
-      <Card.Footer p="6" pt="0">
+      <Card.Footer p={{ base: 4, md: 6 }} pt={0}>
         <Button
-          onClick={() => onJoin(lobby.id)}
-          disabled={isFull}
-          size="lg"
+          onClick={() => !isJoinDisabled && onJoin(lobby.id)}
+          disabled={isJoinDisabled}
+          size={{ base: "md", md: "lg" }}
           width="100%"
-          bg={isFull ? "gray.400" : "#FF6B35"}
-          color="white"
+          bg={getJoinButtonBg()}
+          color={getJoinButtonColor()}
           fontWeight="black"
-          fontSize="lg"
+          fontSize={{ base: "sm", md: "md" }}
           textTransform="uppercase"
           letterSpacing="wider"
           borderRadius="0"
           border="3px solid"
-          borderColor="gray.900"
-          shadow="4px 4px 0px rgba(0,0,0,0.8)"
-          _hover={!isFull ? {
-            bg: "#E55A2B",
+          borderColor="border.default"
+          shadow="brutalist.md"
+          _hover={!isJoinDisabled ? {
+            bg: "#26C6B3",
             transform: "translate(-2px, -2px)",
-            shadow: "6px 6px 0px rgba(0,0,0,0.8)",
+            shadow: "brutalist.lg",
           } : {}}
-          _active={!isFull ? {
+          _active={!isJoinDisabled ? {
             transform: "translate(0px, 0px)",
-            shadow: "2px 2px 0px rgba(0,0,0,0.8)",
+            shadow: "brutalist.sm",
           } : {}}
           transition="all 0.1s ease"
+          minH={{ base: "44px", md: "auto" }}
         >
-          {isFull ? "🔒 FULL" : "⚡ JOIN GAME"}
+          {getJoinButtonText()}
         </Button>
       </Card.Footer>
     </Card.Root>
@@ -232,128 +264,409 @@ const LobbyCard: React.FC<LobbyCardProps> = ({ lobby, onJoin }) => {
 
 
 
-interface LobbyPendingProps {
-  onJoinLobby?: (lobbyId: number) => void;
-  useMockData?: boolean;
-}
+const Pagination: React.FC<PaginationProps> = ({ currentPage, totalPages, onPageChange }) => {
+  if (totalPages <= 1) return null;
+
+  const isMobile = useBreakpointValue({ base: true, md: false });
+  const maxVisiblePages = isMobile ? 3 : 5;
+
+  const getPageNumbers = () => {
+    const pages = [];
+    const showPages = maxVisiblePages;
+
+    let start = Math.max(1, currentPage - Math.floor(showPages / 2));
+    let end = Math.min(totalPages, start + showPages - 1);
+
+    if (end - start < showPages - 1) {
+      start = Math.max(1, end - showPages + 1);
+    }
+
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+
+    return pages;
+  };
+
+  return (
+    <HStack justify="center" padding={2} mt={8} flexWrap="wrap">
+      <IconButton
+        onClick={() => onPageChange(currentPage - 1)}
+        disabled={currentPage === 1}
+        bg={currentPage === 1 ? "bg.muted" : "brutalist.blue"}
+        color={currentPage === 1 ? "fg.muted" : "fg.inverted"}
+        borderRadius="0"
+        border="3px solid"
+        borderColor="border.default"
+        shadow="brutalist.sm"
+        size={{ base: "sm", md: "md" }}
+        _hover={currentPage !== 1 ? {
+          transform: "translate(-1px, -1px)",
+          shadow: "brutalist.md",
+        } : {}}
+        _active={currentPage !== 1 ? {
+          transform: "translate(0px, 0px)",
+          shadow: "brutalist.sm",
+        } : {}}
+      >
+        <ChevronLeft size={16} />
+      </IconButton>
+
+      {getPageNumbers().map((page) => (
+        <Button
+          key={page}
+          onClick={() => onPageChange(page)}
+          bg={currentPage === page ? "primary.solid" : "bg.default"}
+          color="fg.default"
+          fontWeight="black"
+          size={{ base: "sm", md: "sm" }}
+          borderRadius="0"
+          border="3px solid"
+          borderColor="border.default"
+          shadow="brutalist.sm"
+          _hover={{
+            transform: "translate(-1px, -1px)",
+            shadow: "brutalist.md",
+            bg: currentPage === page ? "primary.solid" : "bg.subtle",
+          }}
+          _active={{
+            transform: "translate(0px, 0px)",
+            shadow: "brutalist.sm",
+          }}
+          minW={{ base: "36px", md: "40px" }}
+        >
+          {page}
+        </Button>
+      ))}
+
+      <IconButton
+        onClick={() => onPageChange(currentPage + 1)}
+        disabled={currentPage === totalPages}
+        bg={currentPage === totalPages ? "bg.muted" : "brutalist.blue"}
+        color={currentPage === totalPages ? "fg.muted" : "fg.inverted"}
+        borderRadius="0"
+        border="3px solid"
+        borderColor="border.default"
+        shadow="brutalist.sm"
+        size={{ base: "sm", md: "md" }}
+        _hover={currentPage !== totalPages ? {
+          transform: "translate(-1px, -1px)",
+          shadow: "brutalist.md",
+        } : {}}
+        _active={currentPage !== totalPages ? {
+          transform: "translate(0px, 0px)",
+          shadow: "brutalist.sm",
+        } : {}}
+      >
+        <ChevronRight size={16} />
+      </IconButton>
+    </HStack>
+  );
+};
+
+
 
 const LobbyPending: React.FC<LobbyPendingProps> = ({
   onJoinLobby = (id) => console.log(`Joining lobby ${id}`),
-  useMockData = true
+  refreshTrigger = 0,
+  onCreateLobby,
+  onRefresh
 }) => {
+  const [lobbies, setLobbies] = useState<PendingLobby[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isUserInLobby, setIsUserInLobby] = useState(false);
+  const [checkingUserStatus, setCheckingUserStatus] = useState(false);
+  const { publicKey } = useWallet();
 
-  const [lobbies, setLobbies] = React.useState<PendingLobby[]>([]);
-  const {publicKey} = useWallet();
+  // Responsive items per page
+  const itemsPerPage = useBreakpointValue({
+    base: 1,  // Mobile: 1 item for better readability
+    sm: 2,    // Small: 2 items  
+    md: 4,    // Tablet: 4 items  
+    lg: 6,    // Desktop: 6 items
+    xl: 9     // Large desktop: 9 items
+  }) || 6;
 
+  // Check if user is already in a lobby
+  const checkUserLobbyStatus = async () => {
+    if (!publicKey) {
+      setIsUserInLobby(false);
+      return;
+    }
 
-  const fetchLobies = async () => {
+    setCheckingUserStatus(true);
+    try {
+      const isInGame = await database.games.isInLobby(publicKey.toBase58());
+      setIsUserInLobby(isInGame);
+    } catch (error) {
+      console.error("Error checking user lobby status:", error);
+      setIsUserInLobby(false);
+    } finally {
+      setCheckingUserStatus(false);
+    }
+  };
+
+  const fetchLobbies = async () => {
+    setLoading(true);
     try {
       const fetchedLobbies = await database.lobbies.getAll();
       setLobbies(fetchedLobbies);
     } catch (error) {
       console.error("Error fetching lobbies:", error);
       setLobbies([]);
+    } finally {
+      setLoading(false);
     }
   };
 
-
-  React.useEffect(() => {
-    // if (useMockData) {
-    //   setLobbies(MOCK_PENDING_LOBBIES);
-    // } else {
-    //   fetchLobies();
-    // }
-    fetchLobies();
-  }, [useMockData]);
+  useEffect(() => {
+    fetchLobbies();
+    checkUserLobbyStatus();
+  }, [refreshTrigger, publicKey]);
 
   const handleJoinLobby = async (lobbyId: number) => {
+    if (isUserInLobby) return;
+
     onJoinLobby(lobbyId);
 
-    console.log(`Attempting to join lobby ${lobbyId}`);
+    if (!publicKey) return;
 
-    const userId = await database.users.getByWallet(publicKey!.toBase58());
+    const userId = await database.users.getByWallet(publicKey.toBase58());
 
-    const response = await fetch('http://localhost:4000/api/v1/game/join-lobby', {
+    const response = await fetch(`${apiUrl}/game/join-lobby`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         lobby_id: lobbyId,
-        user_id: userId?.id, // Replace with actual user ID
+        user_id: userId?.id,
       }),
-    }); 
+    });
+
     if (!response.ok) {
       console.error('Failed to join lobby:', response.statusText);
       return;
     }
 
+    // Refresh user status after joining
+    checkUserLobbyStatus();
   };
 
-  if (lobbies.length === 0) {
-    return (
-      <Box
-        textAlign="center"
-        p="12"
-        bg="gray.50"
-        border="4px solid"
-        borderColor="gray.300"
-        borderRadius="0"
-      >
-        <Text fontSize="2xl" fontWeight="black" color="gray.400" mb="2">
-          NO PENDING GAMES
-        </Text>
-        <Text fontSize="md" color="gray.600">
-          Be the first to create a game!
-        </Text>
-      </Box>
-    );
-  }
+  const handleCreateLobby = () => {
+    if (isUserInLobby) return;
+    if (onCreateLobby) {
+      onCreateLobby();
+    }
+  };
+
+  const handleRefresh = () => {
+    if (onRefresh) {
+      onRefresh();
+    }
+    checkUserLobbyStatus();
+  };
+
+  // Pagination logic
+  const totalPages = Math.ceil(lobbies.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentLobbies = lobbies.slice(startIndex, endIndex);
+
+  // Reset to page 1 when lobbies change
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(1);
+    }
+  }, [totalPages, currentPage]);
+
+  const getCreateButtonText = () => {
+    if (checkingUserStatus) return "Checking...";
+    if (isUserInLobby) return "Already in Lobby";
+    return "Create Lobby";
+  };
+
+  const getCreateButtonBg = () => {
+    if (checkingUserStatus || isUserInLobby) return "bg.muted";
+    return "brutalist.green";
+  };
+
+  const getCreateButtonColor = () => {
+    if (checkingUserStatus || isUserInLobby) return "fg.muted";
+    return "fg.inverted";
+  };
 
   return (
-    <Box>
-      {/* Header */}
-      <Box
-        bg="gray.900"
-        color="white"
-        p="6"
-        mb="6"
-        transform="rotate(1deg)"
-        shadow="8px 8px 0px rgba(0,0,0,0.3)"
+    <Container maxW="100%" px={{ base: 2, md: 4 }}>
+      {/* Main Container following leaderboard pattern */}
+      <Card.Root
+        borderWidth="2px"
+        borderStyle="solid"
+        borderColor="border.default"
+        bg="bg.default"
+        shadow="brutalist.xl"
+        borderRadius="0"
+        overflow="hidden"
       >
-        <Heading
-          size="xl"
-          fontWeight="black"
-          textTransform="uppercase"
-          letterSpacing="wider"
-          textAlign="center"
+        {/* Header with violet background - Mobile Responsive */}
+        <Card.Header
+          bg="primary.solid"
+          color="fg.default"
+          p={{ base: 4, md: 4 }}
+          borderBottom="4px solid"
+          borderColor="border.default"
         >
-          🎮 PENDING GAMES
-        </Heading>
-        <Text textAlign="center" fontSize="sm" mt="2" opacity="0.8">
-          {lobbies.length} games waiting for players
-        </Text>
-      </Box>
+          <Stack
+            direction={{ base: "column", lg: "row" }}
+            justify="space-between"
+            align={{ base: "flex-start", lg: "center" }}
+            padding={4}
+          >
+            <VStack align="flex-start" padding={1}>
+              <Heading
+                size={{ base: "lg", md: "xl" }}
+                fontWeight="black"
+                textTransform="uppercase"
+                letterSpacing="wider"
+              >
+                🎮 Game Lobbies
+              </Heading>
+              <Text fontSize="sm" fontWeight="bold" opacity={0.8}>
+                {loading ? "Loading..." : `${lobbies.length} games available`}
+              </Text>
+              {isUserInLobby && (
+                <HStack padding={2} mt={2}>
+                  <AlertCircle size={16} />
+                  <Text fontSize="xs" fontWeight="bold" opacity={0.9}>
+                    You're currently in a game. Navigate to "🤝 MY LOBBY"
+                  </Text>
+                </HStack>
+              )}
+            </VStack>
 
-      {/* Lobbies Grid */}
-      <Grid
-        templateColumns={{
-          base: "1fr",
-          md: "repeat(2, 1fr)",
-          lg: "repeat(3, 1fr)"
-        }}
-        gap="6"
-        px="4"
-      >
-        {lobbies.map((lobby) => (
-          <LobbyCard
-            key={lobby.id}
-            lobby={lobby}
-            onJoin={handleJoinLobby}
-          />
-        ))}
-      </Grid>
-    </Box>
+            <HStack padding={3} flexWrap={{ base: "wrap", sm: "nowrap" }}>
+              {/* Create Lobby Button */}
+              <Button
+                onClick={handleCreateLobby}
+                disabled={isUserInLobby || checkingUserStatus}
+                bg={getCreateButtonBg()}
+                color={getCreateButtonColor()}
+                fontWeight="black"
+                fontSize={{ base: "sm", md: "md" }}
+                textTransform="uppercase"
+                letterSpacing="wider"
+                borderRadius="0"
+                border="3px solid"
+                borderColor="border.default"
+                shadow="brutalist.md"
+                px={{ base: 4, md: 6 }}
+                py={3}
+                _hover={!isUserInLobby && !checkingUserStatus ? {
+                  bg: "#26C6B3",
+                  transform: "translate(-2px, -2px)",
+                  shadow: "brutalist.lg",
+                } : {}}
+                _active={!isUserInLobby && !checkingUserStatus ? {
+                  transform: "translate(0px, 0px)",
+                  shadow: "brutalist.sm",
+                } : {}}
+                transition="all 0.1s ease"
+              >
+                {getCreateButtonText()}
+              </Button>
+
+              {/* Circular Refresh Button */}
+              <IconButton
+                onClick={handleRefresh}
+                bg="bg.default"
+                color="fg.default"
+                borderRadius="50%"
+                border="3px solid"
+                borderColor="border.default"
+                shadow="brutalist.md"
+                size={{ base: "md", md: "lg" }}
+                _hover={{
+                  transform: "translate(-2px, -2px)",
+                  shadow: "brutalist.lg",
+                }}
+                _active={{
+                  transform: "translate(0px, 0px)",
+                  shadow: "brutalist.sm",
+                }}
+                transition="all 0.1s ease"
+              >
+                <RotateCcw size={20} />
+              </IconButton>
+            </HStack>
+          </Stack>
+        </Card.Header>
+
+        {/* Content Area */}
+        <Card.Body p={{ base: 4, md: 6 }}>
+          {loading ? (
+            <VStack padding={4} py={12}>
+              <Text fontSize="xl" fontWeight="black" color="fg.default">
+                🔄 Loading Games...
+              </Text>
+            </VStack>
+          ) : lobbies.length === 0 ? (
+            <VStack padding={6} py={12}>
+              <Box
+                bg="bg.muted"
+                border="4px solid"
+                borderColor="border.subtle"
+                p={8}
+                borderRadius="0"
+                textAlign="center"
+              >
+                <VStack padding={4}>
+                  <Trophy size={48} color="#9f7aea" />
+                  <Heading size="lg" fontWeight="black" color="fg.default">
+                    No Games Available
+                  </Heading>
+                  <Text color="fg.muted" fontWeight="bold">
+                    Be the first to create a game!
+                  </Text>
+                </VStack>
+              </Box>
+            </VStack>
+          ) : (
+            <>
+              {/* Lobbies Grid - Mobile Responsive */}
+              <Grid
+                templateColumns={{
+                  base: "repeat(1, 1fr)",     // Mobile: 1 column
+                  sm: "repeat(2, 1fr)",       // Small: 2 columns
+                  md: "repeat(2, 1fr)",       // Medium: 2 columns
+                  lg: "repeat(3, 1fr)",       // Large: 3 columns
+                  xl: "repeat(3, 1fr)",       // XL: 3 columns
+                }}
+                gap={{ base: 4, md: 6 }}
+                mb={6}
+              >
+                {currentLobbies.map((lobby) => (
+                  <LobbyCard
+                    key={lobby.id}
+                    lobby={lobby}
+                    onJoin={handleJoinLobby}
+                    isUserInLobby={isUserInLobby}
+                    isLoading={checkingUserStatus}
+                  />
+                ))}
+              </Grid>
+
+              {/* Pagination */}
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+              />
+            </>
+          )}
+        </Card.Body>
+      </Card.Root>
+    </Container>
   );
 };
 

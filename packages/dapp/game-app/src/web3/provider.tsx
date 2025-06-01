@@ -15,11 +15,16 @@ import { PhantomWalletAdapter, SolflareWalletAdapter } from '@solana/wallet-adap
 // Required for wallet modal styles
 import '@solana/wallet-adapter-react-ui/styles.css';
 
+const solanaEnv = import.meta.env.VITE_SOLANA_ENV || 'devnet';
 
 export const WalletContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
     // Choose network: 'devnet', 'testnet', or 'mainnet-beta'
+    const network = solanaEnv === 'mainnet-beta'
+        ? WalletAdapterNetwork.Mainnet
+        : solanaEnv === 'testnet'
+        ? WalletAdapterNetwork.Testnet
+        : WalletAdapterNetwork.Devnet;
     // const network = WalletAdapterNetwork.Devnet;
-    const network = WalletAdapterNetwork.Devnet;
     const endpoint = useMemo(() => clusterApiUrl(network), [network]);
 
     // Configure the wallets you want to support (Phantom, Solflare, etc.)

@@ -11,6 +11,8 @@ import {
 } from '@solana/web3.js';
 import { solConnection } from '@/web3';
 import { GAME_VAULT_ADDRESS } from '@/web3/constants';
+import { useNavigate } from 'react-router-dom';
+import apiUrl from '@/api/config';
 
 interface CreateLobbyModalProps {
   isOpen: boolean;
@@ -22,7 +24,7 @@ const stakeOptions = [
   { value: '100000000', label: '0.1 SOL' },
   { value: '250000000', label: '0.25 SOL' },
   { value: '500000000', label: '0.5 SOL' },
-  { value: '750000000', label: '0.75 SOL' },
+  // { value: '750000000', label: '0.75 SOL' },
   { value: '1000000000', label: '1.0 SOL' },
 ];
 
@@ -78,9 +80,7 @@ export const CreateLobbyModal: React.FC<CreateLobbyModalProps> = ({
     setIsLoading(true);
 
     try {
-      // NEW: Create and sign transaction first
       const stakeAmountLamports = parseInt(stakeAmount);
-
       const transaction = new Transaction().add(
         SystemProgram.transfer({
           fromPubkey: publicKey,
@@ -99,15 +99,11 @@ export const CreateLobbyModal: React.FC<CreateLobbyModalProps> = ({
 
       // Send and get signature
       const txSignature = await solConnection.sendRawTransaction(signedTransaction.serialize());
-      console.log('Transaction signature:', txSignature);
-      if (!txSignature) {
-        throw new Error('Transaction signature is null');
-      }
-      console.log('Transaction sent with signature:', txSignature);
+      if (!txSignature) throw new Error('Transaction signature is null');      
     
       let tournament_id;
       if(maxPlayers == 4 || maxPlayers == 8){
-        const response = await fetch('http://localhost:4000/api/v1/game/create-tournament', {
+        const response = await fetch(`${apiUrl}/game/create-tournament`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -121,12 +117,11 @@ export const CreateLobbyModal: React.FC<CreateLobbyModalProps> = ({
           }),
         });
         const data = await response.json()
-        console.log(data)
         tournament_id = data.tournament.id
       }
 
       console.log(tournament_id)
-      const response = await fetch('http://localhost:4000/api/v1/game/create-lobby', {
+      const response = await fetch(`${apiUrl}/game/create-lobby`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -140,9 +135,6 @@ export const CreateLobbyModal: React.FC<CreateLobbyModalProps> = ({
           txHash: txSignature,
         }),
       });
-
-
-      console.log((Number(stakeAmount)).toString())
       const data = await response.json();
 
       if (!response.ok) {
@@ -155,6 +147,8 @@ export const CreateLobbyModal: React.FC<CreateLobbyModalProps> = ({
         type: 'success',
         duration: 4000,
       });
+
+      
 
       onLobbyCreated();
       onClose();
@@ -171,7 +165,7 @@ export const CreateLobbyModal: React.FC<CreateLobbyModalProps> = ({
         duration: 5000,
       });
     } finally {
-      setIsLoading(false);
+      setIsLoading(false);      
     }
   };
 

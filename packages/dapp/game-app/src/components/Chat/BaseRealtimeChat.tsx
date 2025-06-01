@@ -40,19 +40,17 @@ interface User {
 
 interface ChatProps {
   chatType: 'global' | 'lobby' | 'match' | 'tournament';
-  contextId?: number; // lobby_id, match_id, or tournament_id (not needed for global)
-  currentUser: User | null; // Must be authenticated user from database
-  title?: string; // Custom title for the chat
+  contextId?: number;
+  currentUser: User | null;
+  title?: string;
 }
 
-// Chat Component
 const RealtimeChat: React.FC<ChatProps> = ({
   chatType,
   contextId,
   currentUser,
   title
 }) => {
-  // All hooks must be declared at the top level, always in the same order
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
@@ -61,7 +59,6 @@ const RealtimeChat: React.FC<ChatProps> = ({
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Validation - moved after hooks
   const isValidContext = chatType === 'global' || contextId !== undefined;
   
   if (!isValidContext) {
@@ -107,7 +104,6 @@ const RealtimeChat: React.FC<ChatProps> = ({
     }
   };
 
-  // Check if message belongs to current chat context
   const isMessageForCurrentChat = (message: any): boolean => {
     if (chatType === 'global') {
       return !message.match_id && !message.lobby_id && !message.tournament_id;
@@ -144,10 +140,9 @@ const RealtimeChat: React.FC<ChatProps> = ({
               solana_address
             )
           `)
-          .order('created_at', { ascending: false }) // Get newest first
-          .limit(100); // Limit to 100 messages
+          .order('created_at', { ascending: false })
+          .limit(100);
 
-        // Apply filters based on chat type
         if (chatType === 'global') {
           query = query
             .is('match_id', null)
@@ -167,11 +162,10 @@ const RealtimeChat: React.FC<ChatProps> = ({
           throw fetchError;
         }
 
-        // Reverse to show oldest first, but limited to 100
         setMessages(
           (data || [])
             .filter((msg: any) => !!msg.created_at)
-            .reverse() // Show oldest first for proper chat order
+            .reverse()
             .map((msg: any) => ({
               ...msg,
               created_at: msg.created_at ?? new Date().toISOString()
@@ -255,7 +249,6 @@ const RealtimeChat: React.FC<ChatProps> = ({
     };
   }, [chatType, contextId, loading, isValidContext]);
 
-  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
@@ -324,24 +317,35 @@ const RealtimeChat: React.FC<ChatProps> = ({
   if (!currentUser) {
     return (
       <Card.Root
-
         borderRadius="none"
-        p={6}
-        textAlign="center"
+        border="4px solid"
+        borderColor="border.default"
+        bg="bg.subtle"
+        shadow="brutalist.lg"
+        h="100%"
+        display="flex"
+        flexDirection="column"
+        overflow="hidden"
       >
-        <Card.Header>
-          <Text fontSize="lg" fontWeight="black" color="primary.contrast" mb={2}>
-            CHAT
-          </Text>
+        <Card.Header p={6} textAlign="center" flex="1" display="flex" alignItems="center" justifyContent="center">
+          <VStack spacing={4}>
+            <Box
+              bg="primary.solid"
+              p={4}
+              border="3px solid"
+              borderColor="border.default"
+              borderRadius="0"
+            >
+              <MessageCircle size={32} color="black" />
+            </Box>
+            <Text fontSize="lg" fontWeight="black" color="fg.default" textTransform="uppercase">
+              🔒 CONNECT WALLET
+            </Text>
+            <Text color="fg.muted" fontSize="sm" textAlign="center">
+              Connect your wallet to access chat features
+            </Text>
+          </VStack>
         </Card.Header>
-        <Card.Body>
-          <Text fontSize="lg" fontWeight="black" color="primary.contrast" mb={2}>
-            🔒 CONNECT WALLET
-          </Text>
-          <Text color="primary.contrast">
-            Connect your wallet to access chat
-          </Text>
-        </Card.Body>
       </Card.Root>
     );
   }
@@ -352,19 +356,23 @@ const RealtimeChat: React.FC<ChatProps> = ({
         borderWidth="4px"
         borderStyle="solid"
         borderColor="border.default"
-        bg="brutalist.red"
+        bg="error"
         shadow="brutalist.xl"
         borderRadius="none"
-        p={6}
-        textAlign="center"
+        h="100%"
+        display="flex"
+        alignItems="center"
+        justifyContent="center"
       >
-        <Card.Body>
-          <Text fontSize="lg" fontWeight="black" color="primary.contrast" mb={2}>
-            ⚠️ INVALID CONTEXT
-          </Text>
-          <Text color="primary.contrast">
-            {`contextId is required for ${chatType} chat`}
-          </Text>
+        <Card.Body textAlign="center">
+          <VStack spacing={4}>
+            <Text fontSize="lg" fontWeight="black" color="fg.inverted" textTransform="uppercase">
+              ⚠️ INVALID CONTEXT
+            </Text>
+            <Text color="fg.inverted" fontSize="sm">
+              {`contextId is required for ${chatType} chat`}
+            </Text>
+          </VStack>
         </Card.Body>
       </Card.Root>
     );
@@ -372,17 +380,14 @@ const RealtimeChat: React.FC<ChatProps> = ({
 
   return (
     <Card.Root
-      // borderWidth="2px"
       borderStyle="solid"
       borderColor="border.default"
       bg="bg.default"
       shadow="brutalist.xl"
       borderRadius="none"
-      height={"100%"}
-      // h="100%"
+      h="100%"
       display="flex"
       flexDirection="column"
-      alignItems={'space-between'}
       overflow="hidden"
     >
       {/* Header */}
@@ -391,28 +396,29 @@ const RealtimeChat: React.FC<ChatProps> = ({
         borderBottom="4px solid"
         borderColor="border.default"
         bg="bg.subtle"
+        flexShrink={0}
       >
         <HStack justify="space-between">
           <HStack>
             {getChatIcon()}
-            <Text fontSize="lg" fontWeight="black" color="fg.default" textTransform="uppercase">
+            <Text fontSize={{ base: "md", md: "lg" }} fontWeight="black" color="fg.default" textTransform="uppercase">
               {getChatTitle()}
             </Text>
           </HStack>
-          <HStack>
-            <HStack padding={1}>
+          <HStack spacing={2}>
+            <HStack spacing={1}>
               {connectionStatus === 'connected' ? (
                 <Wifi size={16} color="#06D6A0" />
               ) : (
                 <WifiOff size={16} color="#DC143C" />
               )}
-              <Text fontSize="xs" color={connectionStatus === 'connected' ? 'success' : 'error'}>
+              <Text fontSize="xs" color={connectionStatus === 'connected' ? 'success' : 'error'} display={{ base: "none", md: "block" }}>
                 {connectionStatus.toUpperCase()}
               </Text>
             </HStack>
             <Badge
               bg={chatType === 'global' ? 'brutalist.green' : 'brutalist.blue'}
-              color="primary.contrast"
+              color="fg.inverted"
               fontSize="xs"
               fontWeight="black"
               px={2}
@@ -429,30 +435,31 @@ const RealtimeChat: React.FC<ChatProps> = ({
         </HStack>
       </Card.Header>
 
-      {/* Messages Area */}
-      <Card.Body p={0} 
+      {/* Messages Area - This should take all available space */}
+      <Card.Body 
+        p={0} 
         flex="1"
         display="flex"
         flexDirection="column"
         overflow="hidden"
-        // height={"80%"}
+        minH="0" // Important for flex child to be able to shrink
       >
         {loading ? (
-          <VStack justify="center" flex="1" p={8}>
+          <VStack justify="center" align="center" flex="1" p={8}>
             <Spinner size="lg" color="primary.solid" />
-            <Text fontSize="sm" color="fg.muted">Loading messages...</Text>
+            <Text fontSize="sm" color="fg.muted" fontWeight="bold">Loading messages...</Text>
           </VStack>
         ) : error ? (
-          <VStack justify="center" flex="1" p={8}>
-            <Text fontSize="sm" color="error" textAlign="center">{error}</Text>
+          <VStack justify="center" align="center" flex="1" p={8}>
+            <Text fontSize="sm" color="error" textAlign="center" fontWeight="bold">{error}</Text>
             <Button
               size="sm"
               onClick={() => {
                 setError(null);
                 window.location.reload();
               }}
-              bg="brutalist.red"
-              color="primary.contrast"
+              bg="error"
+              color="fg.inverted"
               fontWeight="bold"
               borderRadius="none"
               border="2px solid"
@@ -471,14 +478,12 @@ const RealtimeChat: React.FC<ChatProps> = ({
             flex="1"
             overflowY="auto"
             p={4}
-            minH="0"
-            maxH="500px"
-            // maxH={'50%'}
+            minH="0" // Important for proper scrolling
           >
             {messages.length === 0 ? (
-              <VStack justify="center" align="center" h="200px" color="fg.subtle">
+              <VStack justify="center" align="center" h="100%" color="fg.subtle" minH="200px">
                 <MessageCircle size={32} />
-                <Text fontSize="sm" textAlign="center">
+                <Text fontSize="sm" textAlign="center" fontWeight="bold">
                   {chatType === 'global' 
                     ? 'Welcome! Start the global conversation!' 
                     : 'No messages yet. Be the first to chat!'
@@ -486,7 +491,7 @@ const RealtimeChat: React.FC<ChatProps> = ({
                 </Text>
               </VStack>
             ) : (
-              <VStack align="stretch" padding={3}>
+              <VStack align="stretch" spacing={3}>
                 {messages.map((message) => {
                   const isOwnMessage = message.user_id === currentUser.id;
                   const displayName = getDisplayName(message.users);
@@ -497,21 +502,21 @@ const RealtimeChat: React.FC<ChatProps> = ({
                       justify={isOwnMessage ? 'flex-end' : 'flex-start'}
                     >
                       <Box
-                        maxW="70%"
+                        maxW="80%"
                         px={3}
                         py={2}
                         borderRadius="none"
                         border="3px solid"
                         borderColor="border.default"
                         bg={isOwnMessage ? 'primary.solid' : 'bg.subtle'}
-                        color={isOwnMessage ? 'primary.contrast' : 'fg.default'}
+                        color={isOwnMessage ? 'fg.default' : 'fg.default'}
                         shadow="brutalist.md"
                       >
                         {!isOwnMessage && (
                           <Text
                             fontSize="xs"
                             fontWeight="black"
-                            color={isOwnMessage ? 'primary.contrast' : 'fg.muted'}
+                            color="fg.muted"
                             mb={1}
                             textTransform="uppercase"
                           >
@@ -524,7 +529,7 @@ const RealtimeChat: React.FC<ChatProps> = ({
                         <Text
                           fontSize="xs"
                           mt={1}
-                          color={isOwnMessage ? 'primary.contrast' : 'fg.subtle'}
+                          color="fg.subtle"
                           textAlign={isOwnMessage ? 'right' : 'left'}
                         >
                           {formatTime(message.created_at)}
@@ -540,9 +545,15 @@ const RealtimeChat: React.FC<ChatProps> = ({
         )}
       </Card.Body>
 
-      {/* Message Input */}
-      <Card.Footer p={4} borderTop="4px solid" borderColor="border.default" bg="bg.subtle" minHeight={'10%'}>
-        <HStack width="100%" padding={2}>
+      {/* Message Input - Fixed at bottom */}
+      <Card.Footer 
+        p={4} 
+        borderTop="4px solid" 
+        borderColor="border.default" 
+        bg="bg.subtle"
+        flexShrink={0}
+      >
+        <HStack width="100%" spacing={2}>
           <Input
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
@@ -553,6 +564,7 @@ const RealtimeChat: React.FC<ChatProps> = ({
             borderRadius="none"
             bg="bg.default"
             color="fg.default"
+            fontSize={{ base: "sm", md: "md" }}
             _focus={{
               borderColor: "primary.solid",
               shadow: "brutalist.sm"
@@ -565,10 +577,10 @@ const RealtimeChat: React.FC<ChatProps> = ({
             onClick={sendMessage}
             disabled={!newMessage.trim() || sending}
             bg="violet.500"
-            color="primary.contrast"
+            color="fg.inverted"
             fontWeight="black"
-            fontSize="lg"
-            px={4}
+            fontSize={{ base: "md", md: "lg" }}
+            px={{ base: 3, md: 4 }}
             py={2}
             borderRadius="none"
             border="3px solid"
@@ -583,7 +595,7 @@ const RealtimeChat: React.FC<ChatProps> = ({
               shadow: "brutalist.sm",
             }}
             transition="all 0.1s ease"
-            minW="60px"
+            minW={{ base: "50px", md: "60px" }}
           >
             {sending ? <Spinner size="sm" /> : <Send size={20} />}
           </Button>

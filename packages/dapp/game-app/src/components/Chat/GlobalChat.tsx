@@ -56,18 +56,19 @@ const GlobalChatWrapper: React.FC = () => {
         border="4px solid"
         borderColor="border.default"
         borderRadius="none"
+        overflow="hidden"
       >
-        <VStack padding={4} p={6}>
+        <VStack spacing={4} p={6}>
           <Spinner 
             size="lg" 
-            color="primary.solid" 
-            // thickness="4px"
+            color="primary.solid"
           />
           <Text 
             fontWeight="bold" 
             color="fg.muted"
             textAlign="center"
             fontSize="sm"
+            textTransform="uppercase"
           >
             Checking user identity...
           </Text>
@@ -77,10 +78,12 @@ const GlobalChatWrapper: React.FC = () => {
   }
 
   return (
-    <RealtimeChat
-      chatType="global"
-      currentUser={user}
-    />
+    <Box h="100%" overflow="hidden">
+      <RealtimeChat
+        chatType="global"
+        currentUser={user}
+      />
+    </Box>
   );
 };
 

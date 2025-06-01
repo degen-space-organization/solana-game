@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useWallet } from '@solana/wallet-adapter-react';
+import apiUrl from '@/api/config';
 import {
   Box,
   Heading,
@@ -215,7 +216,7 @@ const LobbyDetailsPage: React.FC = () => {
         duration: 4000,
       });
 
-      const response = await fetch('http://localhost:4000/api/v1/game/submit-stake', {
+      const response = await fetch(`${apiUrl}/game/submit-stake`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -259,7 +260,7 @@ const LobbyDetailsPage: React.FC = () => {
       });
 
       // Call the backend API to handle withdrawal logic including Solana refund
-      const response = await fetch('http://localhost:4000/api/v1/game/withdraw-lobby', {
+      const response = await fetch(`${apiUrl}/game/withdraw-lobby`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -325,7 +326,7 @@ const LobbyDetailsPage: React.FC = () => {
       });
 
       // Call the backend API to handle kicking a player
-      const response = await fetch('http://localhost:4000/api/v1/game/kick-player', {
+      const response = await fetch(`${apiUrl}/game/kick-player`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -377,7 +378,7 @@ const LobbyDetailsPage: React.FC = () => {
         type: "loading",
         duration: 3000,
       });
-      const response = await fetch('http://localhost:4000/api/v1/game/start-match', {
+      const response = await fetch(`${apiUrl}/game/start-match`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -429,7 +430,7 @@ const LobbyDetailsPage: React.FC = () => {
       });
 
       // Call the backend API to start the tournament
-      const response = await fetch('http://localhost:4000/api/v1/game/start-tournament', {
+      const response = await fetch(`${apiUrl}/game/start-tournament`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -495,7 +496,7 @@ const LobbyDetailsPage: React.FC = () => {
       console.log('Closing lobby with user ID:', userId);
       console.log('Lobby ID:', lobby!.id);
 
-      const response = await fetch('http://localhost:4000/api/v1/game/close-lobby', {
+      const response = await fetch(`${apiUrl}/game/close-lobby`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -547,7 +548,7 @@ const LobbyDetailsPage: React.FC = () => {
       });
 
       if(lobby?.tournament_id){
-        const response = await fetch('http://localhost:4000/api/v1/game/join-tournament', {
+        const response = await fetch(`${apiUrl}/game/join-tournament`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -560,7 +561,7 @@ const LobbyDetailsPage: React.FC = () => {
       }
 
       // Call the backend API to handle joining the lobby
-      const response = await fetch('http://localhost:4000/api/v1/game/join-lobby', {
+      const response = await fetch(`${apiUrl}/game/join-lobby`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

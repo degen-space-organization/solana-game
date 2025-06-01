@@ -9,7 +9,7 @@ body::before {
   left: 0;
   right: 0;
   bottom: 0;
-  background-image: 
+  background-image:
     linear-gradient(rgba(0, 0, 0, 0.05) 2px, transparent 1px),
     linear-gradient(90deg, rgba(0, 0, 0, 0.05) 2px, transparent 1px);
   background-size: 32px 32px;
@@ -19,11 +19,134 @@ body::before {
   opacity: 0.8;
 }
 
+
 /* Custom Cursors for Neobrutalism */
 :root {
   --cursor-default: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20"><rect width="16" height="16" x="2" y="2" fill="none" stroke="%23000" stroke-width="2"/><rect width="6" height="6" x="7" y="7" fill="%23000"/></svg>'), auto;
   --cursor-pointer: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20"><rect width="16" height="16" x="2" y="2" fill="none" stroke="%238b5cf6" stroke-width="2"/><rect width="6" height="6" x="7" y="7" fill="%238b5cf6"/></svg>'), pointer;
   --cursor-link: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20"><rect width="16" height="16" x="2" y="2" fill="none" stroke="%23118ab2" stroke-width="2"/><rect width="6" height="6" x="7" y="7" fill="%23118ab2"/></svg>'), pointer;
+  --header-height: 120px;
+  /* Adjust to your header height */
+  --nav-height: 60px;
+  /* Adjust to your nav height */
+}
+
+/* Layout Height Variables */
+:root {
+  --header-height: 120px;
+  --nav-height: 60px;
+  --header-nav-height: 180px;
+}
+
+/* Ensure proper scrolling behavior */
+html, body {
+  overflow-x: hidden;
+  height: 100%;
+}
+
+#root {
+  height: 100%;
+}
+
+/* Custom scrollbar for better UX */
+.chakra-box::-webkit-scrollbar {
+  width: 8px;
+}
+
+.chakra-box::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 0;
+}
+
+.chakra-box::-webkit-scrollbar-thumb {
+  background: #9f7aea;
+  border-radius: 0;
+  border: 2px solid #000;
+}
+
+.chakra-box::-webkit-scrollbar-thumb:hover {
+  background: #805ad5;
+}
+
+/* Firefox scrollbar */
+.chakra-box {
+  scrollbar-width: thin;
+  scrollbar-color: #9f7aea #f1f1f1;
+}
+
+/* Ensure sticky elements have proper layering */
+.sticky-header {
+  z-index: 1000 !important;
+}
+
+.sticky-nav {
+  z-index: 999 !important;
+}
+
+.sticky-sidebar {
+  z-index: 998 !important;
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 1024px) {
+  :root {
+    --header-height: 140px;
+    --nav-height: 50px;
+    --header-nav-height: 190px;
+  }
+}
+
+@media (max-width: 768px) {
+  :root {
+    --header-height: 160px;
+    --nav-height: 0px; /* Nav becomes drawer on mobile */
+    --header-nav-height: 160px;
+  }
+}
+
+/* Prevent layout shift during sticky positioning */
+.layout-container {
+  position: relative;
+}
+
+/* Ensure smooth transitions for sticky elements */
+.sticky-element {
+  transition: box-shadow 0.2s ease;
+}
+
+.sticky-element.stuck {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Chat-specific scrolling improvements */
+.chat-messages-container {
+  scroll-behavior: smooth;
+}
+
+.chat-messages-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat-messages-container::-webkit-scrollbar-track {
+  background: var(--chakra-colors-bg-subtle);
+}
+
+.chat-messages-container::-webkit-scrollbar-thumb {
+  background: var(--chakra-colors-primary-solid);
+  border: 1px solid var(--chakra-colors-border-default);
+}
+
+/* Ensure proper focus management for sticky elements */
+.sticky-header:focus-within,
+.sticky-nav:focus-within,
+.sticky-sidebar:focus-within {
+  z-index: 1001;
+}
+
+/* Prevent content jumping during sticky state changes */
+.sticky-placeholder {
+  height: var(--placeholder-height, 0);
+  visibility: hidden;
 }
 
 /* Apply custom cursors */
@@ -68,6 +191,7 @@ a,
 
 /* Reduced motion preferences */
 @media (prefers-reduced-motion: reduce) {
+
   *,
   *::before,
   *::after {

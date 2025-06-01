@@ -2,78 +2,167 @@ import { useEffect, useState, useRef } from 'react';
 import { Box, Text } from '@chakra-ui/react';
 import { database } from "@/supabase/Database";
 
-
 export default function Timer({
     gameId
-} : {
+}: {
     gameId: number
 }) {
-    const [remaining, setRemaining] = useState<number>(20);
+    const [remaining, setRemaining] = useState<number>(30);
     const [loading, setLoading] = useState(true);
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
         let isMounted = true;
         setLoading(true);
+
         async function fetchStartTime() {
             try {
                 const gameData = await database.games.getGameRoundById(gameId);
                 if (!gameData || !gameData.created_at) {
-                    setRemaining(0);
-                    setLoading(false);
+                    if (isMounted) {
+                        setRemaining(0);
+                        setLoading(false);
+                    }
                     return;
                 }
-                const startTime = new Date(gameData.created_at as string).getTime();
-                const now = Date.now();
-                const elapsed = Math.floor((now - startTime) / 1000);
-                const left = Math.max(20 - elapsed, 0);
-                if (isMounted) setRemaining(left);
-                setLoading(false);
-                if (intervalRef.current) clearInterval(intervalRef.current);
-                intervalRef.current = setInterval(() => {
-                    const now2 = Date.now();
-                    const elapsed2 = Math.floor((now2 - startTime) / 1000);
-                    const left2 = Math.max(20 - elapsed2, 0);
-                    if (isMounted) setRemaining(left2);
-                    if (left2 <= 0 && intervalRef.current) {
-                        clearInterval(intervalRef.current);
-                    }
-                }, 1000);
+
+                // Get server time in UTC and current time in UTC
+                // const serverTimeUTC = new Date(gameData.created_at as string).getTime();
+                const rawTimestamp = gameData.created_at as string;
+                const utcTimestamp = rawTimestamp.endsWith('Z') ? rawTimestamp : rawTimestamp + 'Z';
+                const serverTimeUTC = new Date(utcTimestamp).getTime();
+                const currentTimeUTC = Date.now();
+                const elapsedSeconds = Math.floor((currentTimeUTC - serverTimeUTC) / 1000);
+                const remainingSeconds = Math.max(30 - elapsedSeconds, 0);
+
+
+                if (isMounted) {
+                    setRemaining(remainingSeconds);
+                    setLoading(false);
+                }
+
+                // Clear any existing interval
+                if (intervalRef.current) {
+                    clearInterval(intervalRef.current);
+                    intervalRef.current = null;
+                }
+
+                // Start countdown if there's time remaining
+                if (remainingSeconds > 0) {
+                    intervalRef.current = setInterval(() => {
+                        const now = Date.now();
+                        const newElapsed = Math.floor((now - serverTimeUTC) / 1000);
+                        const newRemaining = Math.max(30 - newElapsed, 0);
+
+                        if (isMounted) {
+                            setRemaining(newRemaining);
+                        }
+
+                        if (newRemaining <= 0 && intervalRef.current) {
+                            clearInterval(intervalRef.current);
+                            intervalRef.current = null;
+                        }
+                    }, 1000);
+                }
+
             } catch (error) {
-                console.error("Error fetching game time:", error);
-                setRemaining(0);
-                setLoading(false);
+                console.error("Timer error:", error);
+                if (isMounted) {
+                    setRemaining(0);
+                    setLoading(false);
+                }
             }
         }
+
         fetchStartTime();
+
         return () => {
             isMounted = false;
-            if (intervalRef.current) clearInterval(intervalRef.current);
+            if (intervalRef.current) {
+                clearInterval(intervalRef.current);
+                intervalRef.current = null;
+            }
         };
     }, [gameId]);
 
-    const formatTime = (s: number) => {
-        const m = Math.floor(s / 60);
-        const sec = s % 60;
-        return `${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
+    const formatTime = (seconds: number): string => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     };
 
-    // Neobrutalism style
+    const getTimerStyles = () => {
+        if (loading) {
+            return {
+                bg: 'bg.muted',
+                color: 'fg.muted',
+                borderColor: 'border.subtle'
+            };
+        }
+
+        if (remaining <= 5) {
+            return {
+                bg: 'red.50',
+                color: 'error',
+                borderColor: 'error'
+            };
+        }
+
+        if (remaining <= 10) {
+            return {
+                bg: 'orange.50',
+                color: 'brutalist.orange',
+                borderColor: 'brutalist.orange'
+            };
+        }
+
+        return {
+            bg: 'primary.subtle',
+            color: 'primary.emphasis',
+            borderColor: 'primary.emphasis'
+        };
+    };
+
+    const styles = getTimerStyles();
+    const shouldPulse = remaining <= 5 && remaining > 0 && !loading;
+
     return (
         <Box
-            border="4px solid #222"
-            borderRadius="0"
-            bg="#F3E8FF"
-            boxShadow="8px 8px 0px rgba(0,0,0,0.8)"
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-            width="96px"
-            height="96px"
-            margin="0 auto"
+            p="4"
+            textAlign="center"
+            minW={{ base: "100px", md: "120px" }}
+            maxW={{ base: "120px", md: "140px" }}
+            mx="auto"
+            animation={shouldPulse ? "pulse 1s infinite" : "none"}
         >
-            <Text fontSize="2xl" fontWeight="900" color="#7B2CBF" letterSpacing="2px" fontFamily="monospace">
-                {loading ? '...' : formatTime(remaining)}
+            <Text
+                fontSize={{ base: "xl", md: "2xl" }}
+                fontWeight="black"
+                color={styles.color}
+                fontFamily="mono"
+                letterSpacing="1px"
+                lineHeight="1"
+            >
+                {loading ? "--:--" : formatTime(remaining)}
+            </Text>
+
+            <Text
+                fontSize="xs"
+                fontWeight="bold"
+                color={styles.color}
+                textTransform="uppercase"
+                letterSpacing="wider"
+                mt="1"
+                opacity="0.8"
+            >
+                {loading
+                    ? 'Loading'
+                    : remaining <= 0
+                        ? 'Time Up!'
+                        : remaining <= 5
+                            ? 'Hurry!'
+                            : 'Timer'
+                }
             </Text>
         </Box>
     );

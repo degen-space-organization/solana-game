@@ -102,6 +102,8 @@ export const CreateLobbyModal: React.FC<CreateLobbyModalProps> = ({
       if (!txSignature) throw new Error('Transaction signature is null');      
     
       let tournament_id;
+      console.log('nigga is about to send a request to the folowing url')
+      console.log(`${apiUrl}/game/create-tournament`)
       if(maxPlayers == 4 || maxPlayers == 8){
         const response = await fetch(`${apiUrl}/game/create-tournament`, {
           method: 'POST',
@@ -118,7 +120,7 @@ export const CreateLobbyModal: React.FC<CreateLobbyModalProps> = ({
         });
         const data = await response.json()
         tournament_id = data.tournament.id
-      }
+      } 
 
       console.log(tournament_id)
       const response = await fetch(`${apiUrl}/game/create-lobby`, {

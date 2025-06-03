@@ -11,3 +11,7 @@ node_modules/**
 # Distributiona
 dist
 build
+
+# Docker volumes
+docker/volumes/*
+!docker/volumes/.gitkeep

@@ -15,7 +15,7 @@ export interface Lobby {
   id: number;
   name: string | null;
   tournament_id: number | null;
-  status: 'waiting' | 'ready' | 'starting' | 'closed' | 'disbanded';
+  status: 'waiting' | 'ready' | 'starting' | 'closed' | 'disbanded' | 'closing' | 'withdrawal';
   max_players: number;
   current_players: number;
   stake_amount: string; // in lamports: '250000000', '500000000', '750000000', '1000000000'

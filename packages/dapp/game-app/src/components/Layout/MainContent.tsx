@@ -1,5 +1,5 @@
 // src/components/Layout/MainContent.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Container,
@@ -25,6 +25,7 @@ import type { User } from '../../types/lobby';
 import type { SectionType } from '../../App';
 import MyLobby from '../Lobby/MyLobby';
 import GamePage from '../Game/GamePage';
+import { supabase } from '@/supabase';
 
 interface MainContentProps {
   activeSection: SectionType;
@@ -39,14 +40,34 @@ const MainContent: React.FC<MainContentProps> = ({
   onJoinLobby,
   onSectionChange
 }) => {
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [isCreateLobbyModalOpen, setIsCreateLobbyModalOpen] = useState(false);
   const [lobbiesRefreshTrigger, setLobbiesRefreshTrigger] = useState(0);
   const [isUserInLobby, setIsUserInLobby] = useState(false);
   const { publicKey } = useWallet();
   // const navigate = useNavigate();
 
-  // Check if user is already in a lobby/game
-  const checkUserGameStatus = async () => {
+  // const checkUserGameStatus = async () => {
+  //   if (!publicKey) {
+  //     setIsUserInLobby(false);
+  //     return;
+  //   }
+
+  //   try {
+  //     const isInGame = await database.games.isInTournamentOrMatch(publicKey.toBase58());
+  //     setIsUserInLobby(isInGame);
+  //   } catch (error) {
+  //     console.error("Error checking user game status:", error);
+  //     setIsUserInLobby(false);
+  //   }
+  // };
+
+  useEffect(() => {
+    // checkUserGameStatus();
+    checkUserGameStatusCallback();
+  }, [publicKey, activeSection]);
+
+  const checkUserGameStatusCallback = useCallback(async () => {
     if (!publicKey) {
       setIsUserInLobby(false);
       return;
@@ -59,11 +80,89 @@ const MainContent: React.FC<MainContentProps> = ({
       console.error("Error checking user game status:", error);
       setIsUserInLobby(false);
     }
-  };
+  }, [publicKey]);
 
   useEffect(() => {
-    checkUserGameStatus();
-  }, [publicKey, activeSection]);
+    if (publicKey) {
+      const fetchUserId = async () => {
+        const userData = await database.users.getByWallet(publicKey.toBase58());
+        setCurrentUserId(userData?.id || null);
+      };
+      fetchUserId();
+    } else {
+      setCurrentUserId(null);
+    }
+  }, [publicKey]);
+
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    console.log('Setting up global realtime listeners for user:', currentUserId);
+
+    const channel = supabase
+      .channel(`global-user-events-${currentUserId}-${Date.now()}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'match_participants',
+          filter: `user_id=eq.${currentUserId}`
+        },
+        (payload) => {
+          console.log('User added to match globally!', payload.new);
+
+          toaster.create({
+            title: "Match Started! 🎮",
+            description: "You've been added to a match. Loading game...",
+            type: "success",
+            duration: 3000,
+          });
+
+          // Auto-redirect to game page
+          onSectionChange('mygame');
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'lobby_participants',
+          filter: `user_id=eq.${currentUserId}`
+        },
+        (payload) => {
+          console.log('User removed from lobby!', payload.old);
+
+          toaster.create({
+            title: "Removed from Lobby 👋",
+            description: "You have been removed from the lobby or it was closed.",
+            type: "warning",
+            duration: 5000,
+          });
+
+          // If user is currently viewing their lobby, redirect them
+          if (activeSection === 'joined_lobbies') {
+            onSectionChange('lobbies');
+          }
+
+          // Refresh user status
+          // checkUserGameStatus();
+          checkUserGameStatusCallback();
+        }
+      )
+      .subscribe((status) => {
+        console.log('Global user events subscription status:', status);
+      });
+
+    return () => {
+      console.log('Cleaning up global user events subscription');
+      channel.unsubscribe();
+    };
+  }, [currentUserId, onSectionChange, activeSection]);
+
+  // Check if user is already in a lobby/game
+
 
   const handleCreateLobby = () => {
     // Only allow creating lobby if user is not already in one
@@ -95,7 +194,9 @@ const MainContent: React.FC<MainContentProps> = ({
     setLobbiesRefreshTrigger(prev => prev + 1);
 
     // Refresh user status after creating lobby
-    checkUserGameStatus();
+    // checkUserGameStatus();
+    checkUserGameStatusCallback();
+    onSectionChange('joined_lobbies'); // Add this line
 
     toaster.create({
       title: "Lobby Created! 🎉",
@@ -124,13 +225,15 @@ const MainContent: React.FC<MainContentProps> = ({
 
     // Refresh user status after attempting to join
     setTimeout(() => {
-      checkUserGameStatus();
+      // checkUserGameStatus();
+      checkUserGameStatusCallback();
     }, 1000);
   };
 
   const handleRefreshLobbies = () => {
     setLobbiesRefreshTrigger(prev => prev + 1);
-    checkUserGameStatus();
+    // checkUserGameStatus();
+    checkUserGameStatusCallback();
   };
 
   const renderContent = () => {
@@ -150,7 +253,7 @@ const MainContent: React.FC<MainContentProps> = ({
         );
 
       case 'joined_lobbies':
-        return <MyLobby />
+        return <MyLobby onSectionChange={onSectionChange} />
 
       case 'leaderboard':
         return <Leaderboard />;

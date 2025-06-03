@@ -3,13 +3,13 @@ import { supabase } from '@/supabase';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import {
-  Box,
-  VStack,
-  Text,
-  Button,
-  Spinner,
-  Card,
-  useBreakpointValue,
+    Box,
+    VStack,
+    Text,
+    Button,
+    Spinner,
+    Card,
+    useBreakpointValue,
 } from '@chakra-ui/react';
 import { AlertTriangle } from 'lucide-react';
 
@@ -149,6 +149,56 @@ export default function Round() {
         // Create a single channel for all match-related updates
         const channel = supabase
             .channel(`user-game-updates-${userInfo.id}`)
+            // .on(
+            //     'postgres_changes',
+            //     {
+            //         event: 'UPDATE',
+            //         schema: 'public',
+            //         table: 'game_rounds',
+            //     },
+            //     async (payload) => {
+            //         const updatedRound = payload.new as RoundInfo;
+            //         console.log('🔄 Round UPDATE detected:', updatedRound);
+
+            //         // Check if this update is for one of our matches
+            //         if (!userMatchIds.includes(updatedRound.match_id)) {
+            //             console.log('⏭️ Update not for our matches, ignoring');
+            //             return;
+            //         }
+
+            //         // If this is our current round being updated
+            //         if (updatedRound.id === currentRoundIdRef.current) {
+            //             console.log('📝 Current round updated:', updatedRound);
+
+            //             if (updatedRound.status === 'completed') {
+            //                 console.log('✅ Current round completed, checking for new rounds...');
+
+            //                 // Wait for potential new round creation
+            //                 setTimeout(async () => {
+            //                     try {
+            //                         const newRoundResult = await database.games.findLatestGameRoundForUser(userInfo.solana_address);
+
+            //                         if (newRoundResult && newRoundResult.id !== currentRoundIdRef.current) {
+            //                             console.log('🆕 New round found, remounting component:', newRoundResult);
+            //                             setComponentKey(prev => prev + 1);
+            //                             await fetchRoundInfo();
+            //                         } else {
+            //                             console.log('📍 No new round found, updating current round info');
+            //                             setRoundInfo(updatedRound);
+            //                         }
+            //                     } catch (error) {
+            //                         console.error('❌ Error checking for new rounds:', error);
+            //                         setRoundInfo(updatedRound);
+            //                     }
+            //                 }, 2000); // Increased wait time
+            //             } else {
+            //                 console.log('📝 Updating current round status to:', updatedRound.status);
+            //                 setRoundInfo(updatedRound);
+            //             }
+            //         }
+            //     }
+            // )
+            // UPDATE handler
             .on(
                 'postgres_changes',
                 {
@@ -166,38 +216,25 @@ export default function Round() {
                         return;
                     }
 
-                    // If this is our current round being updated
+                    // Only process updates for our current round
                     if (updatedRound.id === currentRoundIdRef.current) {
                         console.log('📝 Current round updated:', updatedRound);
 
-                        if (updatedRound.status === 'completed') {
-                            console.log('✅ Current round completed, checking for new rounds...');
-
-                            // Wait for potential new round creation
-                            setTimeout(async () => {
-                                try {
-                                    const newRoundResult = await database.games.findLatestGameRoundForUser(userInfo.solana_address);
-
-                                    if (newRoundResult && newRoundResult.id !== currentRoundIdRef.current) {
-                                        console.log('🆕 New round found, remounting component:', newRoundResult);
-                                        setComponentKey(prev => prev + 1);
-                                        await fetchRoundInfo();
-                                    } else {
-                                        console.log('📍 No new round found, updating current round info');
-                                        setRoundInfo(updatedRound);
-                                    }
-                                } catch (error) {
-                                    console.error('❌ Error checking for new rounds:', error);
-                                    setRoundInfo(updatedRound);
-                                }
-                            }, 2000); // Increased wait time
-                        } else {
-                            console.log('📝 Updating current round status to:', updatedRound.status);
+                        // Only update if the round is actually completed AND has moves from both players
+                        if (updatedRound.status === 'completed' &&
+                            updatedRound.player1_move &&
+                            updatedRound.player2_move) {
+                            console.log('✅ Round truly completed with both moves, updating state');
                             setRoundInfo(updatedRound);
+
+                            // Don't immediately check for new rounds - let the INSERT handler do that
+                        } else {
+                            console.log('⏭️ Round update ignored - not fully completed or missing moves');
                         }
                     }
                 }
             )
+            // INSERT handler
             .on(
                 'postgres_changes',
                 {
@@ -388,32 +425,32 @@ export default function Round() {
         <Box key={componentKey} border={'none'} shadow={'none'}>
             {/* <VStack padding={6} align="stretch"> */}
 
-                {/* Timer Component */}
-                <Box display="flex" justifyContent="center">
-                    <Timer
-                        gameId={roundInfo.id}
-                        key={`timer-${componentKey}-${roundInfo.id}`}
-                    />
-                </Box>
+            {/* Timer Component */}
+            <Box display="flex" justifyContent="center">
+                <Timer
+                    gameId={roundInfo.id}
+                    key={`timer-${componentKey}-${roundInfo.id}`}
+                />
+            </Box>
 
-                {/* Battlefield Component */}
-                <Box>
-                    <Battlefield
-                        roundId={roundInfo.id}
-                        userId={userId}
-                        key={`battlefield-${componentKey}-${roundInfo.id}`}
-                    />
-                </Box>
+            {/* Battlefield Component */}
+            <Box>
+                <Battlefield
+                    roundId={roundInfo.id}
+                    userId={userId}
+                    key={`battlefield-${componentKey}-${roundInfo.id}`}
+                />
+            </Box>
 
-                {/* Choose Move Component */}
-                <Box>
-                    <ChooseMove
-                        gameRoundNumber={roundInfo.round_number}
-                        userId={userId}
-                        matchId={roundInfo.match_id}
-                        key={`choosemove-${componentKey}-${roundInfo.id}`}
-                    />
-                </Box>
+            {/* Choose Move Component */}
+            <Box>
+                <ChooseMove
+                    gameRoundNumber={roundInfo.round_number}
+                    userId={userId}
+                    matchId={roundInfo.match_id}
+                    key={`choosemove-${componentKey}-${roundInfo.id}`}
+                />
+            </Box>
             {/* </VStack> */}
         </Box>
     );

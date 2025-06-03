@@ -6,12 +6,10 @@ import {
   Text,
   Heading,
   Card,
-  Button,
   Spinner,
 } from '@chakra-ui/react';
 import { 
   Trophy, 
-  RotateCcw,
   Coins,
   Target
 } from 'lucide-react';
@@ -51,12 +49,6 @@ export default function GameResult({ matchId }: GameResultProps) {
 
   const formatSolAmount = (lamports: string): string => {
     return (parseInt(lamports) / 1e9).toFixed(2);
-  };
-
-  const handlePlayAgain = () => {
-    // Option 1: Try to navigate to lobbies section (if you have routing)
-    // Option 2: Refresh the page to reset to lobby view
-    window.location.reload();
   };
 
   // Fetch match data and participants
@@ -326,56 +318,6 @@ export default function GameResult({ matchId }: GameResultProps) {
           </Card.Body>
         </Card.Root>
 
-        {/* Play Again Button */}
-        <Card.Root
-          bg="bg.subtle"
-          border="4px solid"
-          borderColor="border.default"
-          borderRadius="0"
-          shadow="8px 8px 0px rgba(0,0,0,0.8)"
-        >
-          <Card.Body p="6" textAlign="center">
-            <VStack gap="4">
-              <Text
-                fontSize="md"
-                fontWeight="bold"
-                color="fg.default"
-                textAlign="center"
-              >
-                Ready for another round?
-              </Text>
-
-              <Button
-                onClick={handlePlayAgain}
-                bg="primary.emphasis"
-                color="fg.inverted"
-                border="3px solid"
-                borderColor="border.default"
-                borderRadius="0"
-                shadow="4px 4px 0px rgba(0,0,0,0.8)"
-                fontWeight="black"
-                textTransform="uppercase"
-                letterSpacing="wider"
-                px="8"
-                py="6"
-                fontSize="lg"
-                _hover={{
-                  transform: "translate(-2px, -2px)",
-                  shadow: "6px 6px 0px rgba(0,0,0,0.8)",
-                }}
-                _active={{
-                  transform: "translate(0px, 0px)",
-                  shadow: "2px 2px 0px rgba(0,0,0,0.8)",
-                }}
-              >
-                <HStack gap="3">
-                  <RotateCcw size={20} />
-                  <Text>Play Again</Text>
-                </HStack>
-              </Button>
-            </VStack>
-          </Card.Body>
-        </Card.Root>
       </VStack>
     </Box>
   );

@@ -9,7 +9,6 @@ import Header from './components/Layout/Header';
 import Navigation from './components/Layout/Navigation';
 import ChatSidebar from './components/Layout/ChatSidebar';
 import MainContent from './components/Layout/MainContent';
-// import LobbyDetailsPage from './components/Lobby/LobbyDetailsPage';
 
 // Utils
 import { database } from '@/supabase/Database';
@@ -79,13 +78,6 @@ function App() {
       });
       return;
     }
-
-    toaster.create({
-      title: "🎮 Joining Lobby...",
-      description: `Attempting to join lobby #${lobbyId}`,
-      type: "loading",
-      duration: 2000,
-    });
 
     try {
       const response = await fetch(`${apiUrl}/game/join-lobby`, {
@@ -253,10 +245,6 @@ function App() {
                     />
                   } 
                 />
-                {/* <Route 
-                  path="/lobby/:lobbyId" 
-                  element={<LobbyDetailsPage />} 
-                /> */}
               </Routes>
 
               {/* Chat Drawer for Mobile */}

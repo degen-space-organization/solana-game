@@ -401,7 +401,7 @@ const Spectate: React.FC = () => {
       >
         {/* Header */}
         <Box
-          bg="primary.subtle"
+          bg="primary.solid"
           borderBottom="3px solid"
           borderColor="border.default"
           p={4}
@@ -528,6 +528,13 @@ const Spectate: React.FC = () => {
                 ? `Viewing Match #${selectedMatch.match.id} • Score: ${player1Score}-${player2Score} • ${sortedRounds.length} rounds`
                 : `${ongoingMatches.length} ongoing matches available`
               }
+            </Text>
+            <Text
+              fontSize="xs"
+              color="fg.muted"
+              textAlign="center"
+              fontWeight="medium"
+            >
             </Text>
           </VStack>
         </Box>
@@ -901,6 +908,9 @@ const Spectate: React.FC = () => {
                   </Text>
                   <Text fontSize="md" color="fg.subtle">
                     No matches are currently in progress. Check back later!
+                  </Text>
+                  <Text fontSize="sm" color="fg.subtle" mt={2}>
+                    Or search for a specific historical match by ID above.
                   </Text>
                 </Box>
               ) : (

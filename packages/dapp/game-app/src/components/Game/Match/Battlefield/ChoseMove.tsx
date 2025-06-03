@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Box, Button, VStack, HStack, Image, Text, Card, Grid, Badge } from '@chakra-ui/react';
-import { Zap, CheckCircle, Clock } from 'lucide-react';
+import { CheckCircle, Clock } from 'lucide-react';
 import { supabase } from '@/supabase';
 import apiUrl from '@/api/config';
 

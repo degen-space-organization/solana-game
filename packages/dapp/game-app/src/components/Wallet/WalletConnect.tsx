@@ -186,7 +186,7 @@ export const ConnectWalletButton = () => {
               {publicKey ? shortenAddress(publicKey.toBase58()) : ''}
             </Text>
             <Text fontSize="xs" color="fg.muted">
-              {balance !== null ? `${balance.toFixed(3)} SOL` : 'Loading...'}
+              {balance !== null ? `${balance.toFixed(3)} SOL` : `${loading && 'Loading...'}`}
             </Text>
           </VStack>
 

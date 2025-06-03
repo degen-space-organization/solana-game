@@ -1,5 +1,5 @@
 import type { FC, ReactNode } from 'react';
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 
 import { WalletProvider } from '@solana/wallet-adapter-react';
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';

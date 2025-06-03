@@ -18,7 +18,7 @@ import {
 } from '@chakra-ui/react';
 import {
   Crown,
-  RefreshCw,
+  // RefreshCw,
   Search,
   Copy,
   ExternalLink,
@@ -56,15 +56,15 @@ const Leaderboard: React.FC = () => {
   };
 
   // Function to get color scheme for rank badge
-  const getRankColors = (rank: RankedPlayer['rank']) => {
-    switch (rank) {
-      case 'Bronze': return { bg: 'brutalist.orange', color: 'fg.default' };
-      case 'Silver': return { bg: 'brutalist.gray.300', color: 'fg.default' };
-      case 'Gold': return { bg: 'brutalist.yellow', color: 'fg.default' };
-      case 'Legendary': return { bg: 'primary.emphasis', color: 'fg.inverted' };
-      default: return { bg: 'bg.muted', color: 'fg.muted' };
-    }
-  };
+  // const getRankColors = (rank: RankedPlayer['rank']) => {
+  //   switch (rank) {
+  //     case 'Bronze': return { bg: 'brutalist.orange', color: 'fg.default' };
+  //     case 'Silver': return { bg: 'brutalist.gray.300', color: 'fg.default' };
+  //     case 'Gold': return { bg: 'brutalist.yellow', color: 'fg.default' };
+  //     case 'Legendary': return { bg: 'primary.emphasis', color: 'fg.inverted' };
+  //     default: return { bg: 'bg.muted', color: 'fg.muted' };
+  //   }
+  // };
 
   // Filter and paginate players
   const filteredPlayers = useMemo(() => {
@@ -351,7 +351,7 @@ const Leaderboard: React.FC = () => {
               <VStack padding={0} align="stretch">
                 {paginatedPlayers.map((player, index) => {
                   const position = getPositionDisplay(index);
-                  const rankColors = getRankColors(player.rank);
+                  // const rankColors = getRankColors(player.rank);
                   const isTopThree = position <= 3;
 
                   return (

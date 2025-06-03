@@ -42,6 +42,11 @@ export default class GameController {
                 return res.status(403).json({ error: "Only the lobby creator can start the match." });
             }
 
+            // Ensure lobby is in 'waiting' status
+            if (lobby.status !== 'waiting') {
+                return res.status(400).json({ error: "Lobby is not in 'waiting' status." });
+            }
+
             // Ensure enough players are in the lobby and all have staked if required
             const participants = lobby.lobby_participants;
             if (!participants || participants.length !== lobby.max_players) {
@@ -50,10 +55,6 @@ export default class GameController {
                 return res.status(400).json({ error: "Not enough players in lobby to start match." });
             }
 
-            // dont allow creation of lobby if withdrawal is in progress
-            if (lobby.status === 'withdrawal') {
-                return res.status(400).json({ error: "Lobby is currently in withdrawal status and cannot start a match." });
-            };
 
             // Check if all participants are ready and staked (example; add actual staking logic)
             // For now, assuming they are ready if they are present.
@@ -674,7 +675,6 @@ export default class GameController {
         }
     }
 
-
     static async advanceTournament(tournamentId: number): Promise<{ success: boolean, tournamentWinnerId?: number | null, errorMessage?: string }> {
         console.log(`Advancing tournament ${tournamentId}.`);
 
@@ -1199,22 +1199,10 @@ export default class GameController {
                 .eq('id', lobby_id)
                 .single();
 
-
-
-            if (lobbyError) {
-                console.error("Error fetching lobby:", lobbyError);
-                return res.status(404).json({ error: "Lobby not found" });
-            }
-
-
-            if (lobby.status !== 'waiting') {
-                return res.status(400).json({ error: "Lobby is not joinable" });
-            }
-
-
-            if (lobby.current_players! >= lobby.max_players!) {
-                return res.status(400).json({ error: "Lobby is full" });
-            }
+            if (lobbyError) return res.status(404).json({ error: "Lobby not found" });
+            // only join if the lobby is in the waiting status
+            if (lobby.status !== 'waiting') return res.status(400).json({ error: "Lobby is not joinable" });
+            if (lobby.current_players! >= lobby.max_players!) return res.status(400).json({ error: "Lobby is full" });
 
 
             // Check if user is already in this lobby
@@ -1311,6 +1299,17 @@ export default class GameController {
             if (!user_id || !lobby_id) {
                 return res.status(400).json({ error: "Missing required fields: user_id, lobby_id" });
             }
+            // fetch lobby
+            const { data: lobbyData, error: lobbyFetchError } = await dbClient
+                .from('lobbies')
+                .select('*')
+                .eq('id', lobby_id)
+                .single();
+            if (lobbyFetchError || !lobbyData || lobbyData.status !== 'waiting') {
+                console.error("Error fetching lobby for withdrawal:", lobbyFetchError);
+                return res.status(404).json({ error: "Lobby not found or not in a valid state for withdrawal" });
+            }
+
             // fetch user first
             const { data: user, error: userError } = await dbClient
                 .from('users')
@@ -1321,6 +1320,8 @@ export default class GameController {
                 console.error("Error fetching user for withdrawal:", userError);
                 return res.status(404).json({ error: "User not found" });
             }
+
+
 
             // Fetch participant details to check if they have staked
             const { data: participant, error: participantError } = await dbClient
@@ -1335,6 +1336,16 @@ export default class GameController {
                 return res.status(404).json({ error: "Participant not found in this lobby" });
             }
 
+            // Update the status of lobby to "withdrawal"
+            const { error: updateLobbyError } = await dbClient
+                .from('lobbies')
+                .update({ status: 'withdrawal' })
+                .eq('id', lobby_id);
+            if (updateLobbyError) {
+                console.error("Error updating lobby status to withdrawal:", updateLobbyError);
+                return res.status(500).json({ error: "Failed to update lobby status" });
+            }
+
             // Fetch lobby details to get stake amount and current players
             const { data: lobby, error: lobbyError } = await dbClient
                 .from('lobbies')
@@ -1347,15 +1358,6 @@ export default class GameController {
                 return res.status(404).json({ error: "Lobby not found or error fetching lobby data" });
             }
 
-            // Update the status of lobby to "withdrawal"
-            const { error: updateLobbyError } = await dbClient
-                .from('lobbies')
-                .update({ status: 'withdrawal' })
-                .eq('id', lobby_id);
-            if (updateLobbyError) {
-                console.error("Error updating lobby status to withdrawal:", updateLobbyError);
-                return res.status(500).json({ error: "Failed to update lobby status" });
-            }
 
             // format stake amount from lamports to sol number
             const stakeAmountInSol = parseFloat(lobby.stake_amount) / 1e9; // Convert lamports to SOL
@@ -1390,7 +1392,8 @@ export default class GameController {
                 .from('lobbies')
                 .update({
                     current_players: newCurrentPlayers,
-                    status: newCurrentPlayers === 0 ? 'disbanded' : lobby.status
+                    status: newCurrentPlayers === 0 ? 'disbanded' : 'waiting', // Disband if no players left
+                    total_prize_pool: newCurrentPlayers > 0 ? (parseFloat(lobby.stake_amount) * newCurrentPlayers).toString() : '0'
                 })
                 .eq('id', lobby_id);
 
@@ -1419,11 +1422,11 @@ export default class GameController {
             // Verify the caller is the lobby creator
             const { data: lobby, error: lobbyError } = await dbClient
                 .from('lobbies')
-                .select('created_by, current_players, stake_amount, status')
+                .select('*')
                 .eq('id', lobby_id)
                 .single();
 
-            if (lobbyError || !lobby) {
+            if (lobbyError || !lobby || lobby.status !== 'waiting') {
                 console.error("Error fetching lobby for kicking player:", lobbyError);
                 return res.status(404).json({ error: "Lobby not found" });
             }
@@ -1490,33 +1493,52 @@ export default class GameController {
         try {
             const { lobby_id, user_id } = req.body;
 
+            console.log('Received payload for lobby deletion:', req.body);
+
             if (!lobby_id || !user_id) {
                 return res.status(400).json({ error: "Missing required fields: lobby_id, user_id" });
             }
 
             // Fetch the lobby to check if the user is the creator
-            const { data: lobby, error: lobbyError } = await dbClient
+            const { data: lobbyArray, error: lobbyError } = await dbClient
                 .from('lobbies')
                 .select('*')
                 .eq('id', lobby_id)
-                .single();
+
+            if (!lobbyArray || lobbyArray?.length === 0 || lobbyError || lobbyArray[0].status === 'withdrawal') {
+                console.error("Error fetching lobby for deletion:", lobbyError);
+                return res.status(403).json({ error: "Cannot disband while withdrawal is in process" });
+            }
+
+            // update lobby to closing status
+            const { error: updateLobbyError } = await dbClient
+                .from('lobbies')
+                .update({ status: 'closing' })
+                .eq('id', lobby_id);
+
+            if (updateLobbyError) {
+                console.error("Error updating lobby status to closing:", updateLobbyError);
+                return res.status(500).json({ error: "Failed to update lobby status to closing" });
+            }
+
+            const lobby = lobbyArray[0];
+
+            console.log("Fetched lobby for deletion:", lobby);
+            console.error("Lobby deletion error:", lobbyError);
 
             // fetch all users from lobby_participants
             const { data: participants, error: participantsError } = await dbClient
                 .from('lobby_participants')
                 .select('*')
                 .eq('lobby_id', lobby_id);
+
+            console.log("Fetched participants for lobby deletion:", participants);
+
             if (!participants || participants.length === 0) {
                 console.error("No participants found for lobby deletion.");
+                console.error("Error fetching participants for lobby deletion:", participantsError);
                 return res.status(404).json({ error: "No participants found for this lobby" });
             }
-
-            // fetch all users based on the ids from lobby_participants
-            const participantWalletAddresses = await dbClient
-                .from('users')
-                .select('solana_address')
-                .in('id', participants.map(p => p.user_id));
-
 
             if (lobbyError || !lobby) {
                 console.error("Error fetching lobby for deletion:", lobbyError);
@@ -1528,7 +1550,17 @@ export default class GameController {
             }
 
             // issue a refund to all participants if they have staked
-            const arrayOfWalletAddresses = participantWalletAddresses.data!.map(p => p.solana_address);
+            const participantsEligibleForRefund = participants.filter(p => p.has_staked && p.stake_transaction_hash)
+            const walletAddresses = participantsEligibleForRefund.map(p => p.user_id);
+            const eligibleWalletAddresses = await dbClient
+                .from('users')
+                .select('solana_address')
+                .in('id', walletAddresses);
+            if (eligibleWalletAddresses.error || !eligibleWalletAddresses.data) {
+                console.error("Error fetching participant wallet addresses for lobby deletion:", eligibleWalletAddresses.error);
+                return res.status(500).json({ error: "Failed to fetch participant wallet addresses" });
+            }
+            const arrayOfWalletAddresses = eligibleWalletAddresses.data!.map(p => p.solana_address);
             const stakeAmountInSol = parseFloat(lobby.stake_amount) / 1e9; // Convert lamports to SOL
             const result = await AdminWallet.processLobbyDeletion(arrayOfWalletAddresses, stakeAmountInSol);
 
@@ -1575,6 +1607,17 @@ export default class GameController {
 
             if (!user_id || !lobby_id) {
                 return res.status(400).json({ error: "Missing required fields: user_id, lobby_id" });
+            }
+
+            const { data: lobbyCheck, error: lobbyCheckError } = await dbClient
+                .from('lobbies')
+                .select('*')
+                .eq('id', lobby_id)
+                .single();
+
+            if (lobbyCheckError || !lobbyCheck || lobbyCheck.status === 'closing') {
+                console.error("Error fetching lobby for leaving:", lobbyCheckError);
+                return res.status(404).json({ error: "Lobby not found or in process of closing" });
             }
 
             // Check if the user is a participant in the lobby

@@ -41,6 +41,7 @@ export default class VaultController {
     constructor() { }
 
 
+
     static async processWithdrawal(lobbyId: number, userId: number) {
         try {
             // fetch the user first
@@ -135,16 +136,26 @@ export default class VaultController {
                 console.error('User not found for ID:', userId);
                 return false;
             }
+
+
+            // obtain the deposit amount from the transaction hash
+            const depositAmount = await this._obtainDepositAmount(txHash, user.data?.solana_address!, adminWallet);
+            if (depositAmount !== amount / 1e9) {
+                console.error(`Deposit amount mismatch: expected ${amount / 1e9} SOL, got ${depositAmount} SOL`);
+                return false;
+            }
+
             const lobby = await dbClient.from('lobbies').select('*').eq('id', lobbyId).single();
             if (!lobby) {
                 console.error('Lobby not found for ID:', lobbyId);
                 return false;
             }
 
-            // obtain the deposit amount from the transaction hash
-            const depositAmount = await this._obtainDepositAmount(txHash, user.data?.solana_address!, adminWallet);
-            if (depositAmount !== amount / 1e9) {
-                console.error(`Deposit amount mismatch: expected ${amount / 1e9} SOL, got ${depositAmount} SOL`);
+            // if the lobby doesnt exist or the lobby is not in the 'waiting' state, return false and issue refund
+            if (!lobby.data || lobby.data.status !== 'waiting') {
+                console.error('Lobby is not in waiting state or does not exist');
+                const refundTx = await AdminWallet.processRefund(user.data?.solana_address!, depositAmount);
+                if (!refundTx) console.error('Failed to process refund for deposit');
                 return false;
             }
 
@@ -200,7 +211,6 @@ export default class VaultController {
                 return false;
             }
 
-
             // fetch the lobby
             const lobby = await dbClient.from('lobbies').select('*').eq('id', lobbyId).single();
             if (!lobby) {
@@ -221,9 +231,18 @@ export default class VaultController {
 
             if (depositAmount !== stakeInLamports / 1e9) {
                 console.error(`Deposit amount mismatch: expected ${stakeInLamports / 1e9} SOL, got ${depositAmount} SOL`);
+                // handle refund here
                 return false;
             }
 
+            if (lobby.data?.status !== 'waiting') {
+                console.error('Lobby is not in waiting state or does not exist');
+                // handle refund here
+                const refundTx = await AdminWallet.processRefund(user.data?.solana_address!, depositAmount);
+                if (!refundTx) console.error('Failed to process refund for deposit');
+                return false;
+            }
+            
             // insert the deposit record into the database
             const depositRecord = await dbClient.from('stake_transactions').insert([{
                 user_id: userId,

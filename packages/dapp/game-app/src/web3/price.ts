@@ -11,7 +11,7 @@ export interface ISolPrice {
 export default class SolanaPrice { 
 
 
-    static async convertSolToUsd(solAmount: number): Promise<ISolPrice | null> {
+    static async convertSolToUsd(): Promise<ISolPrice | null> {
         return null;
     };
 

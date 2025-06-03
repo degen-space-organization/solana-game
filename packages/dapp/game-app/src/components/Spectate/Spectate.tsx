@@ -10,9 +10,8 @@ import {
   IconButton,
   Card,
   Grid,
-  GridItem,
   Badge,
-  useBreakpointValue,
+  // useBreakpointValue,
   Spinner,
 } from '@chakra-ui/react';
 import {
@@ -22,7 +21,6 @@ import {
   Clock,
   Trophy,
   Users,
-  Gamepad2,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
@@ -75,7 +73,7 @@ const Spectate: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const ROUNDS_PER_PAGE = 10;
 
-  const isMobile = useBreakpointValue({ base: true, md: false });
+  // const isMobile = useBreakpointValue({ base: true, md: false });
 
   // Utility functions
   const getDisplayName = (user: any, fallback: string = 'Unknown'): string => {
@@ -403,7 +401,7 @@ const Spectate: React.FC = () => {
       >
         {/* Header */}
         <Box
-          bg="primary.subtle"
+          bg="primary.solid"
           borderBottom="3px solid"
           borderColor="border.default"
           p={4}
@@ -530,6 +528,13 @@ const Spectate: React.FC = () => {
                 ? `Viewing Match #${selectedMatch.match.id} • Score: ${player1Score}-${player2Score} • ${sortedRounds.length} rounds`
                 : `${ongoingMatches.length} ongoing matches available`
               }
+            </Text>
+            <Text
+              fontSize="xs"
+              color="fg.muted"
+              textAlign="center"
+              fontWeight="medium"
+            >
             </Text>
           </VStack>
         </Box>
@@ -903,6 +908,9 @@ const Spectate: React.FC = () => {
                   </Text>
                   <Text fontSize="md" color="fg.subtle">
                     No matches are currently in progress. Check back later!
+                  </Text>
+                  <Text fontSize="sm" color="fg.subtle" mt={2}>
+                    Or search for a specific historical match by ID above.
                   </Text>
                 </Box>
               ) : (

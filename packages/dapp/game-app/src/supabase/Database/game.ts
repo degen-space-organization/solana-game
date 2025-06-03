@@ -1,4 +1,3 @@
-import type { IGameDataWithTournament } from '@/components/Game/GameInfo/GameInfo';
 import { supabase } from '../index';
 import type { Tables } from '../types';
 

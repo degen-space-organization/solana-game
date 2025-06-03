@@ -5,13 +5,21 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile
-    ports:
-      - "${SERVER_PORT:-4000}:4000"
+    expose:
+      - "4000"  # Only expose internally to Nginx Proxy Manager
     env_file:
       - .env
     environment:
-      - NODE_ENV=development
-    # volumes:
-      # - .:/app
-      # - /app/node_modules
-    # command: yarn dev
+      - NODE_ENV=production
+
+  nginx-proxy-manager:
+    image: jc21/nginx-proxy-manager:latest
+    container_name: nginx-proxy-manager
+    restart: always
+    ports:
+      - "80:80"        # HTTP
+      - "443:443"      # HTTPS
+      - "81:81"        # Admin UI
+    volumes:
+      - ./docker/volumes/data/nginx/data:/data
+      - ./docker/volumes/data/nginx/letsencrypt:/etc/letsencrypt

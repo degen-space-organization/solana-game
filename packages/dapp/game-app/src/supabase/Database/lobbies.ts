@@ -6,9 +6,8 @@
  * part of the bigger supabase db transactions scope
  */
 
-import type { PendingLobby, ActiveLobbyDetails } from "../../types/lobby";
+import type { PendingLobby } from "../../types/lobby";
 import { supabase } from "..";
-import { LAMPORTS_PER_SOL } from '@solana/web3.js'; // Import LAMPORTS_PER_SOL
 
 
 export const lobbies = {

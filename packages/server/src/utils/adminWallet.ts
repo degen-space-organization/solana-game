@@ -32,6 +32,11 @@ export default class AdminWallet {
         return this._sendSolToUser(walletAddress, netAmount);
     }
 
+    static async processRefund(walletAddress: string, amount: number): Promise<string | null> {
+        const netAmount = AdminWallet._calculateNetAmount(amount);
+        return this._sendSolToUser(walletAddress, netAmount);
+    }
+
     /**
      * Processes a payout for a tournament where we have only one winner.
      */

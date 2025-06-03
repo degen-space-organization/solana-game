@@ -35,7 +35,6 @@ import {
     useBreakpointValue,
 } from '@chakra-ui/react';
 import {
-    Users,
     CheckCircle,
     Clock,
     UserX,
@@ -52,7 +51,7 @@ import {
 import { database } from '@/supabase/Database';
 import { toaster } from '@/components/ui/toaster';
 import type { PendingLobby } from '@/types/lobby';
-import { PublicKey, SystemProgram, Transaction } from '@solana/web3.js';
+import { SystemProgram, Transaction } from '@solana/web3.js';
 import { solConnection } from '@/web3';
 import { GAME_VAULT_ADDRESS } from '@/web3/constants';
 import apiUrl from '@/api/config';
@@ -75,7 +74,11 @@ interface LobbyParticipant {
     };
 }
 
-const MyLobby: React.FC = () => {
+interface MyLobbyProps {
+    onSectionChange?: (section: 'mygame' | 'lobbies' | 'joined_lobbies' | 'tournaments' | 'leaderboard' | 'spectate' | 'demo') => void;
+}
+
+const MyLobby: React.FC<MyLobbyProps> = ({ onSectionChange }) => {
     const { publicKey, signTransaction } = useWallet();
     const [lobby, setLobby] = useState<PendingLobby | null>(null);
     const [participants, setParticipants] = useState<LobbyParticipant[]>([]);
@@ -84,6 +87,9 @@ const MyLobby: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    // State tracking to reflect actions initiated by non-current-user
+    const [previousLobbyId, setPreviousLobbyId] = useState<number | null>(null);
+    const [wasInLobby, setWasInLobby] = useState<boolean>(false);
 
     const isMobile = useBreakpointValue({ base: true, lg: false });
     const walletAddress = publicKey ? publicKey.toBase58() : null;
@@ -97,6 +103,8 @@ const MyLobby: React.FC = () => {
             setLoading(false);
             return;
         }
+
+
 
         setLoading(true);
         setError(null);
@@ -116,7 +124,7 @@ const MyLobby: React.FC = () => {
             // Get joined lobbies and find the active one
             const joinedLobbies = await database.lobbies.getJoined(userData.id);
             const activeLobby = joinedLobbies.find(lobby =>
-                lobby.status === 'waiting' || lobby.status === 'ready' || lobby.status === 'starting'
+                lobby.status === 'waiting' || lobby.status === 'ready' || lobby.status === 'starting' || lobby.status === 'withdrawal' || lobby.status === 'closing'
             );
 
             if (!activeLobby) {
@@ -128,6 +136,8 @@ const MyLobby: React.FC = () => {
             }
 
             setLobby(activeLobby);
+            setPreviousLobbyId(activeLobby.id); // Add this line
+            setWasInLobby(true); // Add this line
 
             // Fetch participants for the active lobby
             const fetchedParticipants = await database.lobbies.getParticipants(activeLobby.id);
@@ -148,6 +158,22 @@ const MyLobby: React.FC = () => {
     useEffect(() => {
         fetchCurrentLobby();
     }, [walletAddress]);
+
+    useEffect(() => {
+        // Detect if user was kicked or lobby was disbanded
+        if (wasInLobby && !loading && !lobby && previousLobbyId) {
+            toaster.create({
+                title: "Removed from Lobby",
+                description: "You have been removed from the lobby or it was closed by the admin.",
+                type: "warning",
+                duration: 5000,
+            });
+
+            onSectionChange?.('lobbies');
+            setPreviousLobbyId(null);
+            setWasInLobby(false);
+        }
+    }, [lobby, loading, wasInLobby, previousLobbyId, onSectionChange]);
 
     const getDisplayName = (user: any) => {
         if (!user) return 'Unknown';
@@ -189,12 +215,6 @@ const MyLobby: React.FC = () => {
 
         setActionLoading(true);
         try {
-            toaster.create({
-                title: "Staking...",
-                description: `Staking ${lobby.stake_amount_sol} SOL for this lobby`,
-                type: "loading",
-                duration: 3000,
-            });
 
             const stakeAmountInLamports = lobby.stake_amount_sol * 1e9;
 
@@ -254,12 +274,6 @@ const MyLobby: React.FC = () => {
         if (!walletAddress || !lobby) return;
         setActionLoading(true);
         try {
-            toaster.create({
-                title: "Withdrawing...",
-                description: "Processing withdrawal from lobby",
-                type: "loading",
-                duration: 3000,
-            });
             const response = await fetch(`${apiUrl}/game/withdraw-lobby`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -278,7 +292,12 @@ const MyLobby: React.FC = () => {
                 type: "success",
                 duration: 4000,
             });
+
+            setWasInLobby(false);
+            setPreviousLobbyId(null);
+            onSectionChange?.('lobbies');
             fetchCurrentLobby();
+
         } catch (error: any) {
             console.error('Withdraw error:', error);
             toaster.create({
@@ -298,12 +317,6 @@ const MyLobby: React.FC = () => {
 
         setActionLoading(true);
         try {
-            toaster.create({
-                title: "Leaving...",
-                description: "Processing leaving from lobby",
-                type: "loading",
-                duration: 3000,
-            });
 
             const response = await fetch(`${apiUrl}/game/leave-lobby`, {
                 method: 'POST',
@@ -325,6 +338,11 @@ const MyLobby: React.FC = () => {
                 type: "success",
                 duration: 4000,
             });
+
+            setWasInLobby(false);
+            setPreviousLobbyId(null);
+
+            onSectionChange?.('lobbies'); // Add this line
 
             fetchCurrentLobby();
 
@@ -499,7 +517,10 @@ const MyLobby: React.FC = () => {
                 type: "success",
                 duration: 4000,
             });
-
+            
+            setWasInLobby(false);
+            setPreviousLobbyId(null);
+            onSectionChange?.('lobbies');
             fetchCurrentLobby();
 
         } catch (error: any) {

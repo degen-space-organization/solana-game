@@ -1,17 +1,17 @@
 // packages/dapp/game-app/src/components/Lobby/CreateLobbyModal.tsx
 import React, { useState, useEffect } from 'react';
-import { useConnection, useWallet } from '@solana/wallet-adapter-react';
+import { useWallet } from '@solana/wallet-adapter-react';
 import { toaster } from '../ui/toaster';
 import { database } from '@/supabase/Database';
 import {
   Transaction,
   SystemProgram,
-  PublicKey,
-  LAMPORTS_PER_SOL
+  // PublicKey,
+  // LAMPORTS_PER_SOL
 } from '@solana/web3.js';
 import { solConnection } from '@/web3';
 import { GAME_VAULT_ADDRESS } from '@/web3/constants';
-import { useNavigate } from 'react-router-dom';
+// import { useNavigate } from 'react-router-dom';
 import apiUrl from '@/api/config';
 
 interface CreateLobbyModalProps {
@@ -43,7 +43,8 @@ export const CreateLobbyModal: React.FC<CreateLobbyModalProps> = ({
   if (!isOpen) return null;
 
   const { publicKey, connected, signTransaction } = useWallet();
-  const { connection } = useConnection();
+  const isMobile = window.innerWidth <= 768;
+
   const [lobbyName, setLobbyName] = useState('');
   const [stakeAmount, setStakeAmount] = useState<string>(stakeOptions[0].value);
   const [maxPlayers, setMaxPlayers] = useState<number>(maxPlayersOptions[0].value);
@@ -99,10 +100,12 @@ export const CreateLobbyModal: React.FC<CreateLobbyModalProps> = ({
 
       // Send and get signature
       const txSignature = await solConnection.sendRawTransaction(signedTransaction.serialize());
-      if (!txSignature) throw new Error('Transaction signature is null');      
-    
+      if (!txSignature) throw new Error('Transaction signature is null');
+
       let tournament_id;
-      if(maxPlayers == 4 || maxPlayers == 8){
+      console.log('nigga is about to send a request to the folowing url')
+      console.log(`${apiUrl}/game/create-tournament`)
+      if (maxPlayers == 4 || maxPlayers == 8) {
         const response = await fetch(`${apiUrl}/game/create-tournament`, {
           method: 'POST',
           headers: {
@@ -148,7 +151,7 @@ export const CreateLobbyModal: React.FC<CreateLobbyModalProps> = ({
         duration: 4000,
       });
 
-      
+
 
       onLobbyCreated();
       onClose();
@@ -165,7 +168,7 @@ export const CreateLobbyModal: React.FC<CreateLobbyModalProps> = ({
         duration: 5000,
       });
     } finally {
-      setIsLoading(false);      
+      setIsLoading(false);
     }
   };
 
@@ -179,9 +182,22 @@ export const CreateLobbyModal: React.FC<CreateLobbyModalProps> = ({
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
     display: 'flex',
     justifyContent: 'center',
-    alignItems: 'center',
+    alignItems: isMobile ? 'flex-start' : 'center', // Change this line
     zIndex: 1000,
+    paddingTop: isMobile ? '120px' : '0', // Add this line for mobile top spacing
+    overflowY: 'auto', // Add this to allow scrolling if content is too tall
   };
+
+  // const modalContentStyle: React.CSSProperties = {
+  //   backgroundColor: 'white',
+  //   border: '4px solid #333',
+  //   borderRadius: '0',
+  //   boxShadow: '8px 8px 0px rgba(0,0,0,0.8)',
+  //   width: '90%',
+  //   maxWidth: '500px',
+  //   fontFamily: 'sans-serif',
+  //   position: 'relative',
+  // };
 
   const modalContentStyle: React.CSSProperties = {
     backgroundColor: 'white',
@@ -192,6 +208,9 @@ export const CreateLobbyModal: React.FC<CreateLobbyModalProps> = ({
     maxWidth: '500px',
     fontFamily: 'sans-serif',
     position: 'relative',
+    marginBottom: isMobile ? '20px' : '0', // Add bottom margin on mobile
+    maxHeight: isMobile ? 'calc(100vh - 140px)' : 'auto', // Add this to prevent modal from being too tall
+    overflowY: isMobile ? 'auto' : 'visible', // Add scrolling to modal content if needed
   };
 
   const modalHeaderStyle: React.CSSProperties = {

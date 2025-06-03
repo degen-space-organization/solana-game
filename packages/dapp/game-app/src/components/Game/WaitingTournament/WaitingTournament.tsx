@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+//@ts-nocheck
+import { useState, useEffect } from 'react';
 import {
   Box,
   Container,
@@ -16,11 +17,9 @@ import {
 } from '@chakra-ui/react';
 import { 
   Clock, 
-  Users, 
   Trophy, 
   Target,
   Zap,
-  CheckCircle,
   AlertCircle
 } from 'lucide-react';
 

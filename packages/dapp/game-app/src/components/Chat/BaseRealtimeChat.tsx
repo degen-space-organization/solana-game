@@ -15,6 +15,7 @@ import {
 } from '@chakra-ui/react';
 import { Send, MessageCircle, Users, Globe, Trophy, Gamepad2, Wifi, WifiOff } from 'lucide-react';
 import { supabase } from '../../supabase/index';
+import { useWallet } from '@solana/wallet-adapter-react';
 
 // Types
 interface ChatMessage {
@@ -51,6 +52,7 @@ const RealtimeChat: React.FC<ChatProps> = ({
   currentUser,
   title
 }) => {
+  const {publicKey} = useWallet();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
@@ -58,9 +60,10 @@ const RealtimeChat: React.FC<ChatProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  // const inputRef = useRef<HTMLInputElement>(null); 
 
   const isValidContext = chatType === 'global' || contextId !== undefined;
-  
+
   if (!isValidContext) {
     console.error(`contextId is required for ${chatType} chat`);
   }
@@ -76,11 +79,13 @@ const RealtimeChat: React.FC<ChatProps> = ({
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     const diffMinutes = Math.floor(diffMs / (1000 * 60));
-    
+
     if (diffMinutes < 1) return 'now';
     if (diffMinutes < 60) return `${diffMinutes}m`;
     if (diffMinutes < 1440) return `${Math.floor(diffMinutes / 60)}h`;
     return date.toLocaleDateString();
+
+    // TODO - get the current browser timezone offset in minutes and format the date accordingly
   };
 
   const getChatIcon = () => {
@@ -141,7 +146,7 @@ const RealtimeChat: React.FC<ChatProps> = ({
             )
           `)
           .order('created_at', { ascending: false })
-          .limit(100);
+          .limit(50);
 
         if (chatType === 'global') {
           query = query
@@ -200,7 +205,7 @@ const RealtimeChat: React.FC<ChatProps> = ({
         },
         async (payload) => {
           console.log('Received realtime message:', payload.new);
-          
+
           if (!isMessageForCurrentChat(payload.new)) {
             console.log('Message not for current chat, ignoring');
             return;
@@ -249,6 +254,7 @@ const RealtimeChat: React.FC<ChatProps> = ({
     };
   }, [chatType, contextId, loading, isValidContext]);
 
+  // Scroll to bottom when messages change
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
@@ -312,6 +318,7 @@ const RealtimeChat: React.FC<ChatProps> = ({
       sendMessage();
     }
   };
+
 
   // Conditional rendering after all hooks
   if (!currentUser) {
@@ -436,8 +443,8 @@ const RealtimeChat: React.FC<ChatProps> = ({
       </Card.Header>
 
       {/* Messages Area - This should take all available space */}
-      <Card.Body 
-        p={0} 
+      <Card.Body
+        p={0}
         flex="1"
         display="flex"
         flexDirection="column"
@@ -474,7 +481,7 @@ const RealtimeChat: React.FC<ChatProps> = ({
             </Button>
           </VStack>
         ) : (
-          <Box 
+          <Box
             flex="1"
             overflowY="auto"
             p={4}
@@ -484,8 +491,8 @@ const RealtimeChat: React.FC<ChatProps> = ({
               <VStack justify="center" align="center" h="100%" color="fg.subtle" minH="200px">
                 <MessageCircle size={32} />
                 <Text fontSize="sm" textAlign="center" fontWeight="bold">
-                  {chatType === 'global' 
-                    ? 'Welcome! Start the global conversation!' 
+                  {chatType === 'global'
+                    ? 'Welcome! Start the global conversation!'
                     : 'No messages yet. Be the first to chat!'
                   }
                 </Text>
@@ -546,16 +553,17 @@ const RealtimeChat: React.FC<ChatProps> = ({
       </Card.Body>
 
       {/* Message Input - Fixed at bottom */}
-      <Card.Footer 
-        p={4} 
-        borderTop="4px solid" 
-        borderColor="border.default" 
+      <Card.Footer
+        p={4}
+        borderTop="4px solid"
+        borderColor="border.default"
         bg="bg.subtle"
         flexShrink={0}
       >
         <HStack width="100%" spacing={2}>
           <Input
             value={newMessage}
+            // ref={inputRef} 
             onChange={(e) => setNewMessage(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder={`Message ${getChatTitle().toLowerCase()}...`}

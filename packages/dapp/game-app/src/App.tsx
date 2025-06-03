@@ -9,7 +9,7 @@ import Header from './components/Layout/Header';
 import Navigation from './components/Layout/Navigation';
 import ChatSidebar from './components/Layout/ChatSidebar';
 import MainContent from './components/Layout/MainContent';
-import LobbyDetailsPage from './components/Lobby/LobbyDetailsPage';
+// import LobbyDetailsPage from './components/Lobby/LobbyDetailsPage';
 
 // Utils
 import { database } from '@/supabase/Database';
@@ -151,7 +151,9 @@ function App() {
                 "sidebar content"
               `
             }}
-            minH="100vh"
+            h='100vh'
+            // overflow={"auto"}
+            // minH="100vh"
           >
             {/* Header */}
             <GridItem area="header">
@@ -173,7 +175,10 @@ function App() {
             </GridItem>
 
             {/* Chat Sidebar */}
-            <GridItem area="sidebar">
+            <GridItem area="sidebar"
+              overflow={"hidden"}
+              h="100%"
+            >
               <ChatSidebar 
                 isOpen={true}
                 onClose={() => {}}
@@ -182,7 +187,10 @@ function App() {
             </GridItem>
 
             {/* Main Content */}
-            <GridItem area="content" overflow="hidden">
+            <GridItem area="content"
+              overflow="auto"
+              // overflow="hidden"
+            >
               <Routes>
                 <Route 
                   path="/" 
@@ -194,10 +202,6 @@ function App() {
                       onSectionChange={handleSectionChange}
                     />
                   } 
-                />
-                <Route 
-                  path="/lobby/:lobbyId" 
-                  element={<LobbyDetailsPage />} 
                 />
               </Routes>
             </GridItem>

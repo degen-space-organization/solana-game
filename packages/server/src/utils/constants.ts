@@ -18,9 +18,9 @@ export const TOURNAMENT_PRIZE_SHARE = [0.7, 0.3]; // First and second place only
 // 42KWcJjJpqAsHBHw3Z8KPywqdz3TSRcAx1xfu9y569QY
 const adminKeypair = process.env.ADMIN_PRIVATE_KEY || '';
 
-export const FEES_WALLET_ADDRESS = process.env.FEES_WALLET_ADDRESS || '48wcCEj1hdV5UGwr3PmhqvU3ix1eN5rMqEsBxT4XKRfc';
+export const FEES_WALLET_ADDRESS = process.env.FEES_WALLET_ADDRESS || 'ApikWabjynKEYFP5L1EYc5Ho49sDy4CD5zU19Br3ZTBo';
 
 export const ADMIN_KEYPAIR = Keypair.fromSecretKey(bs58.decode(adminKeypair));
 export const ADMIN_PUBLIC_KEY = ADMIN_KEYPAIR.publicKey;
 
-export const SOLANA_RPC_URL = process.env.SOLANA_RPC_URL || 'https://dimensional-black-snowflake.solana-mainnet.quiknode.pro/ecd1017c3cd740f6646e4734249fd9ec97e7ac60/';
+export const SOLANA_RPC_URL = process.env.SOLANA_RPC_URL || 'https://solemn-boldest-knowledge.solana-mainnet.quiknode.pro/b1b2ff829d15118d404843fceea175e2dcf817cc/';

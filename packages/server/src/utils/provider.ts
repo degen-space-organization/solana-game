@@ -4,7 +4,12 @@
  * Provider utility functions and objects
  */
 import { Cluster, Connection, clusterApiUrl } from "@solana/web3.js";
+import { config } from "dotenv";
 
+// Load environment variables from .env file
+config({
+    path: "../../.env"
+});
 
 
 const cluster = process.env.SOLANA_NODE_ENV === 'devnet' ? 'devnet' : 'mainnet-beta';

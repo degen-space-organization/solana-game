@@ -22,18 +22,15 @@ export default function Match() {
 
         try {
             setLoading(true);
-            console.log("🔍 Fetching current match for wallet:", publicKey.toBase58());
             
             // Fetch the current active game for the connected wallet
             const data = await games.getCurrentGameByWallet(publicKey.toBase58());
             
             if (data) {
-                console.log("✅ Found active match:", data.match.id, "Status:", data.match.status);
                 setGameData(data);
                 setMatchStatus(data.match.status);
                 setWinnerId(data.match.winner_id);
             } else {
-                console.log("❌ No active match found");
                 setGameData(null);
                 setMatchStatus(null);
                 setWinnerId(null);
@@ -58,7 +55,6 @@ export default function Match() {
         }
 
         const matchId = gameData.match.id;
-        console.log("🔔 Setting up real-time subscription for match:", matchId);
 
         const channel = supabase
             .channel(`match-status-${matchId}`)
@@ -71,7 +67,6 @@ export default function Match() {
                     filter: `id=eq.${matchId}`,
                 },
                 (payload) => {
-                    console.log("🔄 Match status update received:", payload.new);
                     const updatedMatch = payload.new;
                     
                     // Update local state with new status and winner
@@ -93,13 +88,11 @@ export default function Match() {
                     });
                 }
             )
-            .subscribe((status) => {
-                console.log("📡 Subscription status:", status);
+            .subscribe(() => {
             });
 
         // Cleanup subscription on unmount or when match changes
         return () => {
-            console.log("🧹 Cleaning up match subscription for:", matchId);
             supabase.removeChannel(channel);
         };
     }, [gameData?.match?.id]);
@@ -135,7 +128,6 @@ export default function Match() {
     }
 
     // Debug info
-    console.log("🎮 Rendering Match component with status:", matchStatus);
 
     return (
         <Box border="none" shadow="none">

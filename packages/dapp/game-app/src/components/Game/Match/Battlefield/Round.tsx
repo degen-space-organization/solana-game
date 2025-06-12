@@ -53,7 +53,6 @@ export default function Round() {
     // Fetch user's match IDs
     const fetchUserMatches = useCallback(async (solanaAddress: string) => {
         try {
-            console.log('🔍 Fetching user matches for:', solanaAddress);
 
             const { data: user, error: userError } = await supabase
                 .from('users')
@@ -75,7 +74,6 @@ export default function Round() {
             }
 
             const matchIds = matchParticipants?.map(mp => mp.match_id) || [];
-            console.log('📍 User is in matches:', matchIds);
 
             setUserMatchIds(matchIds);
             return matchIds;
@@ -97,7 +95,6 @@ export default function Round() {
             setLoading(true);
             setError(null);
 
-            console.log('🔄 Fetching round info for:', publicKey.toString());
 
             // Fetch user info, match IDs, and latest round info
             const [userResult] = await Promise.all([
@@ -116,8 +113,6 @@ export default function Round() {
                 throw new Error('No active game round found');
             }
 
-            console.log('✅ Fetched round information:', roundResult);
-            console.log('✅ Fetched user information:', userResult);
 
             setUserInfo(userResult);
             setUserId(userResult.id);
@@ -140,11 +135,9 @@ export default function Round() {
     // Real-time subscription for round updates
     useEffect(() => {
         if (!userMatchIds.length || !userInfo) {
-            console.log('⏳ Waiting for user match IDs...', { userMatchIds, userInfo: !!userInfo });
             return;
         }
 
-        console.log('🔔 Setting up real-time subscriptions for matches:', userMatchIds);
 
         // Create a single channel for all match-related updates
         const channel = supabase
@@ -158,20 +151,16 @@ export default function Round() {
             //     },
             //     async (payload) => {
             //         const updatedRound = payload.new as RoundInfo;
-            //         console.log('🔄 Round UPDATE detected:', updatedRound);
 
             //         // Check if this update is for one of our matches
             //         if (!userMatchIds.includes(updatedRound.match_id)) {
-            //             console.log('⏭️ Update not for our matches, ignoring');
             //             return;
             //         }
 
             //         // If this is our current round being updated
             //         if (updatedRound.id === currentRoundIdRef.current) {
-            //             console.log('📝 Current round updated:', updatedRound);
 
             //             if (updatedRound.status === 'completed') {
-            //                 console.log('✅ Current round completed, checking for new rounds...');
 
             //                 // Wait for potential new round creation
             //                 setTimeout(async () => {
@@ -179,20 +168,16 @@ export default function Round() {
             //                         const newRoundResult = await database.games.findLatestGameRoundForUser(userInfo.solana_address);
 
             //                         if (newRoundResult && newRoundResult.id !== currentRoundIdRef.current) {
-            //                             console.log('🆕 New round found, remounting component:', newRoundResult);
             //                             setComponentKey(prev => prev + 1);
             //                             await fetchRoundInfo();
             //                         } else {
-            //                             console.log('📍 No new round found, updating current round info');
             //                             setRoundInfo(updatedRound);
             //                         }
             //                     } catch (error) {
-            //                         console.error('❌ Error checking for new rounds:', error);
             //                         setRoundInfo(updatedRound);
             //                     }
             //                 }, 2000); // Increased wait time
             //             } else {
-            //                 console.log('📝 Updating current round status to:', updatedRound.status);
             //                 setRoundInfo(updatedRound);
             //             }
             //         }
@@ -208,28 +193,23 @@ export default function Round() {
                 },
                 async (payload) => {
                     const updatedRound = payload.new as RoundInfo;
-                    console.log('🔄 Round UPDATE detected:', updatedRound);
 
                     // Check if this update is for one of our matches
                     if (!userMatchIds.includes(updatedRound.match_id)) {
-                        console.log('⏭️ Update not for our matches, ignoring');
                         return;
                     }
 
                     // Only process updates for our current round
                     if (updatedRound.id === currentRoundIdRef.current) {
-                        console.log('📝 Current round updated:', updatedRound);
 
                         // Only update if the round is actually completed AND has moves from both players
                         if (updatedRound.status === 'completed' &&
                             updatedRound.player1_move &&
                             updatedRound.player2_move) {
-                            console.log('✅ Round truly completed with both moves, updating state');
                             setRoundInfo(updatedRound);
 
                             // Don't immediately check for new rounds - let the INSERT handler do that
                         } else {
-                            console.log('⏭️ Round update ignored - not fully completed or missing moves');
                         }
                     }
                 }
@@ -244,17 +224,14 @@ export default function Round() {
                 },
                 async (payload) => {
                     const newRound = payload.new as RoundInfo;
-                    console.log('🆕 New round INSERT detected:', newRound);
 
                     // Check if this insert is for one of our matches
                     if (!userMatchIds.includes(newRound.match_id)) {
-                        console.log('⏭️ Insert not for our matches, ignoring');
                         return;
                     }
 
                     // Check if this is a newer round than our current one
                     if (newRound.id !== currentRoundIdRef.current) {
-                        console.log('🚀 New round for our match detected, checking if it\'s newer...');
 
                         // Always refetch to get the latest round
                         setTimeout(async () => {
@@ -262,7 +239,6 @@ export default function Round() {
                                 const latestRound = await database.games.findLatestGameRoundForUser(userInfo.solana_address);
 
                                 if (latestRound && latestRound.id !== currentRoundIdRef.current) {
-                                    console.log('🔄 Newer round confirmed, remounting component:', latestRound);
                                     setComponentKey(prev => prev + 1);
                                     await fetchRoundInfo();
                                 }
@@ -273,27 +249,14 @@ export default function Round() {
                     }
                 }
             )
-            .subscribe((status) => {
-                console.log('📡 Subscription status:', status);
+            .subscribe(() => {
             });
 
         return () => {
-            console.log('🧹 Cleaning up real-time subscription');
             supabase.removeChannel(channel);
         };
     }, [userMatchIds, userInfo?.id, userInfo?.solana_address, fetchRoundInfo]);
 
-    // Debug effect to log state changes
-    useEffect(() => {
-        console.log('🏷️ Component state changed:', {
-            componentKey,
-            roundId: roundInfo?.id,
-            roundNumber: roundInfo?.round_number,
-            status: roundInfo?.status,
-            matchId: roundInfo?.match_id,
-            userId
-        });
-    }, [componentKey, roundInfo?.id, roundInfo?.round_number, roundInfo?.status, roundInfo?.match_id, userId]);
 
     // Loading state
     if (loading) {

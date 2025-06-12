@@ -154,8 +154,7 @@ export default function Game() {
           table: 'matches',
           filter: `id=eq.${gameData.match.id}`,
         },
-        (payload) => {
-          console.log('Match update received:', payload);
+        () => {
           fetchGameData(); // Re-fetch when match data changes
         }
       )
@@ -167,8 +166,7 @@ export default function Game() {
           table: 'game_rounds',
           filter: `match_id=eq.${gameData.match.id}`,
         },
-        (payload) => {
-          console.log('Round update received:', payload);
+        () => {
           fetchGameData(); // Re-fetch when round data changes
         }
       )

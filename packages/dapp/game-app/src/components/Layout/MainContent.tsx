@@ -97,8 +97,6 @@ const MainContent: React.FC<MainContentProps> = ({
   useEffect(() => {
     if (!currentUserId) return;
 
-    console.log('Setting up global realtime listeners for user:', currentUserId);
-
     const channel = supabase
       .channel(`global-user-events-${currentUserId}-${Date.now()}`)
       .on(
@@ -109,8 +107,8 @@ const MainContent: React.FC<MainContentProps> = ({
           table: 'match_participants',
           filter: `user_id=eq.${currentUserId}`
         },
-        (payload) => {
-          console.log('User added to match globally!', payload.new);
+        () => {
+          console.log('User added to match globally!');
 
           toaster.create({
             title: "Match Started! 🎮",
@@ -151,9 +149,7 @@ const MainContent: React.FC<MainContentProps> = ({
           checkUserGameStatusCallback();
         }
       )
-      .subscribe((status) => {
-        console.log('Global user events subscription status:', status);
-      });
+      .subscribe();
 
     return () => {
       console.log('Cleaning up global user events subscription');

@@ -92,12 +92,12 @@ function App() {
       const data = await response.json();
 
       if (data.error) {
-        toaster.create({
-          title: "Join Failed",
-          description: data.error,
-          type: "error",
-          duration: 5000,
-        });
+        // toaster.create({
+        //   title: "Join Failed",
+        //   description: data.error,
+        //   type: "error",
+        //   duration: 5000,
+        // });
       } else {
         toaster.create({
           title: "Success! 🎉",

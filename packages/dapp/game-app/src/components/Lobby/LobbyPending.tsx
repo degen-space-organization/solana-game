@@ -411,7 +411,9 @@ const LobbyPending: React.FC<LobbyPendingProps> = ({
     setLoading(true);
     try {
       const fetchedLobbies = await database.lobbies.getAll();
-      setLobbies(fetchedLobbies);
+      // Filter out disbanded lobbies
+      const activeLobbies = fetchedLobbies.filter(lobby => lobby.status !== 'disbanded');
+      setLobbies(activeLobbies);
     } catch (error) {
       console.error("Error fetching lobbies:", error);
       setLobbies([]);
@@ -449,6 +451,9 @@ const LobbyPending: React.FC<LobbyPendingProps> = ({
       console.error('Failed to join lobby:', response.statusText);
       return;
     }
+
+    // sleep for 1 second to allow lobby state to update
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
     // Refresh user status after joining
     checkUserLobbyStatus();

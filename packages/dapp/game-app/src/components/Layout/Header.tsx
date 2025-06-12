@@ -9,9 +9,13 @@ import {
   Heading,
   IconButton,
   Badge,
+  Image,
   // useBreakpointValue,
 } from "@chakra-ui/react";
 import { Menu, MessageCircle } from 'lucide-react';
+import { Link as ChakraLink } from '@chakra-ui/react';
+
+import XLogo from '../../../public/x-logo.svg'; // Ensure this path is correct
 
 import { ConnectWalletButton } from '../Wallet/WalletConnect';
 import type { User } from '../../types/lobby';
@@ -58,10 +62,10 @@ const Header: React.FC<HeaderProps> = ({
       top="0"
       zIndex="sticky"
     >
-      <Container 
+      <Container
         maxW="100%"
         p={4}
-        // bg={'violet.300'}
+      // bg={'violet.300'}
       >
         {isMobile ? (
           <VStack spaceX={4} align="stretch">
@@ -109,10 +113,10 @@ const Header: React.FC<HeaderProps> = ({
             </Flex>
 
             {/* Mobile: Game title */}
-            <Box 
-              h="60px" 
-              display="flex" 
-              alignItems="center" 
+            <Box
+              h="60px"
+              display="flex"
+              alignItems="center"
               justifyContent="center"
             >
               <Heading
@@ -124,7 +128,7 @@ const Header: React.FC<HeaderProps> = ({
                 textAlign="center"
                 textShadow="1px 1px 0px rgba(139, 92, 246, 0.3)"
               >
-                Rock, Paper, Scissors... casino
+                Rock, Paper, Scissors Game
               </Heading>
             </Box>
 
@@ -153,21 +157,61 @@ const Header: React.FC<HeaderProps> = ({
         ) : (
           /* Desktop Layout */
           <Flex justify="space-between" align="center">
-            {/* Left side - Game Title */}
-            <Heading
-              size="2xl"
-              fontWeight="black"
-              color="fg.default"
-              textTransform="uppercase"
-              letterSpacing="tight"
+            <HStack align="center">
+
+              {/* Left side - Game Title */}
+              <Heading
+                size="2xl"
+                fontWeight="black"
+                color="fg.default"
+                textTransform="uppercase"
+                letterSpacing="tight"
               // textShadow="3px 3px 0px rgba(139, 92, 246, 0.3)"
-            >
-              Rock, Paper, Scissors... casino
-            </Heading>
+              >
+                Rock, Paper, Scissors Game
+              </Heading>
+
+              {/* X (Twitter) neobrutalism box */}
+
+            </HStack>
+
 
             {/* Right side - Rank and Wallet */}
             <HStack padding={1}>
-              {currentUser && currentUserRank !== 'Unranked' && (
+              <ChakraLink
+                href="https://x.com/PlayRPSGame"
+                target="_blank"
+                rel="noopener noreferrer"
+                bg="black"
+                border="3px solid"
+                borderColor="border.default"
+                borderRadius="md"
+                px={3}
+                py={2}
+                mx={4}
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+                shadow="brutalist.md"
+                transition="all 0.1s"
+                _hover={{
+                  transform: 'translate(-2px, -2px)',
+                  shadow: 'brutalist.lg',
+                  bg: 'gray.900',
+                }}
+                _active={{
+                  transform: 'translate(0px, 0px)',
+                  shadow: 'brutalist.md',
+                }}
+              >
+                <Image
+                  src={XLogo}
+                  alt="X (Twitter) logo"
+                  boxSize="28px"
+                  display="block"
+                />
+              </ChakraLink>
+              {/* {currentUser && currentUserRank !== 'Unranked' && (
                 <Badge
                   colorScheme={getRankColorScheme(currentUserRank)}
                   variant="solid"
@@ -183,7 +227,7 @@ const Header: React.FC<HeaderProps> = ({
                 >
                   {currentUserRank}
                 </Badge>
-              )}
+              )} */}
               <ConnectWalletButton />
             </HStack>
           </Flex>

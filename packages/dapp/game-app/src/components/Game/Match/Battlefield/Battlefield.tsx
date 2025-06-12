@@ -113,7 +113,6 @@ export default function Battlefield({ roundId, userId }: BattlefieldProps) {
           filter: `id=eq.${roundId}` 
         },
         (payload) => {
-          console.log('🔄 Round updated:', payload.new);
           const updatedRound = payload.new as GameRound;
           setRound(updatedRound);
           

@@ -20,10 +20,7 @@ CREATE TABLE game_rounds (
     CONSTRAINT game_rounds_unique_round_per_match UNIQUE (match_id, round_number),
     CONSTRAINT game_rounds_round_number_positive CHECK (round_number > 0),
     CONSTRAINT game_rounds_completed_after_created CHECK (completed_at IS NULL OR completed_at >= created_at)
-    -- CONSTRAINT game_rounds_moves_consistency CHECK (
-    --     (player1_move IS NULL AND player2_move IS NULL AND winner_id IS NULL AND completed_at IS NULL) OR
-    --     (player1_move IS NOT NULL AND player2_move IS NOT NULL AND completed_at IS NOT NULL)
-    -- )
+
 );
 
 -- Indexes

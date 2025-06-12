@@ -191,7 +191,6 @@ const RealtimeChat: React.FC<ChatProps> = ({
   useEffect(() => {
     if (loading || !isValidContext) return;
 
-    console.log(`Setting up realtime for ${chatType} chat`, { contextId });
     setConnectionStatus('connecting');
 
     const channel = supabase
@@ -204,7 +203,6 @@ const RealtimeChat: React.FC<ChatProps> = ({
           table: 'chat_messages'
         },
         async (payload) => {
-          console.log('Received realtime message:', payload.new);
 
           if (!isMessageForCurrentChat(payload.new)) {
             console.log('Message not for current chat, ignoring');
@@ -228,12 +226,10 @@ const RealtimeChat: React.FC<ChatProps> = ({
               users: userData
             };
 
-            console.log('Adding new message to chat:', newMessage);
 
             setMessages(prev => {
               const messageExists = prev.some(msg => msg.id === newMessage.id);
               if (messageExists) {
-                console.log('Message already exists, skipping');
                 return prev;
               }
               return [...prev, newMessage];
@@ -244,12 +240,10 @@ const RealtimeChat: React.FC<ChatProps> = ({
         }
       )
       .subscribe((status) => {
-        console.log('Realtime subscription status:', status);
         setConnectionStatus(status === 'SUBSCRIBED' ? 'connected' : 'connecting');
       });
 
     return () => {
-      console.log('Cleaning up realtime subscription');
       channel.unsubscribe();
     };
   }, [chatType, contextId, loading, isValidContext]);
@@ -262,13 +256,6 @@ const RealtimeChat: React.FC<ChatProps> = ({
   // Send message
   const sendMessage = async () => {
     if (!newMessage.trim() || !currentUser || sending) return;
-
-    console.log('Sending message:', {
-      message: newMessage,
-      chatType,
-      contextId,
-      currentUser: currentUser.id
-    });
 
     setSending(true);
     setError(null);
@@ -290,7 +277,6 @@ const RealtimeChat: React.FC<ChatProps> = ({
         messageData.tournament_id = contextId;
       }
 
-      console.log('Inserting message data:', messageData);
 
       const { data, error } = await supabase
         .from('chat_messages')
@@ -301,7 +287,6 @@ const RealtimeChat: React.FC<ChatProps> = ({
         throw error;
       }
 
-      console.log('Message sent successfully:', data);
       setNewMessage('');
 
     } catch (err) {
@@ -533,14 +518,14 @@ const RealtimeChat: React.FC<ChatProps> = ({
                         <Text fontSize="sm" wordBreak="break-word" lineHeight="1.4">
                           {message.message}
                         </Text>
-                        <Text
+                        {/* <Text
                           fontSize="xs"
                           mt={1}
                           color="fg.subtle"
                           textAlign={isOwnMessage ? 'right' : 'left'}
                         >
                           {formatTime(message.created_at)}
-                        </Text>
+                        </Text> */}
                       </Box>
                     </Flex>
                   );

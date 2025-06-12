@@ -49,16 +49,19 @@ export const CreateLobbyModal: React.FC<CreateLobbyModalProps> = ({
   const [stakeAmount, setStakeAmount] = useState<string>(stakeOptions[0].value);
   const [maxPlayers, setMaxPlayers] = useState<number>(maxPlayersOptions[0].value);
   const [isLoading, setIsLoading] = useState(false);
+  const [isCreatingTournament] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   useEffect(() => {
     const fetchUserId = async () => {
       if (publicKey) {
-        const address = publicKey.toBase58();
-        const user = await database.users.getByWallet(address);
-        if (user) {
-          setCurrentUserId(user.id);
-        } else {
+        try {
+          const address = publicKey.toBase58();
+          const user = await database.users.getByWallet(address);
+          setCurrentUserId(user?.id || null);
+        } catch (error) {
+          console.error('Error fetching user:', error);
           setCurrentUserId(null);
         }
       }
@@ -66,8 +69,32 @@ export const CreateLobbyModal: React.FC<CreateLobbyModalProps> = ({
     fetchUserId();
   }, [publicKey]);
 
+  const validateForm = () => {
+    const newErrors: { [key: string]: string } = {};
+    
+    if (lobbyName && lobbyName.length < 3) {
+      newErrors.lobbyName = 'Lobby name must be at least 3 characters';
+    }
+    
+    if (!stakeAmount) {
+      newErrors.stakeAmount = 'Please select a stake amount';
+    }
+    
+    if (!maxPlayers) {
+      newErrors.maxPlayers = 'Please select number of players';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+  
     if (!connected || !publicKey || isLoading || !currentUserId) {
       toaster.create({
         title: 'Wallet Not Connected',
@@ -77,10 +104,11 @@ export const CreateLobbyModal: React.FC<CreateLobbyModalProps> = ({
       });
       return;
     }
-
+  
     setIsLoading(true);
-
+  
     try {
+      // Create and sign transaction (same as before)
       const stakeAmountLamports = parseInt(stakeAmount);
       const transaction = new Transaction().add(
         SystemProgram.transfer({
@@ -89,80 +117,55 @@ export const CreateLobbyModal: React.FC<CreateLobbyModalProps> = ({
           lamports: stakeAmountLamports,
         })
       );
-
+  
       const { blockhash, lastValidBlockHeight } = await solConnection.getLatestBlockhash();
       transaction.recentBlockhash = blockhash;
       transaction.lastValidBlockHeight = lastValidBlockHeight;
       transaction.feePayer = publicKey;
-
-      // Sign transaction (opens wallet)
+  
       const signedTransaction = await signTransaction!(transaction);
-
-      // Send and get signature
       const txSignature = await solConnection.sendRawTransaction(signedTransaction.serialize());
-      if (!txSignature) throw new Error('Transaction signature is null');
-
-      let tournament_id;
-      console.log('nigga is about to send a request to the folowing url')
-      console.log(`${apiUrl}/game/create-tournament`)
-      if (maxPlayers == 4 || maxPlayers == 8) {
-        const response = await fetch(`${apiUrl}/game/create-tournament`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            name: lobbyName || null,
-            created_by: currentUserId,
-            max_players: maxPlayers,
-            stake_amount: (Number(stakeAmount)).toString(),
-            // txHash: txSignature,
-          }),
-        });
-        const data = await response.json()
-        tournament_id = data.tournament.id
+      
+      if (!txSignature) {
+        throw new Error('Transaction signature is null');
       }
-
-      console.log(tournament_id)
+  
+      // Call the unified create lobby endpoint (no need for separate tournament creation)
       const response = await fetch(`${apiUrl}/game/create-lobby`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: lobbyName || null,
-          tournament_id: tournament_id,
           created_by: currentUserId,
-          stake_amount: (Number(stakeAmount)).toString(),
+          stake_amount: stakeAmount,
           max_players: maxPlayers,
-          txHash: txSignature,
+          tx_hash: txSignature,
         }),
       });
+  
       const data = await response.json();
-
+  
       if (!response.ok) {
         throw new Error(data.error || 'Failed to create lobby');
       }
-
+  
+      // Show success message based on what was created
       toaster.create({
-        title: 'Lobby Created! 🎉',
-        description: `Lobby #${data.lobby.id} has been created.`,
+        title: data.is_tournament_lobby ? 'Tournament Created! 🏆' : 'Lobby Created! 🎉',
+        description: data.is_tournament_lobby 
+          ? `Tournament lobby #${data.lobby_id} has been created with ${maxPlayers} player slots.`
+          : `Lobby #${data.lobby_id} has been created.`,
         type: 'success',
         duration: 4000,
       });
-
-
-
+  
       onLobbyCreated();
       onClose();
-      setLobbyName('');
-      setStakeAmount(stakeOptions[0].value);
-      setMaxPlayers(maxPlayersOptions[0].value);
-
+      resetForm();
     } catch (error: any) {
       console.error('Error creating lobby:', error);
       toaster.create({
-        title: 'Lobby Creation Failed',
+        title: 'Creation Failed',
         description: error.message || 'An unexpected error occurred.',
         type: 'error',
         duration: 5000,
@@ -170,6 +173,13 @@ export const CreateLobbyModal: React.FC<CreateLobbyModalProps> = ({
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const resetForm = () => {
+    setLobbyName('');
+    setStakeAmount(stakeOptions[0].value);
+    setMaxPlayers(maxPlayersOptions[0].value);
+    setErrors({});
   };
 
   // Basic styles for the modal (ensure these are consistent with your CSS strategy)
@@ -187,17 +197,6 @@ export const CreateLobbyModal: React.FC<CreateLobbyModalProps> = ({
     paddingTop: isMobile ? '120px' : '0', // Add this line for mobile top spacing
     overflowY: 'auto', // Add this to allow scrolling if content is too tall
   };
-
-  // const modalContentStyle: React.CSSProperties = {
-  //   backgroundColor: 'white',
-  //   border: '4px solid #333',
-  //   borderRadius: '0',
-  //   boxShadow: '8px 8px 0px rgba(0,0,0,0.8)',
-  //   width: '90%',
-  //   maxWidth: '500px',
-  //   fontFamily: 'sans-serif',
-  //   position: 'relative',
-  // };
 
   const modalContentStyle: React.CSSProperties = {
     backgroundColor: 'white',
@@ -304,27 +303,32 @@ export const CreateLobbyModal: React.FC<CreateLobbyModalProps> = ({
         <div style={modalBodyStyle}>
           <form onSubmit={handleSubmit}>
             <div style={formControlStyle}>
-              <label htmlFor="lobby-name" style={formLabelStyle}>Lobby Name (Optional)</label>
+              <label style={formLabelStyle}>
+                Lobby Name (Optional)
+                {errors.lobbyName && (
+                  <span style={{ color: 'red', marginLeft: '8px' }}>{errors.lobbyName}</span>
+                )}
+              </label>
               <input
-                id="lobby-name"
                 type="text"
                 value={lobbyName}
                 onChange={(e) => setLobbyName(e.target.value)}
-                placeholder="e.g., Epic 1v1 Battle"
                 style={inputStyle}
-                disabled={isLoading}
+                placeholder="Enter lobby name"
               />
             </div>
 
             <div style={formControlStyle}>
-              <label htmlFor="stake-amount" style={formLabelStyle}>Stake Amount (SOL)</label>
+              <label style={formLabelStyle}>
+                Stake Amount
+                {errors.stakeAmount && (
+                  <span style={{ color: 'red', marginLeft: '8px' }}>{errors.stakeAmount}</span>
+                )}
+              </label>
               <select
-                id="stake-amount"
                 value={stakeAmount}
                 onChange={(e) => setStakeAmount(e.target.value)}
                 style={selectStyle}
-                disabled={isLoading}
-                required
               >
                 {stakeOptions.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -335,14 +339,16 @@ export const CreateLobbyModal: React.FC<CreateLobbyModalProps> = ({
             </div>
 
             <div style={formControlStyle}>
-              <label htmlFor="max-players" style={formLabelStyle}>Max Players</label>
+              <label style={formLabelStyle}>
+                Number of Players
+                {errors.maxPlayers && (
+                  <span style={{ color: 'red', marginLeft: '8px' }}>{errors.maxPlayers}</span>
+                )}
+              </label>
               <select
-                id="max-players"
                 value={maxPlayers}
-                onChange={(e) => setMaxPlayers(parseInt(e.target.value))}
+                onChange={(e) => setMaxPlayers(Number(e.target.value))}
                 style={selectStyle}
-                disabled={isLoading}
-                required
               >
                 {maxPlayersOptions.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -387,12 +393,12 @@ export const CreateLobbyModal: React.FC<CreateLobbyModalProps> = ({
           <button
             type="submit"
             onClick={handleSubmit}
-            disabled={!connected || isLoading || !currentUserId}
+            disabled={!connected || isLoading || isCreatingTournament}
             style={{
               ...buttonBaseStyle,
               backgroundColor: '#06D6A0', // Green color
               color: 'white',
-              ...(!connected || isLoading || !currentUserId ? disabledButtonStyle : {}),
+              ...(!connected || isLoading || isCreatingTournament ? disabledButtonStyle : {}),
             }}
             onMouseOver={(e) => {
               if (connected && !isLoading && currentUserId) {

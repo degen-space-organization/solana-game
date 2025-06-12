@@ -18,7 +18,3 @@ CREATE TABLE match_participants (
 CREATE INDEX idx_match_participants_match ON match_participants(match_id);
 CREATE INDEX idx_match_participants_user ON match_participants(user_id);
 
--- -- Triggers
--- CREATE TRIGGER trg_prevent_concurrent_match
---     BEFORE INSERT OR UPDATE ON match_participants
---     FOR EACH ROW EXECUTE FUNCTION prevent_concurrent_participation();

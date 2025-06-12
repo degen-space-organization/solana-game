@@ -3,4 +3,7 @@
 
 import { PublicKey } from "@solana/web3.js";
 
-export const GAME_VAULT_ADDRESS = new PublicKey('42KWcJjJpqAsHBHw3Z8KPywqdz3TSRcAx1xfu9y569QY'); // Replace with your actual vault address
+
+const VAULT_ADDRESS = import.meta.env.VITE_VAULT_ADDRESS || '4c4DtUhVVGqgasuXenfJADUqyiD5NPMGUVBdNLVPFtDE'; // Default to a known vault address if not set in environment variables
+
+export const GAME_VAULT_ADDRESS = new PublicKey(VAULT_ADDRESS); // Replace with your actual vault address

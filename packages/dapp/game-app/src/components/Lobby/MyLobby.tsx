@@ -104,8 +104,6 @@ const MyLobby: React.FC<MyLobbyProps> = ({ onSectionChange }) => {
             return;
         }
 
-
-
         setLoading(true);
         setError(null);
 
@@ -120,6 +118,9 @@ const MyLobby: React.FC<MyLobbyProps> = ({ onSectionChange }) => {
                 setLoading(false);
                 return;
             }
+
+            // sleep for 0.6 seconds to ensure user data is fully loaded
+            await new Promise(resolve => setTimeout(resolve, 600));
 
             // Get joined lobbies and find the active one
             const joinedLobbies = await database.lobbies.getJoined(userData.id);
@@ -493,36 +494,51 @@ const MyLobby: React.FC<MyLobbyProps> = ({ onSectionChange }) => {
 
     const handleCloseLobby = async () => {
         if (!isCreator()) return;
-
+    
         setActionLoading(true);
-
+    
         try {
             const response = await fetch(`${apiUrl}/game/close-lobby`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     lobby_id: lobby!.id,
-                    user_id: currentUser!.id,
+                    user_id: currentUser!.id,  // Make sure this matches backend expectation
                 }),
             });
-
+    
             if (!response.ok) {
                 const errorData = await response.json();
                 throw new Error(errorData.error || 'Failed to close lobby');
             }
-
+    
+            const data = await response.json();
+    
+            // Enhanced success message based on refund results
+            let title = "Lobby Closed! 🔐";
+            let description = "The lobby has been closed";
+            
+            if (data.refunds_created > 0) {
+                if (data.failed_refunds === 0) {
+                    description = `Lobby closed and all ${data.successful_refunds} participants refunded successfully`;
+                } else {
+                    title = "Lobby Closed (Some Refunds Failed) ⚠️";
+                    description = `Lobby closed. ${data.successful_refunds}/${data.refunds_created} refunds successful`;
+                }
+            }
+    
             toaster.create({
-                title: "Lobby Closed! 🔐",
-                description: "The lobby has been closed and players have been refunded",
-                type: "success",
-                duration: 4000,
+                title,
+                description,
+                type: data.failed_refunds > 0 ? "warning" : "success",
+                duration: 5000,  // Longer duration for important information
             });
             
             setWasInLobby(false);
             setPreviousLobbyId(null);
             onSectionChange?.('lobbies');
             fetchCurrentLobby();
-
+    
         } catch (error: any) {
             console.error('Close lobby error:', error);
             toaster.create({

@@ -293,8 +293,8 @@ export default class VaultController {
 
     private static async _obtainDepositAmount(txHash: string, expectedFrom: string, expectedTo: string): Promise<number> {
 
-        // sleep for 2 seconds
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        // sleep for 2.5 seconds
+        await new Promise(resolve => setTimeout(resolve, 2500));
 
         const tx = await gSolanaProvider.getParsedTransaction(txHash, {
             maxSupportedTransactionVersion: 0,

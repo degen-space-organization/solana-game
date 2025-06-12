@@ -14,10 +14,6 @@ CREATE TABLE lobby_participants (
     CONSTRAINT lobby_participants_user_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT lobby_participants_unique_entry UNIQUE (lobby_id, user_id),
     CONSTRAINT lobby_participants_staked_at_after_joined CHECK (staked_at IS NULL OR staked_at >= joined_at),
-    -- CONSTRAINT lobby_participants_stake_consistency CHECK (
-    --     (has_staked = FALSE AND stake_transaction_hash IS NULL AND staked_at IS NULL) OR
-    --     (has_staked = TRUE AND stake_transaction_hash IS NOT NULL AND staked_at IS NOT NULL)
-    -- ),
     CONSTRAINT lobby_participants_transaction_hash_not_empty CHECK (
         stake_transaction_hash IS NULL OR LENGTH(TRIM(stake_transaction_hash)) > 0
     )
@@ -28,7 +24,3 @@ CREATE INDEX idx_lobby_participants_lobby ON lobby_participants(lobby_id);
 CREATE INDEX idx_lobby_participants_user ON lobby_participants(user_id);
 
 
--- -- Triggers
--- CREATE TRIGGER trg_prevent_concurrent_lobby
---     BEFORE INSERT OR UPDATE ON lobby_participants
---     FOR EACH ROW EXECUTE FUNCTION prevent_concurrent_participation();
